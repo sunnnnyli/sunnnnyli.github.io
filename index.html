@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunny Li — Salesforce Developer</title>
+    <meta name="description" content="Sunny Li is a Salesforce Developer at Justworks in New York, building automations and integrations.">
+    <link rel="canonical" href="https://sunnnnyli.github.io/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Sunny Li">
+    <meta property="og:url" content="https://sunnnnyli.github.io/">
+    <meta property="og:title" content="Sunny Li — Salesforce Developer">
+    <meta property="og:description" content="I build Salesforce automations and integrations for the Revenue team at Justworks.">
+    <meta property="og:image" content="https://sunnnnyli.github.io/assets/img/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Sunny Li, Salesforce Developer at Justworks">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="theme-color" content="#1c1c1d">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Sunny Li",
+        "url": "https://sunnnnyli.github.io/",
+        "image": "https://sunnnnyli.github.io/assets/img/profile.jpg",
+        "jobTitle": "Salesforce Developer",
+        "worksFor": { "@type": "Organization", "name": "Justworks", "url": "https://www.justworks.com" },
+        "alumniOf": { "@type": "CollegeOrUniversity", "name": "New York University" },
+        "email": "mailto:sunnyli2003@gmail.com",
+        "sameAs": ["https://github.com/sunnnnyli", "https://www.linkedin.com/in/sunnyli2003"],
+        "knowsAbout": ["Salesforce", "Apex", "Lightning Web Components", "Flow", "REST APIs", "Integrations"]
+    }
+    </script>
+    <meta name="color-scheme" content="dark light">
+    <link rel="icon" href="favicon.ico" sizes="32x32">
+    <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml" data-light="assets/icons/favicon-light.svg">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="manifest" href="site.webmanifest">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"></noscript>
+    <!-- Runs before the first paint so the page never flashes the wrong theme. -->
+    <script>
+        // Theme: a saved choice wins, otherwise the visitor's system setting.
+        (() => {
+            let t = null;
+            try { t = localStorage.getItem('theme'); } catch (e) {}
+            if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            document.documentElement.dataset.theme = t;
+        })();
+        // Motion follows the visitor's OS setting unless they've picked otherwise with the nav toggle.
+        (() => {
+            let pref = null;
+            try { pref = localStorage.getItem('motion'); } catch (e) {}
+            const on = pref ? pref === 'on' : !matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (on && 'IntersectionObserver' in window) document.documentElement.classList.add('motion');
+        })();
+    </script>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <script src="assets/js/main.js" defer></script>
+</head>
+<body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+        <div class="container nav-inner">
+            <a class="nav-mark" href="#top">Sunny Li</a>
+            <nav class="nav-links" id="nav-links" aria-label="Primary">
+                <div class="nav-steps">
+                    <span class="nav-track" aria-hidden="true"><span></span></span>
+                    <ul>
+                        <li style="--i:0"><a href="#impact">Impact</a></li>
+                        <li style="--i:1"><a href="#experience">Experience</a></li>
+                        <li style="--i:2"><a href="#projects">Projects</a></li>
+                        <li style="--i:3"><a href="#education">Education</a></li>
+                        <li style="--i:4"><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+                <span class="nav-divider" aria-hidden="true"></span>
+                <a class="nav-resume" href="Sunny-Li-Resume.pdf" target="_blank" rel="noopener">Résumé <span aria-hidden="true">↗</span></a>
+            </nav>
+            <div class="nav-right">
+                <button class="theme-btn" type="button" aria-label="Switch theme" title="Switch theme">
+                    <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"/></svg>
+                    <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+                </button>
+                <button class="motion-btn" type="button" aria-pressed="false" title="Reduce motion">
+                    <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12M15 6v12"/></svg>
+                    <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg>
+                    <span class="motion-label">Reduce motion</span>
+                </button>
+                <a class="pill pill-blue pill-sm nav-resume-sm" href="Sunny-Li-Resume.pdf" target="_blank" rel="noopener">Résumé</a>
+                <button class="menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links"><span></span><span></span></button>
+            </div>
+        </div>
+        <div class="nav-progress" aria-hidden="true"><span></span></div>
+    </header>
+
+    <main id="main">
+        <!-- ============ Hero ============ -->
+        <section class="hero" id="top" data-scene>
+            <div class="hero-sticky">
+                <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+                <div class="dot-grid" aria-hidden="true"></div>
+
+                <div class="container hero-layout">
+                    <div class="hero-copy">
+                        <h1 class="hero-title" data-split>Sunny Li</h1>
+                        <p class="hero-role load" style="--d:.55s"><span class="live-dot" aria-hidden="true"></span><span>Salesforce Developer<span class="sep"><span class="visually-hidden">, </span></span>Justworks</span></p>
+                        <p class="hero-sub load" style="--d:.7s">I build Salesforce <span class="grad-text">automations</span> and <span class="grad-text">integrations</span> for the Revenue team.</p>
+                        <p class="hero-lede load" style="--d:.85s">Before that, I spent two years building for teams across NYC's Office of Technology and Innovation, and designed an AI agent pipeline at Olympix.</p>
+                        <div class="hero-actions load" style="--d:1s">
+                            <span class="email-group">
+                                <a class="email-link" href="mailto:sunnyli2003@gmail.com">sunnyli2003@gmail.com</a>
+                                <button class="copy-btn" type="button" data-copy="sunnyli2003@gmail.com" aria-label="Copy email address" title="Copy email address">
+                                    <svg class="i-copy" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>
+                                    <svg class="i-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+                                    <span class="copy-label">Copy</span>
+                                </button>
+                                <span class="visually-hidden copy-status" aria-live="polite"></span>
+                            </span>
+                            <a class="link" href="Sunny-Li-Resume.pdf" target="_blank" rel="noopener"><svg class="lk-ic lk-stroke" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>Résumé <span class="chev" aria-hidden="true">›</span></a>
+                            <a class="link" href="https://github.com/sunnnnyli" target="_blank" rel="noopener"><svg class="lk-ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>GitHub <span class="chev" aria-hidden="true">›</span></a>
+                            <a class="link" href="https://www.linkedin.com/in/sunnyli2003" target="_blank" rel="noopener"><svg class="lk-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>LinkedIn <span class="chev" aria-hidden="true">›</span></a>
+                        </div>
+                    </div>
+
+                    <div class="hero-photo-wrap">
+                        <figure class="hero-photo">
+                            <span class="photo-glow" aria-hidden="true"></span>
+                            <span class="photo-ring" aria-hidden="true"></span>
+                            <span class="photo-inner">
+                                <picture>
+                                    <source srcset="assets/img/profile.webp" type="image/webp">
+                                    <img class="photo-img" src="assets/img/profile.jpg" alt="Portrait of Sunny Li" width="640" height="640" fetchpriority="high">
+                                </picture>
+                            </span>
+                        </figure>
+                    </div>
+                </div>
+
+                <a class="scroll-cue" href="#story" aria-label="Scroll to continue">Scroll<i></i></a>
+            </div>
+        </section>
+
+        <!-- ============ Story ============ -->
+        <section class="story" id="story" data-scene aria-label="Introduction">
+            <div class="story-sticky">
+                <div class="container">
+                    <div class="story-text" data-words>
+                        <p>I love building things that <span class="hl">quietly make other people's jobs easier</span>.
+                        Usually that means sitting down with the teams who use Salesforce, learning how they actually work,
+                        and <span class="hl">taking the tedious parts off their plates</span>.</p>
+                        <p>I learn the most when I'm <span class="hl">pushed past what I know</span>, like picking up a new
+                        language on the job or keeping up with requirements that change every week. I've come to enjoy that.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ Impact ============ -->
+        <section class="light section" id="impact" aria-labelledby="impact-title">
+            <div class="container">
+                <p class="eyebrow grad-text rv"><span class="eyebrow-num">01</span><span class="sep"><span class="visually-hidden">, </span></span>Impact</p>
+                <h2 class="headline rv" id="impact-title" style="--d:.08s">My work, <br>by the numbers.</h2>
+
+                <div class="bento">
+                    <article class="tile tile-span2 spot rv-scale">
+                        <p class="tile-label">Justworks</p>
+                        <p class="num num-phrase grad-text">Close → billing</p>
+                        <p class="unit">the Revenue process I automate with Apex, LWC, and Flow.</p>
+                        <p class="tile-copy">Connected over REST APIs to the billing and finance systems behind it, and built to stay in sync.</p>
+                    </article>
+                    <article class="tile tile-xl spot rv-scale" style="--d:.08s">
+                        <p class="tile-label">NYC OTI<span class="sep"><span class="visually-hidden">, </span></span>Vulnerability Management</p>
+                        <div>
+                            <p class="num grad-text" data-count="150" data-prefix="~">~150</p>
+                            <p class="unit">hours a week, given back.</p>
+                            <p class="tile-copy">I automated the PDFs and agency notices a 10-analyst team was making by hand, work they'd named as a reason people left.</p>
+                        </div>
+                    </article>
+                    <article class="tile tile-span2 spot rv-scale" style="--d:.08s">
+                        <p class="tile-label">BigQuery client library</p>
+                        <p class="num grad-text" data-count="1" data-suffix="M+">1M+</p>
+                        <p class="unit">records synced from BigQuery into Salesforce, with none lost or duplicated.</p>
+                    </article>
+                    <article class="tile tile-span2 tile-dark spot rv-scale" style="--d:.16s">
+                        <p class="tile-label">Olympix<span class="sep"><span class="visually-hidden">, </span></span>Multi-agent AI pipeline</p>
+                        <p class="num grad-text" data-count="10" data-prefix="$" data-suffix="K">$10K</p>
+                        <p class="unit">exploit reproduced by the four-agent AI pipeline I designed. Ideation, exploitation, parsing, and feedback agents looped on every failure until it matched the published PoC.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ Experience ============ -->
+        <section class="light section" id="experience" aria-labelledby="experience-title" style="padding-top:0">
+            <div class="container">
+                <p class="eyebrow grad-text rv"><span class="eyebrow-num">02</span><span class="sep"><span class="visually-hidden">, </span></span>Experience</p>
+                <h2 class="headline rv" id="experience-title" style="--d:.08s">Where I've shipped.</h2>
+
+                <div class="jobs">
+                    <article class="job">
+                        <div class="job-side rv">
+                            <div class="job-logo" aria-hidden="true"><img class="logo-light" src="assets/img/logos/justworks.svg" alt="" width="635" height="118" loading="lazy" decoding="async"><img class="logo-dark" src="assets/img/logos/justworks-dark.svg" alt="" width="635" height="118" loading="lazy" decoding="async"></div>
+                            <p class="job-dates">Nov 2026 – Present</p>
+                            <h3>Salesforce Developer</h3>
+                            <p class="job-org">Justworks</p>
+                            <p class="job-loc">New York, NY (Hybrid)</p>
+                            <ul class="chips" aria-label="Technologies">
+                                <li>Apex</li><li>Lightning Web Components</li><li>Flow</li><li>REST APIs</li><li>Git</li>
+                            </ul>
+                        </div>
+                        <ol class="feats">
+                            <li><strong>Revenue automation.</strong> I'm learning how the Revenue team works from deal close to billing, and I build and maintain the Apex, LWC, and Flow automation behind it.</li>
+                            <li><strong>Billing integrations.</strong> I connect Salesforce to our billing and finance systems over REST APIs, so the data stays accurate and in sync.</li>
+                            <li><strong>Requirements to releases.</strong> I work with Revenue and Business Operations to turn their requests into Salesforce solutions that scale, shipped through Git and peer review.</li>
+                        </ol>
+                    </article>
+
+                    <article class="job">
+                        <div class="job-side rv">
+                            <div class="job-logo" aria-hidden="true"><img class="logo-light" src="assets/img/logos/nyc-oti.svg" alt="" width="1000" height="205" loading="lazy" decoding="async"><img class="logo-dark" src="assets/img/logos/nyc-oti-dark.svg" alt="" width="1000" height="205" loading="lazy" decoding="async"></div>
+                            <p class="job-dates">Jun 2024 – Sep 2026</p>
+                            <h3>Salesforce Developer &amp; Administrator</h3>
+                            <p class="job-org">NYC Office of Technology and Innovation</p>
+                            <p class="job-loc">Brooklyn, NY (Hybrid)</p>
+                            <ul class="chips" aria-label="Technologies">
+                                <li>Apex</li><li>SOQL</li><li>Flow</li><li>Platform Events</li><li>OAuth 2.0</li><li>BigQuery</li>
+                            </ul>
+                        </div>
+                        <ol class="feats">
+                            <li><strong>A shared BigQuery client.</strong> I built a reusable Apex library that synced 1M+ records into Salesforce with nothing lost or duplicated, using paginated pulls, Batch and Queueable Apex, external-ID upserts, retries, and count checks.</li>
+                            <li><strong>CVE feeds become cases.</strong> I connected an outside vulnerability system through Platform Events and an OAuth 2.0 Connected App, so new CVEs opened cases on their own.</li>
+                            <li><strong>Pull requests, tracked.</strong> My Apex REST webhook linked GitHub pull requests to project tasks, so nobody had to copy them over by hand again.</li>
+                        </ol>
+                    </article>
+
+                    <article class="job">
+                        <div class="job-side rv">
+                            <div class="job-logo mark" aria-hidden="true"><img src="assets/img/logos/olympix.svg" alt="" width="60" height="60" loading="lazy" decoding="async"></div>
+                            <p class="job-dates">Sep 2024 – May 2025</p>
+                            <h3>Software Engineering Intern</h3>
+                            <p class="job-org">Olympix</p>
+                            <p class="job-loc">New York, NY (On-site)</p>
+                            <ul class="chips" aria-label="Technologies">
+                                <li>Solidity</li><li>Forge</li><li>Python</li><li>C#</li><li>OpenAI API</li>
+                            </ul>
+                        </div>
+                        <ol class="feats">
+                            <li><strong>A team of agents.</strong> I designed a multi-agent AI pipeline (ideation, exploitation, output-parsing, and failure-feedback agents) that generated exploits, verified them by execution, and looped until one worked.</li>
+                            <li><strong>Learned C# to ship it.</strong> I picked up C# on the job to port the system from Python into the company's codebase, and built a template so a new agent only needed a role.</li>
+                            <li><strong>Proven at runtime.</strong> My Forge harness tested every generated exploit against 20–30 Solidity contracts, and independently reproduced a documented $10K exploit.</li>
+                        </ol>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ Projects ============ -->
+        <section class="dark" id="projects" aria-labelledby="projects-title">
+            <div class="container projects-head">
+                <p class="eyebrow grad-text rv"><span class="eyebrow-num">03</span><span class="sep"><span class="visually-hidden">, </span></span>Projects</p>
+                <h2 class="headline rv" id="projects-title" style="--d:.08s">Selected work.</h2>
+            </div>
+
+            <div class="gallery" data-scene>
+                <div class="gallery-sticky">
+                    <div class="gallery-track">
+                        <article class="card spot">
+                            <div class="card-art art-dg" aria-hidden="true">
+                                <svg viewBox="0 0 300 150" preserveAspectRatio="xMidYMid meet">
+                                    <text class="dg-cap" x="45" y="16" text-anchor="middle">master list</text>
+                                    <text class="dg-cap" x="157" y="16" text-anchor="middle">split by agency</text>
+                                    <text class="dg-cap" x="258" y="16" text-anchor="middle">notice sent</text>
+                                    <rect class="dg-box dg-hl" x="16" y="58" width="58" height="34" rx="7"/>
+                                    <text class="dg-strong" x="45" y="79" text-anchor="middle">CSV</text>
+                                    <path class="dg-line" d="M74 75 H102 M102 34 V116 M102 34 H124 M102 75 H124 M102 116 H124"/>
+                                    <path class="dg-flow" d="M74 75 H102 V34 H124 M102 75 H124 M102 75 V116 H124"/>
+                                    <rect class="dg-box" x="124" y="22" width="66" height="24" rx="6"/>
+                                    <rect class="dg-box" x="124" y="63" width="66" height="24" rx="6"/>
+                                    <rect class="dg-box" x="124" y="104" width="66" height="24" rx="6"/>
+                                    <text class="dg-text" x="157" y="38" text-anchor="middle">Agency A</text>
+                                    <text class="dg-text" x="157" y="79" text-anchor="middle">Agency B</text>
+                                    <text class="dg-text" x="157" y="120" text-anchor="middle">Agency C</text>
+                                    <path class="dg-line" d="M190 34 H226 M190 75 H226 M190 116 H226"/>
+                                    <path class="dg-flow" d="M190 34 H226 M190 75 H226 M190 116 H226"/>
+                                    <g class="dg-doc"><rect x="226" y="21" width="22" height="27" rx="3"/><rect x="226" y="62" width="22" height="27" rx="3"/><rect x="226" y="103" width="22" height="27" rx="3"/></g>
+                                    <g class="dg-acc"><rect x="230" y="26" width="11" height="2.4" rx="1"/><rect x="230" y="67" width="11" height="2.4" rx="1"/><rect x="230" y="108" width="11" height="2.4" rx="1"/></g>
+                                    <g class="dg-docline"><rect x="230" y="31" width="14" height="1.6"/><rect x="230" y="35" width="10" height="1.6"/><rect x="230" y="72" width="14" height="1.6"/><rect x="230" y="76" width="10" height="1.6"/><rect x="230" y="113" width="14" height="1.6"/><rect x="230" y="117" width="10" height="1.6"/></g>
+                                    <text class="dg-text" x="255" y="38">PDF</text>
+                                    <text class="dg-text" x="255" y="79">PDF</text>
+                                    <text class="dg-text" x="255" y="120">PDF</text>
+                                </svg>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-meta"><span>NYC OTI</span><span>Jul 2025 – Aug 2026</span></p>
+                                <h3>Vulnerability Management Case Automation</h3>
+                                <p>Turns case data into one-page Visualforce PDFs and emails each affected agency its CVE details. A parent/child case pipeline splits the master vulnerability CSV by agency and sends remediation notices once approved.</p>
+                                <ul class="chips" aria-label="Technologies"><li>Apex</li><li>Flow</li><li>Visualforce</li></ul>
+                                <button class="card-more" type="button" data-panel="panel-vm">Read more <span class="chev" aria-hidden="true">→</span></button>
+                            </div>
+                        </article>
+
+                        <article class="card spot">
+                            <div class="card-art art-dg" aria-hidden="true">
+                                <svg viewBox="0 0 300 150" preserveAspectRatio="xMidYMid meet">
+                                    <circle class="dg-orbit" cx="150" cy="75" r="48"/>
+                                    <g class="dg-node" style="--i:0"><rect x="116" y="15" width="68" height="23" rx="11.5"/><text x="150" y="30" text-anchor="middle">Ideate</text></g>
+                                    <g class="dg-node" style="--i:1"><rect x="190" y="64" width="68" height="23" rx="11.5"/><text x="224" y="79" text-anchor="middle">Exploit</text></g>
+                                    <g class="dg-node" style="--i:2"><rect x="116" y="112" width="68" height="23" rx="11.5"/><text x="150" y="127" text-anchor="middle">Parse</text></g>
+                                    <g class="dg-node" style="--i:3"><rect x="42" y="64" width="68" height="23" rx="11.5"/><text x="76" y="79" text-anchor="middle">Feedback</text></g>
+                                    <text class="dg-center" x="150" y="73" text-anchor="middle">↻ until it</text>
+                                    <text class="dg-center" x="150" y="85" text-anchor="middle">works</text>
+                                </svg>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-meta"><span>Olympix</span><span>Sep 2024 – May 2025</span></p>
+                                <h3>Bug PoCer: Web3 Exploit Automation</h3>
+                                <p>Four AI agents that come up with, write, and test smart-contract exploits, feeding their own compiler errors back in until one works. Tested against 20–30 Solidity contracts, it reproduced a documented $10K exploit on its own.</p>
+                                <ul class="chips" aria-label="Technologies"><li>Python</li><li>C#</li><li>Solidity</li><li>Forge</li><li>OpenAI API</li></ul>
+                                <button class="card-more" type="button" data-panel="panel-pocer">Read more <span class="chev" aria-hidden="true">→</span></button>
+                            </div>
+                        </article>
+
+                        <article class="card spot">
+                            <div class="card-art art-dg" aria-hidden="true">
+                                <svg viewBox="0 0 300 150" preserveAspectRatio="xMidYMid meet">
+                                    <text class="dg-cap" x="52" y="16" text-anchor="middle">backend</text>
+                                    <text class="dg-cap" x="150" y="16" text-anchor="middle">viewer's role</text>
+                                    <text class="dg-cap" x="250" y="16" text-anchor="middle">dashboard</text>
+                                    <rect class="dg-box" x="16" y="52" width="72" height="46" rx="7"/>
+                                    <text class="dg-strong" x="52" y="72" text-anchor="middle">Workflow</text>
+                                    <text class="dg-text" x="52" y="86" text-anchor="middle">API</text>
+                                    <path class="dg-line" d="M88 75 H110"/>
+                                    <path class="dg-flow" d="M88 75 H110"/>
+                                    <rect class="dg-box" x="110" y="28" width="80" height="94" rx="8"/>
+                                    <g class="dg-node" style="--i:0"><rect x="120" y="38" width="60" height="20" rx="10"/><text x="150" y="52" text-anchor="middle">Editor</text></g>
+                                    <g class="dg-node" style="--i:1"><rect x="120" y="65" width="60" height="20" rx="10"/><text x="150" y="79" text-anchor="middle">Author</text></g>
+                                    <g class="dg-node" style="--i:2"><rect x="120" y="92" width="60" height="20" rx="10"/><text x="150" y="106" text-anchor="middle">Referee</text></g>
+                                    <path class="dg-line" d="M190 75 H212"/>
+                                    <path class="dg-flow" d="M190 75 H212"/>
+                                    <rect class="dg-box" x="212" y="40" width="76" height="70" rx="7"/>
+                                    <rect class="dg-pill dg-pill-on" x="222" y="52" width="56" height="12" rx="6"/>
+                                    <rect class="dg-pill" x="222" y="69" width="56" height="12" rx="6"/>
+                                    <rect class="dg-pill" x="222" y="86" width="40" height="12" rx="6"/>
+                                </svg>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-meta"><span>NYU<span class="sep"><span class="visually-hidden">, </span></span>Team project</span><span>Jan – May 2025</span></p>
+                                <h3>Journal Editorial Management System</h3>
+                                <p>I built the dashboard for a team editorial platform, showing each editor, author, or referee only the actions their role allows. I also shipped the login and landing pages, tested with Jest and React Testing Library and deployed on Heroku.</p>
+                                <ul class="chips" aria-label="Technologies"><li>React</li><li>Jest</li><li>Axios</li><li>Flask API</li></ul>
+                                <button class="card-more" type="button" data-panel="panel-journal">Read more <span class="chev" aria-hidden="true">→</span></button>
+                            </div>
+                        </article>
+
+                        <article class="card spot">
+                            <div class="card-body">
+                                <p class="card-meta"><span>Archive</span><span>2022 – 2023</span></p>
+                                <h3>Earlier work</h3>
+                                <ul class="earlier">
+                                    <li><span class="yr">2023</span><span><strong>NYU VIP RoboSub.</strong> <span>Navigation for an autonomous underwater vehicle.</span></span></li>
+                                    <li><span class="yr">2023</span><span><strong>Office of the Mayor, MIS.</strong> <span>Imaged and deployed 90+ machines.</span></span></li>
+                                    <li><span class="yr">2023</span><span><strong>CNCF security self-assessment.</strong> <span>With TAG-Security.</span></span></li>
+                                    <li><span class="yr">2023</span><span><strong>Reference monitor.</strong> <span>Repy V2, tested against 500+ attacks.</span></span></li>
+                                    <li><span class="yr">2023</span><span><strong>Java music player.</strong> <span>Thread-concurrent playback.</span></span></li>
+                                    <li><span class="yr">2022</span><span><strong>E20 toolchain.</strong> <span>C++ assembler, simulator, and two-level cache.</span></span></li>
+                                    <li><span class="yr">2022</span><span><strong>Airline reservations.</strong> <span>Flask and MySQL.</span></span></li>
+                                    <li><span class="yr">2022</span><span><strong>Smart glasses.</strong> <span>Raspberry Pi color recognition.</span></span></li>
+                                </ul>
+                            </div>
+                        </article>
+                    </div>
+                    <div class="gallery-progress" aria-hidden="true"><span></span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ Education ============ -->
+        <section class="light section" id="education" aria-labelledby="education-title">
+            <div class="container">
+                <p class="eyebrow grad-text rv"><span class="eyebrow-num">04</span><span class="sep"><span class="visually-hidden">, </span></span>Education</p>
+                <h2 class="headline rv" id="education-title" style="--d:.08s">The foundation.</h2>
+
+                <div class="found">
+                    <article class="tile spot rv-scale">
+                        <p class="tile-label">Degree<span class="sep"><span class="visually-hidden">, </span></span>Sep 2021 – May 2025</p>
+                        <p class="edu-school">New York University</p>
+                        <p class="edu-degree">B.S. in Computer Science</p>
+                        <dl class="edu-facts">
+                            <div><dt>Before NYU</dt><dd>Stuyvesant High School, 2017 – 2021</dd></div>
+                        </dl>
+                    </article>
+                    <article class="tile minor-tile spot rv-scale" style="--d:.1s">
+                        <p class="tile-label">Minors</p>
+                        <p class="minors"><span class="grad-text">Cybersecurity</span><br>&amp; Mathematics</p>
+                    </article>
+                    <article class="tile course-tile spot rv-scale">
+                        <p class="tile-label">Coursework</p>
+                        <ul class="chips course-chips" aria-label="Coursework">
+                            <li>Data Structures &amp; Algorithms</li><li>Object-Oriented Programming</li><li>Operating Systems</li><li>Computer Architecture</li><li>Databases</li><li>Java &amp; Web Design</li><li>Computer, Application &amp; Network Security</li><li>Networking</li><li>Software Engineering</li><li>Artificial Intelligence</li>
+                        </ul>
+                    </article>
+                </div>
+            </div>
+
+            <div class="toolkit">
+                <p class="container toolkit-head rv">Toolkit</p>
+                <div class="marquee" style="--dur:40s">
+                    <div class="marquee-track">
+                        <ul aria-label="Languages">
+                            <li>Apex</li><li>Python</li><li>Java</li><li>JavaScript</li><li>C#</li><li>C/C++</li><li>SQL</li><li>SOQL</li><li>Solidity</li><li>HTML/CSS</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="marquee rev" style="--dur:55s">
+                    <div class="marquee-track">
+                        <ul aria-label="Frameworks and tools">
+                            <li>Salesforce</li><li>Batch &amp; Queueable Apex</li><li>Apex REST</li><li>Lightning Web Components</li><li>Flow</li><li>Platform Events</li><li>Visualforce</li><li>Named Credentials</li><li>OAuth 2.0</li><li>REST APIs</li><li>React</li><li>Jest</li><li>Flask</li><li>Heroku</li><li>Git/GitHub</li><li>Forge (Foundry)</li><li>Docker</li><li>OpenAI API</li><li>Excel</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ Contact ============ -->
+        <section class="dark contact" id="contact" data-scene="enter" aria-labelledby="contact-title">
+            <div class="contact-glow" aria-hidden="true"></div>
+            <div class="container">
+                <h2 class="eyebrow grad-text rv" id="contact-title"><span class="eyebrow-num">05</span><span class="sep"><span class="visually-hidden">, </span></span>Contact</h2>
+                <p class="contact-sub rv">Always happy to connect with people who enjoy making technology work better for the people using it.</p>
+                <div class="contact-actions rv" style="--d:.1s">
+                    <span class="email-group">
+                        <a class="email-link" href="mailto:sunnyli2003@gmail.com">sunnyli2003@gmail.com</a>
+                        <button class="copy-btn" type="button" data-copy="sunnyli2003@gmail.com" aria-label="Copy email address" title="Copy email address">
+                            <svg class="i-copy" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>
+                            <svg class="i-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+                            <span class="copy-label">Copy</span>
+                        </button>
+                        <span class="visually-hidden copy-status" aria-live="polite"></span>
+                    </span>
+                    <a class="link" href="Sunny-Li-Resume.pdf" target="_blank" rel="noopener"><svg class="lk-ic lk-stroke" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>Résumé <span class="chev" aria-hidden="true">›</span></a>
+                    <a class="link" href="https://github.com/sunnnnyli" target="_blank" rel="noopener"><svg class="lk-ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>GitHub <span class="chev" aria-hidden="true">›</span></a>
+                    <a class="link" href="https://www.linkedin.com/in/sunnyli2003" target="_blank" rel="noopener"><svg class="lk-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>LinkedIn <span class="chev" aria-hidden="true">›</span></a>
+                </div>
+                <p class="reply-note rv" style="--d:.16s">I usually reply within a day.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container footer-inner">
+            <p>Designed and built by Sunny Li<span class="sep"><span class="visually-hidden">, </span></span>© <span id="year">2026</span></p>
+            <p class="footer-meta">Last updated <span id="updated">October 2026</span></p>
+            <a href="#top">Back to top ↑</a>
+        </div>
+    </footer>
+
+    <a class="to-top" href="#top" aria-label="Back to top">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5.5 11.5L12 5l6.5 6.5"/></svg>
+    </a>
+
+    <dialog class="panel" id="panel-vm" aria-labelledby="panel-vm-title">
+        <div class="panel-inner">
+            <div class="panel-top">
+                <p class="panel-meta">NYC OTI<span class="sep"><span class="visually-hidden">, </span></span>Jul 2025 – Aug 2026</p>
+                <button class="panel-close" type="button" aria-label="Close">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                </button>
+            </div>
+            <h2 id="panel-vm-title">Vulnerability Management Case Automation</h2>
+                <h3>The problem</h3>
+                <p>Each of the 10 analysts on the vulnerability management team spent about 15 hours a week making PDF notices and emailing agencies by hand. The team named that work as one of the reasons people left.</p>
+                <h3>What I built</h3>
+                <p>Apex and Flow automation that turns case data into a one-page Visualforce PDF, attaches it to the case, and emails each affected agency its CVE details. Alongside it, a parent/child case pipeline that splits the master vulnerability CSV into agency-scoped files, attaches each one to its child case when the parent is approved, and sends remediation notices to the people who need them.</p>
+                <h3>The result</h3>
+                <p>About 150 hours a week given back across the team, roughly 15 per analyst.</p>
+            <ul class="chips" aria-label="Technologies"><li>Apex</li><li>Flow</li><li>Visualforce</li><li>Salesforce</li></ul>
+        </div>
+    </dialog>
+
+    <dialog class="panel" id="panel-pocer" aria-labelledby="panel-pocer-title">
+        <div class="panel-inner">
+            <div class="panel-top">
+                <p class="panel-meta">Olympix<span class="sep"><span class="visually-hidden">, </span></span>Sep 2024 – May 2025</p>
+                <button class="panel-close" type="button" aria-label="Close">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                </button>
+            </div>
+            <h2 id="panel-pocer-title">Bug PoCer: Web3 Exploit Automation</h2>
+                <h3>The goal</h3>
+                <p>Automate the slow, manual part of smart-contract audits: writing a working proof-of-concept exploit for a suspected bug.</p>
+                <h3>What I built</h3>
+                <p>A multi-agent AI pipeline I designed, with ideation, exploitation, output-parsing, and failure-feedback agents run by a status-driven orchestration loop. When an attempt failed, compiler errors and static-analyzer output were fed back into the next one. I learned C# on the job to port the system from Python into the company's codebase, and built an agent template so a new agent only needed a role. A Forge harness tested every generated exploit at runtime against a corpus of 20–30 Solidity contracts.</p>
+                <h3>The result</h3>
+                <p>The pipeline independently reproduced a documented exploit behind a $10K loss, confirmed against the published proof of concept.</p>
+            <ul class="chips" aria-label="Technologies"><li>Python</li><li>C#</li><li>Solidity</li><li>Forge</li><li>OpenAI API</li></ul>
+        </div>
+    </dialog>
+
+    <dialog class="panel" id="panel-journal" aria-labelledby="panel-journal-title">
+        <div class="panel-inner">
+            <div class="panel-top">
+                <p class="panel-meta">NYU<span class="sep"><span class="visually-hidden">, </span></span>Team project<span class="sep"><span class="visually-hidden">, </span></span>Jan – May 2025</p>
+                <button class="panel-close" type="button" aria-label="Close">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                </button>
+            </div>
+            <h2 id="panel-journal-title">Journal Editorial Management System</h2>
+                <h3>The project</h3>
+                <p>A collaborative editorial platform for managing manuscripts through review, built as a team at NYU.</p>
+                <h3>What I built</h3>
+                <p>The dashboard: it fetches each manuscript's valid actions from the backend workflow API, shows only the ones the viewer's role (editor, author, or referee) allows, and sends transitions through an Axios client with inline error handling. I also built the login flow and landing page, with Jest and React Testing Library component tests, shipped through a branch-and-merge workflow to a deployed Heroku app.</p>
+            <ul class="chips" aria-label="Technologies"><li>React</li><li>Jest</li><li>React Testing Library</li><li>Axios</li><li>Flask API</li><li>Heroku</li></ul>
+        </div>
+    </dialog>
+</body>
+</html>

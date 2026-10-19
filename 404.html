@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page not found | Sunny Li</title>
+    <meta name="robots" content="noindex">
+    <link rel="icon" href="/favicon.ico" sizes="32x32">
+    <link rel="icon" href="/assets/icons/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&family=Instrument+Sans:wght@500&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&family=Instrument+Sans:wght@500&display=swap"></noscript>
+    <script>
+        // Same theme choice as the portfolio (shared on the same site)
+        (() => {
+            let t = null;
+            try { t = localStorage.getItem('theme'); } catch (e) {}
+            if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            document.documentElement.dataset.theme = t;
+        })();
+    </script>
+    <style>
+        /* Light: Slate & coral (also the no-script default) */
+        :root,
+        :root[data-theme="light"] {
+            --bg: #f2f4f6;
+            --bg-rgb: 242, 244, 246;
+            --bg-alt: #e8ebef;
+            --surface: #fafbfc;
+            --line: #d4d9df;
+            --text: #242a31;
+            --text-2: #59616c;
+            --text-3: #5d6570;
+            --ink-rgb: 36, 42, 49;
+            --accent: #a84a33;
+            --accent-rgb: 168, 74, 51;
+            --accent-ink: #ffffff;
+            --emph-bg: #242a31;
+            --emph-text: #eef1f4;
+            --emph-text-2: #b4bcc6;
+            --emph-accent: #f0a08a;
+            --emph-ink-rgb: 238, 241, 244;
+            --art-bg: #e3e7ec;
+            --sheet: #ffffff;
+            --sheet-line: #dde2e8;
+            --glow-2-rgb: 110, 125, 145;
+            --glow-cool-rgb: 110, 135, 150;
+            --ring-2: #d98a76;
+            --ring-3: #8b95a3;
+            color-scheme: light;
+        }
+
+        /* Dark: Graphite & honey */
+        :root[data-theme="dark"] {
+            --bg: #1c1c1d;
+            --bg-rgb: 28, 28, 29;
+            --bg-alt: #232325;
+            --surface: #29292c;
+            --line: #38373a;
+            --text: #e6e4e0;
+            --text-2: #aaa7a1;
+            --text-3: #9a9791;
+            --ink-rgb: 230, 228, 224;
+            --accent: #e0b25c;
+            --accent-rgb: 224, 178, 92;
+            --accent-ink: #1c1c1d;
+            --emph-bg: #141415;
+            --emph-text: #e6e4e0;
+            --emph-text-2: #aaa7a1;
+            --emph-accent: #e0b25c;
+            --emph-ink-rgb: 230, 228, 224;
+            --art-bg: #232326;
+            --sheet: #ece9e3;
+            --sheet-line: #d6d1c7;
+            --glow-2-rgb: 150, 140, 125;
+            --glow-cool-rgb: 120, 140, 150;
+            --ring-2: #c99a4e;
+            --ring-3: #7d6a4c;
+            color-scheme: dark;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme]) {
+                --bg: #1c1c1d;
+                --bg-rgb: 28, 28, 29;
+                --bg-alt: #232325;
+                --surface: #29292c;
+                --line: #38373a;
+                --text: #e6e4e0;
+                --text-2: #aaa7a1;
+                --text-3: #9a9791;
+                --ink-rgb: 230, 228, 224;
+                --accent: #e0b25c;
+                --accent-rgb: 224, 178, 92;
+                --accent-ink: #1c1c1d;
+                --emph-bg: #141415;
+                --emph-text: #e6e4e0;
+                --emph-text-2: #aaa7a1;
+                --emph-accent: #e0b25c;
+                --emph-ink-rgb: 230, 228, 224;
+                --art-bg: #232326;
+                --sheet: #ece9e3;
+                --sheet-line: #d6d1c7;
+                --glow-2-rgb: 150, 140, 125;
+                --glow-cool-rgb: 120, 140, 150;
+                --ring-2: #c99a4e;
+                --ring-3: #7d6a4c;
+                color-scheme: dark;
+            }
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            display: grid;
+            place-items: center;
+            min-height: 100vh;
+            min-height: 100svh;
+            margin: 0;
+            padding: 1.5rem 1rem;
+            background:
+                radial-gradient(60% 50% at 80% 10%, rgba(var(--accent-rgb), 0.12), transparent 70%),
+                var(--bg);
+            color: var(--text);
+            font-family: "Newsreader", Georgia, serif;
+        }
+
+        main { width: min(36rem, 100%); }
+
+        .code {
+            margin: 0 0 1rem;
+            font: 500 0.8rem/1 "Instrument Sans", system-ui, sans-serif;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(2.6rem, 8vw, 4.2rem);
+            font-weight: 400;
+            letter-spacing: -0.02em;
+            line-height: 1.05;
+        }
+
+        h1 em { color: var(--accent); }
+
+        p.lede {
+            margin: 1.1rem 0 2rem;
+            font-size: clamp(1.1rem, 2.2vw, 1.3rem);
+            line-height: 1.5;
+            color: var(--text-2);
+        }
+
+        a.home {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.75rem 1.4rem;
+            border-radius: 980px;
+            background: var(--text);
+            color: var(--bg);
+            font: 500 1rem "Instrument Sans", system-ui, sans-serif;
+            text-decoration: none;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        a.home:hover { background: var(--accent); color: var(--accent-ink); }
+
+        a.home:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    </style>
+</head>
+<body>
+    <main>
+        <p class="code">404</p>
+        <h1>This page <em>wandered off.</em></h1>
+        <p class="lede">The link might be mistyped, or the page may have moved. Everything I've built is one click away.</p>
+        <a class="home" href="/">Back to the portfolio <span aria-hidden="true">→</span></a>
+    </main>
+</body>
+</html>
