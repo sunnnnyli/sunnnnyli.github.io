@@ -1,0 +1,54 @@
+# Runs on every push to main (and on pull requests) so a broken link or a slower,
+# less accessible page gets caught before anyone visits it.
+name: Site checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push replaces checks still running for an older one.
+concurrency:
+  group: site-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  links:
+    name: Broken links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Checks every link and file reference in the pages and README.
+      # LinkedIn blocks automated checks, and links back to this site are skipped
+      # because a just-pushed file isn't live yet; the same files are checked locally instead.
+      - name: Check links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --no-progress
+            --root-dir ${{ github.workspace }}
+            --exclude '^https?://(www\.)?linkedin\.com'
+            --exclude '^https://sunnnnyli\.github\.io'
+            --max-retries 3
+            --accept '200..=299,403,429'
+            './*.html'
+            './README.md'
+
+  lighthouse:
+    name: Lighthouse
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Audits the page three times and fails if accessibility, best practices,
+      # or SEO drop below 90. Performance only warns, since shared runners vary.
+      - name: Audit with Lighthouse
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          configPath: ./.github/lighthouserc.json
+          uploadArtifacts: true
