@@ -143,14 +143,26 @@
 .r-sub { margin-top: 0.1rem; }
 .r-role { font-style: italic; color: var(--text-2); }
 
-/* No bullet marks: a thin rule runs beside each list instead */
 .r-points {
     display: grid;
     gap: 0.3rem;
     margin-top: 0.55rem;
-    padding-left: 0.9rem;
-    border-left: 1px solid var(--line);
     color: var(--text-2);
+}
+
+/* Each point starts with a light dash, centered on its first line */
+.r-points li { position: relative; padding-left: 1.15em; }
+
+.r-points li::before {
+    content: '';
+    position: absolute;
+    left: 0.1em;
+    top: 0.78em;
+    top: calc(0.5lh - 0.1em);
+    width: 0.6em;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.6;
 }
 
 .r-skills { display: grid; gap: 0.45rem; }
@@ -207,7 +219,8 @@
     .r-item + .r-item { margin-top: 5.5pt; }
     .r-item h3 { font-size: 10.2pt; }
     .r-where, .r-when { font-size: 8.3pt; }
-    .r-points { gap: 1pt; margin-top: 2.5pt; padding-left: 7pt; }
+    .r-points { gap: 1pt; margin-top: 2.5pt; }
+    .r-points li { padding-left: 1.05em; }
     .r-skills { gap: 1.5pt; }
     .r-item, .r-points li { break-inside: avoid; }
 }

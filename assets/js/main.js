@@ -1326,6 +1326,16 @@
         window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
     }
 
+    /* ---------- Pinyin over the proverb ---------- */
+    // Hovering the characters shows the pinyin (in CSS). Touch screens can't hover, so there a tap toggles it,
+    // and a tap anywhere else puts it away.
+    const proverb = document.querySelector('.quote-zh');
+    if (proverb) {
+        const touchTap = (e) => (e.pointerType ? e.pointerType !== 'mouse' : !matchMedia('(hover: hover)').matches);
+        proverb.addEventListener('click', (e) => { if (touchTap(e)) proverb.classList.toggle('show'); });
+        document.addEventListener('click', (e) => { if (!proverb.contains(e.target)) proverb.classList.remove('show'); });
+    }
+
     /* ---------- Coming back from the résumé ---------- */
     // The page remembers where it was when the visitor leaves. If they come back through the résumé's Back link
     // without the browser's own Back (see resume.js), it puts them at the same spot, again once the fonts settle.

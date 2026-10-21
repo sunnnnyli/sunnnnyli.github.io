@@ -262,6 +262,12 @@ a { color: inherit; text-decoration: none; }
 
 ::selection { background: var(--accent); color: var(--accent-ink); }
 
+/* The pages aren't for highlighting and copying. What people reasonably want to copy stays selectable:
+   the email address, anything typed into, and the résumé page. Photos and the signature don't drag off either. */
+body { -webkit-user-select: none; user-select: none; }
+.email-link, input, textarea, .resume-page { -webkit-user-select: text; user-select: text; }
+img, svg { -webkit-user-drag: none; }
+
 .container {
     width: min(var(--max), 100% - 2 * var(--gutter));
     margin-inline: auto;
@@ -749,20 +755,82 @@ html:not(.motion) .dot-grid canvas { display: none; }
     color: var(--text);
 }
 
-/* The pinyin sits over each character; its room is kept, so the line doesn't move when it shows */
-.quote-zh rt {
-    font-family: var(--font);
-    font-size: 0.42em;
-    letter-spacing: 0;
-    color: var(--accent);
-    opacity: 0;
+/* Pinyin: each character carries its syllable just above it, hidden and taking no room. When it shows (hover,
+   a tap on touch screens, or keyboard focus), the characters and translation slide down to make room and the
+   pinyin fades in; they slide back when it hides. It's a slide, so nothing else on the page moves. */
+.hero-quote { --py-room: 1.1rem; }
+.quote-zh { position: relative; }
+
+/* The characters' hover area reaches up into the room they slide into, so the pointer stays on them */
+.quote-zh::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: var(--py-room);
 }
 
-.quote-zh:hover rt,
-.quote-zh:focus rt { opacity: 1; }
+.zh-ch { position: relative; margin-right: 0.14em; letter-spacing: 0; }
+
+.py {
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    margin-bottom: 0.1em;
+    font-family: var(--serif);
+    font-size: max(0.44em, 0.62rem);
+    line-height: 1;
+    white-space: nowrap;
+    color: var(--accent);
+    opacity: 0;
+    transform: translateX(-50%);
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Phones show the pinyin as one line above the characters instead (there's no room to sit a syllable over each) */
+.py-line {
+    display: none;
+    position: absolute;
+    left: 0.45rem;
+    bottom: 100%;
+    margin-bottom: 0.15rem;
+    font-family: var(--serif);
+    font-size: 0.66rem;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    color: var(--accent);
+    opacity: 0;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* The font has no "ǎ", so its own caron sits on an "a" */
+.caron { position: relative; }
+
+.caron::after {
+    content: "ˇ";
+    position: absolute;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+}
+
+@media (hover: hover) {
+    .quote-zh:hover :is(.py, .py-line) { opacity: 1; }
+    .hero-quote:has(.quote-zh:hover) blockquote { transform: translateY(var(--py-room)); }
+}
+
+.quote-zh.show :is(.py, .py-line),
+.quote-zh:focus-visible :is(.py, .py-line) { opacity: 1; }
+.hero-quote:has(.quote-zh.show) blockquote,
+.hero-quote:has(.quote-zh:focus-visible) blockquote { transform: translateY(var(--py-room)); }
 .quote-zh:focus { outline: none; }
 .quote-zh:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; }
-.motion .quote-zh rt { transition: opacity 0.35s var(--ease); }
+.motion .hero-quote blockquote { transition: transform 0.4s var(--ease); }
+.motion :is(.py, .py-line) { transition: opacity 0.35s var(--ease); }
 
 .quote-en {
     margin-top: 0.55rem;
@@ -2702,13 +2770,18 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
 
 @media (max-width: 760px) {
     .hero-sticky { align-items: flex-start; padding-top: calc(var(--nav-h) + 1rem); }
-    .hero-layout { grid-template-columns: 1fr; gap: 1rem; }
+    .hero-layout { grid-template-columns: 1fr; gap: 1.6rem; }
     .hero-photo-wrap { order: -1; flex-direction: row; align-items: center; gap: 1rem; }
     .hero-photo { flex: none; width: 5.25rem; }
     .hero-quote { flex: 1; width: auto; text-align: left; }
-    .quote-zh { font-size: 1.15rem; }
+    /* The characters and lead-in shrink a little with the screen so each stays on one line, even at 320px */
+    .quote-zh { margin-right: -0.06em; font-size: min(1.15rem, 5vw); letter-spacing: 0.06em; white-space: nowrap; }
+    .zh-ch { margin-right: 0.06em; }
+    .py { display: none; }
+    .py-line { display: block; }
+    .hero-quote { --py-room: 1.15rem; }
     .quote-en { margin-top: 0.3rem; font-size: 0.82rem; line-height: 1.35; }
-    .quote-lead { margin-bottom: 0; font-size: 0.8rem; }
+    .quote-lead { margin-bottom: 0; font-size: min(0.8rem, 2.95vw); white-space: nowrap; }
     .hero-sub { margin-top: 0.9rem; }
     .hero-lede { margin-top: 0.75rem; font-size: 1rem; line-height: 1.5; }
     .hero-actions { gap: 0.9rem 1.25rem; }
