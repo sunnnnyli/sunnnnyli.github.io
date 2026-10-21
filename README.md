@@ -21,6 +21,8 @@ I built it from scratch with plain HTML, CSS, and JavaScript. There's no framewo
 | **Light and dark themes** | It follows your system setting, and the toggle remembers what you pick |
 | **Motion you can turn off** | The scroll animations respect your reduced-motion setting, and there's a switch in the nav too |
 | **Smooth on phones** | Touch screens get lighter effects, so scrolling never feels sluggish |
+| **Skills linked to work** | Pick a skill in the toolkit to see the roles and projects where I used it |
+| **Little details** | Project cards open into their write-ups, the timeline fills as you scroll, and my signature signs the top bar and footer. There's also a secret if you know an old cheat code |
 | **Accessible** | A skip link, native dialogs, keyboard focus styles, and alt text |
 | **Print-friendly** | Printing the page gives you a clean, light copy |
 | **Shares nicely** | Link previews, search-friendly structured data, a sitemap, and a friendly 404 page |
@@ -32,8 +34,8 @@ index.html              the page itself
 404.html                where you land if a link is wrong
 Sunny-Li-Resume.pdf     my résumé
 assets/css/styles.css   styles for both themes
-assets/js/main.js       scroll effects, theme and motion toggles, copy-email button
-assets/img/             my photo, company logos, and the link-preview image
+assets/js/main.js       scroll effects, theme and motion toggles, the Ctrl+K menu, copy-email button
+assets/img/             my photo, company logos, the paper grain, and the link-preview image
 assets/icons/           favicons and app icons
 ```
 

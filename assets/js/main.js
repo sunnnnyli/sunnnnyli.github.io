@@ -6,6 +6,8 @@
     // so the script only measures scenes and cards itself where that isn't supported.
     const sda = !!(window.CSS && CSS.supports && CSS.supports('animation-timeline', 'view()'));
     const isMac = /Mac|iPhone|iPad/i.test((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '');
+    // Tilt only follows a mouse or trackpad
+    const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
 
     document.getElementById('year').textContent = new Date().getFullYear();
 
@@ -32,11 +34,25 @@
     });
 
     const nav = document.querySelector('.nav');
+    // The bar's full height. It slims down once the page scrolls, but sections are still measured against the full bar.
+    const NAV_H = nav.offsetHeight;
+    const jobsEl = document.querySelector('.jobs');
+    const jobEls = [...jobsEl.querySelectorAll('.job')];
     const scenes = [...document.querySelectorAll('[data-scene]')];
     const gallery = document.querySelector('.gallery');
     const cards = [...document.querySelectorAll('.card')];
 
     const fmt = (el, v) => `${el.dataset.prefix || ''}${Math.round(v).toLocaleString('en-US')}${el.dataset.suffix || ''}`;
+
+    // Toolkit skills become buttons before the marquees copy them (see "Toolkit: where each skill was used")
+    document.querySelectorAll('.marquee-track li').forEach((li) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'skill';
+        b.setAttribute('aria-pressed', 'false');
+        b.textContent = li.textContent;
+        li.replaceChildren(b);
+    });
 
     /* ---------- Motion-only setup (runs once, the first time motion is on) ---------- */
     let motionReady = false;
@@ -108,6 +124,8 @@
             copy.setAttribute('aria-hidden', 'true');
             copy.removeAttribute('aria-label');
             track.append(copy);
+            // The copies are only there for the loop, so keyboard focus skips their buttons
+            track.querySelectorAll('[aria-hidden="true"] button').forEach((b) => { b.tabIndex = -1; });
         });
 
         // Reveal on enter
@@ -200,15 +218,24 @@
     // Section positions, tab positions and page height only change when the layout does,
     // so they're measured then (see the ResizeObserver below), never while scrolling.
     let lay = null;
+    let lastTlLen = null;
     const measureLayout = () => {
         const y = window.scrollY;
-        const navH = nav.offsetHeight;
+        // Experience timeline: each dot's center on the page, read from the CSS so the two always agree
+        const dot = getComputedStyle(jobEls[0], '::before');
+        const dotOff = parseFloat(dot.top) + parseFloat(dot.height) / 2;
         lay = {
             docH: document.documentElement.scrollHeight,
             width: navTrack.offsetWidth,
-            secTops: checkpoints.map(({ sec }) => sec.getBoundingClientRect().top + y - navH),
+            secTops: checkpoints.map(({ sec }) => sec.getBoundingClientRect().top + y - NAV_H),
             tabX: checkpoints.map(({ a }) => a.offsetLeft + a.offsetWidth / 2),
+            dots: jobEls.map((job) => job.getBoundingClientRect().top + y + dotOff),
         };
+        const len = `${(lay.dots[lay.dots.length - 1] - lay.dots[0]).toFixed(1)}px`;
+        if (len !== lastTlLen) {
+            lastTlLen = len;
+            jobsEl.style.setProperty('--tl-len', len);
+        }
     };
 
     const measureTrack = (y, max) => {
@@ -252,6 +279,8 @@
 
     let ticking = false;
     let lastScroll = null;
+    let lastSlim = null;
+    let lastTl = null;
     const frame = () => {
         ticking = false;
         const vh = window.innerHeight;
@@ -278,6 +307,28 @@
         }
 
         toTop.classList.toggle('show', y > vh * 1.2);
+        // The top bar slims once the page moves and grows back at the very top
+        const slim = y > 40;
+        if (slim !== lastSlim) {
+            lastSlim = slim;
+            nav.classList.toggle('slim', slim);
+        }
+        // Experience timeline: the line fills down to the middle of the screen, and each dot it reaches lights up
+        if (motion) {
+            const { dots } = lay;
+            const line = y + vh * 0.5;
+            const tl = clamp((line - dots[0]) / Math.max(1, dots[dots.length - 1] - dots[0])).toFixed(4);
+            if (tl !== lastTl) {
+                lastTl = tl;
+                jobsEl.style.setProperty('--tl', tl);
+            }
+            jobEls.forEach((job, i) => {
+                const lit = line >= dots[i];
+                if (job._lit === lit) return;
+                job._lit = lit;
+                job.classList.toggle('lit', lit);
+            });
+        }
         const scroll = max > 0 ? (y / max).toFixed(4) : '0';
         if (scroll !== lastScroll) {
             lastScroll = scroll;
@@ -317,7 +368,7 @@
         if (on === motion) return;
 
         // Pinned scenes change the page height, so remember what's at the top of the screen and put it back.
-        const navH = nav.offsetHeight;
+        const navH = NAV_H;
         const mark = [...document.querySelectorAll('main h1, main h2, .story-text, .tile, .job-side, .feats li, .card, .marquee, .contact-sub')]
             .find((el) => el.getBoundingClientRect().bottom > navH);
         const before = mark ? mark.getBoundingClientRect().top : 0;
@@ -354,14 +405,64 @@
     const toTop = document.querySelector('.to-top');
 
     /* ---------- Project panels ---------- */
+    // With motion on, a card grows into its write-up and shrinks back into place on close (a view transition).
+    // Without view transitions, or when the card isn't on screen (opened from the command menu), the panel slides in.
+    const panelCard = new Map();
+    const onScreen = (el) => {
+        const r = el.getBoundingClientRect();
+        return r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth;
+    };
+    let morphing = false;
+    const morph = (from, to, update) => {
+        if (morphing || !motion || !document.startViewTransition) {
+            update();
+            return;
+        }
+        morphing = true;
+        root.classList.add('vt-morph');
+        from.classList.add('morphing');
+        const vt = document.startViewTransition(() => {
+            from.classList.remove('morphing');
+            update();
+            to.classList.add('morphing');
+        });
+        const done = () => {
+            to.classList.remove('morphing');
+            root.classList.remove('vt-morph');
+            morphing = false;
+        };
+        vt.ready.catch(() => {});
+        vt.finished.then(done, done);
+    };
+    const openPanel = (panel) => {
+        if (panel.open) return;
+        const card = panelCard.get(panel);
+        const grow = motion && !!document.startViewTransition && !morphing && !!card && onScreen(card);
+        panel.classList.toggle('grown', grow);
+        if (grow) morph(card, panel, () => panel.showModal());
+        else panel.showModal();
+    };
+    const closePanel = (panel) => {
+        if (!panel.open) return;
+        const card = panelCard.get(panel);
+        if (panel.classList.contains('grown') && card && onScreen(card)) morph(panel, card, () => panel.close());
+        else panel.close();
+    };
     document.querySelectorAll('[data-panel]').forEach((btn) => {
         const panel = document.getElementById(btn.dataset.panel);
-        btn.addEventListener('click', () => panel.showModal());
+        panelCard.set(panel, btn.closest('.card'));
+        btn.addEventListener('click', () => openPanel(panel));
     });
     document.querySelectorAll('.panel').forEach((panel) => {
-        panel.querySelector('.panel-close').addEventListener('click', () => panel.close());
+        panel.querySelector('.panel-close').addEventListener('click', () => closePanel(panel));
         // A click on the dimmed backdrop (outside the sheet) closes it too.
-        panel.addEventListener('click', (e) => { if (e.target === panel) panel.close(); });
+        panel.addEventListener('click', (e) => { if (e.target === panel) closePanel(panel); });
+        // Esc shrinks it back into its card as well
+        panel.addEventListener('cancel', (e) => {
+            if (!panel.classList.contains('grown')) return;
+            e.preventDefault();
+            closePanel(panel);
+        });
     });
 
     /* ---------- Footer: last updated ---------- */
@@ -639,7 +740,7 @@
             restoreTo = null; // focus moves to the section or panel instead
             closeCmdk();
             if (cmd.nav) goTo(cmd.nav);
-            else cmd.panel.showModal();
+            else openPanel(cmd.panel);
             return;
         }
         const message = await cmd.run();
@@ -675,10 +776,335 @@
     if (isMac) document.querySelectorAll('.kbd-mod').forEach((k) => { k.textContent = '⌘'; });
     if (kbdHint && matchMedia('(pointer: fine)').matches) kbdHint.hidden = false;
 
+    /* ---------- Signature hand-off ---------- */
+    // Once the footer's signature is on screen it takes over: the top bar shows my name in type for the moment,
+    // and the footer's signature signs itself. Scrolling back up hands the signature back to the top bar.
+    const footSig = document.querySelector('.footer-name .sig');
+    if (footSig) new IntersectionObserver(([entry]) => root.classList.toggle('handoff', entry.isIntersecting)).observe(footSig);
+
+    /* ---------- Gentle 3D tilt on the project cards and the portrait ---------- */
+    const tilt = (el, max) => {
+        el.addEventListener('pointermove', (e) => {
+            if (!motion || !finePointer.matches) return;
+            const r = el.getBoundingClientRect();
+            const x = clamp((e.clientX - r.left) / r.width) - 0.5;
+            const y = clamp((e.clientY - r.top) / r.height) - 0.5;
+            el.style.setProperty('--rx', `${(-y * max).toFixed(2)}deg`);
+            el.style.setProperty('--ry', `${(x * max).toFixed(2)}deg`);
+            el.style.setProperty('--gx', `${((x + 0.5) * 100).toFixed(1)}%`);
+            el.style.setProperty('--gy', `${((y + 0.5) * 100).toFixed(1)}%`);
+            el.classList.add('tilted');
+        });
+        el.addEventListener('pointerleave', () => {
+            el.classList.remove('tilted');
+            el.style.setProperty('--rx', '0deg');
+            el.style.setProperty('--ry', '0deg');
+        });
+    };
+    cards.forEach((card) => tilt(card, 5));
+    const photo = document.querySelector('.hero-photo');
+    if (photo) tilt(photo, 10);
+
+    /* ---------- Page dots for the swipeable project row ---------- */
+    // Shown when the row scrolls sideways on its own (phones, or with motion off) instead of following the page.
+    const row = gallery.querySelector('.gallery-sticky');
+    const dotRow = gallery.querySelector('.gallery-dots');
+    const offCenter = (card) => {
+        const r = row.getBoundingClientRect();
+        const c = card.getBoundingClientRect();
+        return c.left + c.width / 2 - (r.left + r.width / 2);
+    };
+    const scrollRowTo = (card) => {
+        if (pinnedDist === null) row.scrollBy({ left: offCenter(card), behavior: motion ? 'smooth' : 'auto' });
+    };
+    let dotQueued = false;
+    let currentDot = -1;
+    // Where the last click is headed, so quick repeat clicks on an arrow keep stepping while the row is still sliding
+    let aimed = null;
+    let aimTimer;
+    const aimAt = (i) => {
+        aimed = clamp(i, 0, cards.length - 1);
+        clearTimeout(aimTimer);
+        aimTimer = setTimeout(() => { aimed = null; }, 900);
+        scrollRowTo(cards[aimed]);
+    };
+    const arrow = (dir, label, path) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'gallery-arrow';
+        b.setAttribute('aria-label', label);
+        b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${path}"/></svg>`;
+        b.addEventListener('click', () => aimAt((aimed !== null ? aimed : currentDot) + dir));
+        return b;
+    };
+    const prevBtn = arrow(-1, 'Previous project', 'M15 5l-7 7 7 7');
+    const nextBtn = arrow(1, 'Next project', 'M9 5l7 7-7 7');
+    const dotList = document.createElement('span');
+    dotList.className = 'gallery-dot-list';
+    const pageDots = cards.map((card, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'gallery-dot';
+        b.setAttribute('aria-label', `Project ${i + 1} of ${cards.length}: ${card.querySelector('h3').textContent.trim()}`);
+        b.addEventListener('click', () => aimAt(i));
+        dotList.append(b);
+        return b;
+    });
+    dotRow.append(prevBtn, dotList, nextBtn);
+    const syncDots = () => {
+        dotQueued = false;
+        let best = 0;
+        let bestOff = Infinity;
+        cards.forEach((card, i) => {
+            const off = Math.abs(offCenter(card));
+            if (off < bestOff) {
+                bestOff = off;
+                best = i;
+            }
+        });
+        if (best === currentDot) return;
+        currentDot = best;
+        pageDots.forEach((d, i) => {
+            if (i === best) d.setAttribute('aria-current', 'true');
+            else d.removeAttribute('aria-current');
+        });
+        // At either end the arrow dims but keeps focus, so keyboard users aren't dropped back to the top of the page
+        prevBtn.setAttribute('aria-disabled', String(best === 0));
+        nextBtn.setAttribute('aria-disabled', String(best === cards.length - 1));
+    };
+    const queueDots = () => {
+        if (dotQueued) return;
+        dotQueued = true;
+        requestAnimationFrame(syncDots);
+    };
+    row.addEventListener('scroll', queueDots, { passive: true });
+    window.addEventListener('resize', queueDots);
+    syncDots();
+
+    /* ---------- Toolkit: where each skill was used ---------- */
+    // Picking a skill marks the roles and projects that used it (each lists its skills in data-skills)
+    // and lists them under the toolkit as links that jump there.
+    const work = [...document.querySelectorAll('[data-skills]')].map((el) => ({
+        el,
+        name: el.dataset.name,
+        kind: el.classList.contains('job') ? 'Role' : 'Project',
+        skills: el.dataset.skills.split(',').map((x) => x.trim()),
+    }));
+    // Toolkit names that the chips on the page spell differently
+    const chipNames = { 'Git/GitHub': ['Git'], 'Forge (Foundry)': ['Forge'], Flask: ['Flask API'] };
+    // What this site itself is built with
+    const siteSkills = ['HTML/CSS', 'JavaScript'];
+    const siteSource = 'https://github.com/sunnnnyli/sunnnnyli.github.io';
+    const hits = document.querySelector('.skill-hits');
+    const toolkitHint = document.querySelector('.toolkit-hint');
+    let picked = null;
+    let pickedFrom = null;
+
+    const flash = (el) => {
+        el.classList.remove('flash');
+        void el.offsetWidth; // restarts the pulse if it's already running
+        el.classList.add('flash');
+        clearTimeout(el._flash);
+        el._flash = setTimeout(() => el.classList.remove('flash'), 1500);
+    };
+
+    const showWork = (el) => {
+        if (el.classList.contains('card')) {
+            if (pinnedDist !== null) {
+                // The pinned row slides with the page, so scroll to where this card reaches the middle
+                const top = gallery.getBoundingClientRect().top + window.scrollY;
+                window.scrollTo({ top: top + clamp(el._c, 0, pinnedDist), behavior: motion ? 'smooth' : 'auto' });
+            } else {
+                row.scrollIntoView({ behavior: motion ? 'smooth' : 'auto', block: 'start' });
+                scrollRowTo(el);
+            }
+            if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
+            el.focus({ preventScroll: true });
+        } else {
+            goTo(`#${el.id}`);
+        }
+        flash(el);
+    };
+
+    const pick = (label) => {
+        picked = picked === label ? null : label;
+        document.querySelectorAll('.skill').forEach((b) => {
+            const on = b.textContent === picked;
+            b.classList.toggle('on', on);
+            b.setAttribute('aria-pressed', String(on));
+        });
+        const names = picked ? [picked, ...(chipNames[picked] || [])] : [];
+        work.forEach(({ el, skills }) => {
+            el.classList.toggle('skill-hit', skills.includes(picked));
+            el.querySelectorAll('.chips li').forEach((li) => li.classList.toggle('chip-hit', names.includes(li.textContent.trim())));
+        });
+        hits.replaceChildren();
+        if (!picked) return;
+
+        const found = work.filter((w) => w.skills.includes(picked));
+        const onSite = siteSkills.includes(picked);
+        const lead = document.createElement('p');
+        lead.className = 'skill-lead';
+        const name = document.createElement('strong');
+        name.textContent = picked;
+        lead.append(name, found.length || onSite ? ' shows up in' : ' is in my toolkit, but not in the work shown here.');
+        hits.append(lead);
+
+        if (found.length || onSite) {
+            const list = document.createElement('ul');
+            list.className = 'skill-links';
+            const add = (kind, label, href, go) => {
+                const a = document.createElement('a');
+                a.className = 'skill-link';
+                a.href = href;
+                const k = document.createElement('span');
+                k.className = 'skill-kind';
+                k.textContent = kind;
+                a.append(k, label);
+                if (go) {
+                    a.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        go();
+                    });
+                } else {
+                    a.target = '_blank';
+                    a.rel = 'noopener';
+                }
+                const li = document.createElement('li');
+                li.append(a);
+                list.append(li);
+            };
+            found.forEach((w) => add(w.kind, w.name, `#${w.el.id}`, () => showWork(w.el)));
+            if (onSite) add('Code', 'This site', siteSource);
+            hits.append(list);
+        }
+
+        const clear = document.createElement('button');
+        clear.type = 'button';
+        clear.className = 'skill-clear';
+        clear.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>Clear';
+        clear.addEventListener('click', () => {
+            pick(picked);
+            if (pickedFrom) pickedFrom.focus();
+        });
+        hits.append(clear);
+    };
+
+    document.querySelector('.toolkit').addEventListener('click', (e) => {
+        const b = e.target.closest('.skill');
+        if (!b) return;
+        // Keyboard focus returns to the real button later, not one of the marquee's hidden copies
+        pickedFrom = b.closest('[aria-hidden="true"]')
+            ? [...document.querySelectorAll('.skill')].find((x) => x.textContent === b.textContent && !x.closest('[aria-hidden="true"]'))
+            : b;
+        pick(b.textContent);
+    });
+    if (toolkitHint) toolkitHint.hidden = false;
+
+    /* ---------- A hidden surprise: ↑ ↑ ↓ ↓ ← → ← → B A ---------- */
+    const toastEl = document.createElement('div');
+    toastEl.className = 'toast';
+    toastEl.setAttribute('role', 'status');
+    document.body.append(toastEl);
+    let toastTimer;
+    const toast = (text) => {
+        toastEl.textContent = text;
+        toastEl.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3500);
+    };
+
+    // Confetti in honey and coral, drawn on a canvas that removes itself once the last piece has fallen
+    const confetti = () => {
+        const cv = document.createElement('canvas');
+        cv.className = 'confetti';
+        cv.setAttribute('aria-hidden', 'true');
+        document.body.append(cv);
+        const W = window.innerWidth;
+        const H = window.innerHeight;
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        cv.width = W * dpr;
+        cv.height = H * dpr;
+        const ctx = cv.getContext('2d');
+        ctx.scale(dpr, dpr);
+        const colors = ['#e0b25c', '#f3d08f', '#c99a4e', '#a84a33', '#d98a76', '#f0a08a'];
+        const power = Math.sqrt(H / 800);
+        const bits = [];
+        // Two bursts, one from each bottom corner, aimed up and inward
+        [[0, -60], [W, -120]].forEach(([x0, aim]) => {
+            for (let i = 0; i < 90; i++) {
+                const a = ((aim + (Math.random() - 0.5) * 40) * Math.PI) / 180;
+                const speed = (16 + Math.random() * 12) * power;
+                bits.push({
+                    x: x0,
+                    y: H + 10,
+                    vx: Math.cos(a) * speed,
+                    vy: Math.sin(a) * speed,
+                    w: 6 + Math.random() * 6,
+                    h: 4 + Math.random() * 6,
+                    r: Math.random() * Math.PI,
+                    vr: (Math.random() - 0.5) * 0.3,
+                    flip: Math.random() * Math.PI,
+                    vf: 0.08 + Math.random() * 0.12,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    round: Math.random() < 0.3,
+                });
+            }
+        });
+        const t0 = performance.now();
+        let last = t0;
+        const step = (now) => {
+            const dt = Math.min(3, (now - last) / 16.67);
+            last = now;
+            const age = now - t0;
+            ctx.clearRect(0, 0, W, H);
+            ctx.globalAlpha = age > 3800 ? Math.max(0, 1 - (age - 3800) / 700) : 1;
+            let falling = 0;
+            bits.forEach((b) => {
+                // Air slows the pieces more on the way down, so they flutter instead of dropping
+                b.vx *= Math.pow(0.985, dt);
+                b.vy = b.vy * Math.pow(b.vy < 0 ? 0.985 : 0.95, dt) + 0.32 * dt;
+                b.x += (b.vx + Math.sin(b.flip) * 0.6) * dt;
+                b.y += b.vy * dt;
+                b.r += b.vr * dt;
+                b.flip += b.vf * dt;
+                if (b.y < H + 20) falling++;
+                ctx.save();
+                ctx.translate(b.x, b.y);
+                ctx.rotate(b.r);
+                ctx.scale(1, Math.cos(b.flip));
+                ctx.fillStyle = b.color;
+                if (b.round) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, b.h / 2 + 1, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h);
+                }
+                ctx.restore();
+            });
+            if (falling && age < 4500) requestAnimationFrame(step);
+            else cv.remove();
+        };
+        requestAnimationFrame(step);
+    };
+
+    const secret = 'arrowup arrowup arrowdown arrowdown arrowleft arrowright arrowleft arrowright b a';
+    let typed = [];
+    document.addEventListener('keydown', (e) => {
+        if (e.target.closest && e.target.closest('input, textarea, [contenteditable]')) return;
+        typed = [...typed, e.key.toLowerCase()].slice(-10);
+        if (typed.join(' ') !== secret) return;
+        typed = [];
+        toast('You found my secret. Thanks for poking around!');
+        if (motion) confetti();
+    });
+
     /* ---------- A hello for anyone who opens the developer console ---------- */
     const accent = getComputedStyle(root).getPropertyValue('--accent').trim() || '#e0b25c';
     console.log('%cHi there, fellow developer!', `font: 600 15px/1.6 system-ui, sans-serif; color: ${accent}`);
     console.log(`This site is plain HTML, CSS, and JavaScript, with no framework and no build step.
 Have a look at the source: https://github.com/sunnnnyli/sunnnnyli.github.io
-Tip: press ${isMac ? '⌘K' : 'Ctrl+K'} on the page to jump anywhere.`);
+Tip: press ${isMac ? '⌘K' : 'Ctrl+K'} on the page to jump anywhere.
+And if you know the old cheat code (↑ ↑ ↓ ↓ ← → ← → B A), give it a try.`);
 })();

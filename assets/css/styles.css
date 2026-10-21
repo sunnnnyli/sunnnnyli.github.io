@@ -20,6 +20,7 @@
     --ease: cubic-bezier(0.16, 1, 0.3, 1);
 
     --nav-h: 52px;
+    --nav-slim: 44px;
     --gutter: 1rem;
     --max: 1080px;
 }
@@ -218,6 +219,7 @@
 html {
     background: var(--dark);
     scroll-behavior: smooth;
+    scrollbar-gutter: stable;
     scroll-padding-top: var(--nav-h);
     -webkit-text-size-adjust: 100%;
 }
@@ -340,7 +342,6 @@ a { color: inherit; text-decoration: none; }
 }
 
 .light .link { color: var(--accent-strong); }
-.link:hover { text-decoration: underline; text-underline-offset: 0.2em; }
 .chev { display: inline-block; transition: transform 0.4s var(--ease); }
 .link:hover .chev { transform: translateX(3px); }
 
@@ -396,11 +397,28 @@ a { color: inherit; text-decoration: none; }
     height: var(--nav-h);
 }
 
-.nav-mark {
+.nav-mark { position: relative; display: block; }
+
+/* My name in type, shown in place of the signature while the footer's signature is on screen */
+.nav-name {
+    position: absolute;
+    left: 0;
+    top: 50%;
     font-family: var(--serif);
     font-size: 1.3rem;
     letter-spacing: -0.01em;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateY(calc(-50% + 6px));
+    pointer-events: none;
 }
+
+.handoff .nav-name { opacity: 1; transform: translateY(-50%); }
+.handoff .nav-mark .sig { opacity: 0; }
+
+.motion .nav-name { transition: opacity 0.4s var(--ease), transform 0.5s var(--ease); }
+.motion .nav-mark .sig { transition: opacity 0.3s var(--ease); }
+.nav-mark:hover { color: var(--accent); }
 
 /* Tabs are checkpoints on a line; the scroll progress fills the line and passes behind them. */
 .nav-links { display: flex; align-items: center; gap: 1.1rem; }
@@ -786,7 +804,11 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
     aspect-ratio: 1;
 }
 
-.motion .hero-photo { animation: photoIn 1.9s var(--ease) both 0.55s; }
+.motion .hero-photo {
+    animation: photoIn 1.9s var(--ease) backwards 0.55s;
+    transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+    transition: transform 0.5s var(--ease);
+}
 
 @keyframes photoIn {
     from { opacity: 0; transform: scale(0.8); filter: blur(20px); }
@@ -1106,7 +1128,7 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
 .gallery { position: relative; }
 
 .gallery-sticky {
-    padding: 1.75rem 0 clamp(5rem, 10vw, 8rem);
+    padding: 1.75rem 0 1.25rem;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
@@ -1151,7 +1173,7 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
 }
 
 .motion .card {
-    transform: scale(calc(0.9 + var(--f, 1) * 0.1));
+    transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(calc(0.9 + var(--f, 1) * 0.1));
     opacity: calc(0.35 + var(--f, 1) * 0.65);
     transition: transform 0.15s linear, opacity 0.15s linear;
 }
@@ -1284,7 +1306,7 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
     position: relative;
     display: block;
     height: auto;
-    padding: 1.75rem 0 clamp(5rem, 10vw, 8rem);
+    padding: 1.75rem 0 1.25rem;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
 }
@@ -1395,6 +1417,10 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
 .motion .marquee.rev .marquee-track { animation-direction: reverse; }
 .motion .marquee:hover .marquee-track { animation-play-state: paused; }
 
+/* Also holds still for keyboard focus, and while one of its skills is picked */
+.motion .marquee:has(:focus-visible) .marquee-track { animation-play-state: paused; }
+.motion .marquee:has(.skill.on) .marquee-track { animation-play-state: paused; }
+
 @keyframes marquee {
     to { transform: translateX(-50%); }
 }
@@ -1474,11 +1500,7 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
     margin: 0;
 }
 
-.footer-name {
-    font-family: var(--serif);
-    font-size: 1.05rem;
-    color: var(--on-dark);
-}
+.footer-name { color: var(--on-dark); }
 
 .footer a { color: var(--on-dark-2); }
 
@@ -1578,6 +1600,11 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
 
     @page { margin: 14mm; }
 
+    body, .hero, .story, .dark, .light, .footer { background-image: none !important; }
+    .gallery-dots, .skill-hits, .toolkit-hint, .toast, .confetti { display: none !important; }
+    .sig-pen { stroke-dashoffset: 0 !important; animation: none !important; }
+    .sig-ink { opacity: 1 !important; animation: none !important; }
+
     body { font-size: 11pt; }
 
     .nav, .skip-link, .aurora, .dot-grid, .scroll-cue, .contact-glow, .gallery-progress,
@@ -1644,7 +1671,8 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
     .card-body { padding: 0.9rem 1rem !important; }
     .found { grid-template-columns: 1.4fr 1fr !important; margin-top: 1rem !important; }
     .course-tile { grid-column: 1 / -1 !important; }
-    .marquee li { padding: 0.3rem 0.7rem !important; font-size: 9pt !important; }
+    .marquee li, .skill { padding: 0.3rem 0.7rem !important; font-size: 9pt !important; }
+    .marquee li:has(> .skill) { padding: 0 !important; }
     .story-text { font-size: 12pt !important; }
 
     .pill-blue, .contact-actions .pill { background: none !important; color: var(--text) !important; border: 1px solid var(--line); }
@@ -1669,7 +1697,7 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
     border: 2px solid var(--accent);
     border-radius: 50%;
     background: var(--bg-alt);
-    z-index: 1;
+    z-index: 2;
 }
 
 /* The current role gets a filled dot */
@@ -1707,7 +1735,6 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
     cursor: pointer;
 }
 
-.card-more:hover { text-decoration: underline; text-underline-offset: 0.2em; }
 .card-more:hover .chev { transform: translateX(3px); }
 
 .panel {
@@ -1734,7 +1761,7 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
     backdrop-filter: blur(4px);
 }
 
-.motion .panel[open] { animation: panelIn 0.55s var(--ease); }
+.motion .panel[open]:not(.grown) { animation: panelIn 0.55s var(--ease); }
 
 @keyframes panelIn {
     from { transform: translateX(48px); opacity: 0; }
@@ -1979,6 +2006,423 @@ main [tabindex="-1"]:focus { outline: none; }
     .footer-kbd { display: none !important; }
 }
 
+/* ================= Link underlines ================= */
+/* The underline draws in from the left on hover and slides off to the right afterwards */
+.lk-t { background: linear-gradient(currentColor, currentColor) no-repeat 100% 100% / 0 1px; }
+
+a:hover .lk-t,
+a:focus-visible .lk-t,
+button:hover > .lk-t,
+button:focus-visible > .lk-t { background-position: 0 100%; background-size: 100% 1px; }
+
+.motion .lk-t { transition: background-size 0.45s var(--ease); }
+
+/* ================= Top bar ================= */
+/* Slims down once the page has scrolled and grows back at the very top. It's fixed, so nothing below moves. */
+.nav-mark { transform-origin: 0 50%; }
+.nav.slim .nav-inner { height: var(--nav-slim); }
+.nav.slim .nav-mark { transform: scale(0.9); }
+.nav.slim { box-shadow: 0 12px 30px -22px rgba(0, 0, 0, 0.5); }
+
+/* The phone menu hangs from the full-height bar */
+.menu-open .nav.slim .nav-inner { height: var(--nav-h); }
+.menu-open .nav.slim .nav-mark { transform: none; }
+
+.motion .nav { transition: box-shadow 0.45s var(--ease); }
+.motion .nav-inner { transition: height 0.45s var(--ease); }
+.motion .nav-mark { transition: transform 0.45s var(--ease), color 0.3s; }
+
+/* ================= Card to write-up ================= */
+/* With motion on, a project card grows into its write-up and shrinks back into place on close (a view transition) */
+.morphing { view-transition-name: project; }
+
+::view-transition-group(project) { animation-duration: 0.55s; animation-timing-function: var(--ease); }
+::view-transition-image-pair(project) { overflow: clip; border-radius: 24px; }
+
+/* Both snapshots keep their real size, pinned to the top left, so the growing box uncovers the panel */
+::view-transition-old(project),
+::view-transition-new(project) { height: 100%; object-fit: none; object-position: 0 0; }
+::view-transition-old(project) { animation: vtOut 0.3s var(--ease) both; }
+::view-transition-new(project) { animation: vtIn 0.45s var(--ease) both; }
+
+/* The dimmed backdrop fades in (and out) instead of the theme switch's instant swap */
+html.vt-morph::view-transition-new(root) { animation: vtIn 0.4s var(--ease) both; }
+
+@keyframes vtIn { from { opacity: 0; } }
+@keyframes vtOut { to { opacity: 0; } }
+
+/* ================= Experience: the timeline fills as you scroll ================= */
+.jobs { position: relative; }
+
+/* The script measures the line from the first dot to the last (--tl-len) and how much of it is filled (--tl) */
+.motion .jobs::before {
+    content: '';
+    position: absolute;
+    left: 4.5px;
+    top: 20px;
+    z-index: 1;
+    width: 2px;
+    height: var(--tl-len, 0px);
+    border-radius: 2px;
+    background: var(--accent);
+    transform: scaleY(var(--tl, 0));
+    transform-origin: 50% 0;
+}
+
+/* Each role's dot starts hollow and lights up when the line reaches it */
+.motion .job::before {
+    border-color: rgba(var(--ink-rgb), 0.3);
+    background: var(--bg-alt);
+    box-shadow: none;
+    transition: border-color 0.4s var(--ease), background 0.4s var(--ease), box-shadow 0.6s var(--ease);
+}
+
+.motion .job.lit::before {
+    border-color: var(--accent);
+    background: var(--accent);
+    animation: dotPop 0.6s var(--ease);
+}
+
+.motion .job.lit:first-child::before { box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.18); }
+
+@keyframes dotPop {
+    45% { transform: scale(1.45); }
+}
+
+/* ================= Gentle 3D tilt (mouse only) ================= */
+/* The script tilts cards and the portrait toward the pointer; a soft glare slides the other way */
+:root,
+:root[data-theme="light"] { --sheen: rgba(255, 255, 255, 0.6); }
+:root[data-theme="dark"] { --sheen: rgba(255, 255, 255, 0.06); }
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) { --sheen: rgba(255, 255, 255, 0.06); }
+}
+
+.card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(115deg, transparent 35%, var(--sheen) 50%, transparent 65%) no-repeat;
+    background-size: 300% 100%;
+    background-position: var(--gx, 50%) 0;
+    opacity: 0;
+    transition: opacity 0.4s var(--ease);
+    pointer-events: none;
+}
+
+.photo-inner::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at var(--gx, 50%) var(--gy, 50%), rgba(255, 255, 255, 0.22), transparent 55%);
+    opacity: 0;
+    transition: opacity 0.4s var(--ease);
+    pointer-events: none;
+}
+
+.motion .card.tilted::after,
+.motion .hero-photo.tilted .photo-inner::after { opacity: 1; }
+
+/* ================= Page dots for the project row ================= */
+/* Shown when the row scrolls sideways on its own (phones, or with motion off) instead of following the page */
+.gallery-dots { display: none; }
+
+html:not(.motion) .gallery-dots,
+.motion .gallery--free .gallery-dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.6rem;
+    padding-bottom: clamp(4rem, 9vw, 7rem);
+}
+
+.gallery-dot-list { display: flex; }
+
+/* Each dot is small, but its button is a comfortable target */
+.gallery-dot {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+}
+
+.gallery-dot::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 8px;
+    background: rgba(var(--ink-rgb), 0.45);
+}
+
+.gallery-dot:hover::before { background: rgba(var(--ink-rgb), 0.75); }
+.gallery-dot[aria-current="true"] { width: 44px; }
+.gallery-dot[aria-current="true"]::before { width: 26px; background: var(--accent); }
+
+.gallery-arrow {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid rgba(var(--ink-rgb), 0.18);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: color 0.3s, border-color 0.3s, opacity 0.3s;
+}
+
+.gallery-arrow:not([aria-disabled="true"]):hover { color: var(--text); border-color: rgba(var(--ink-rgb), 0.4); }
+.gallery-arrow[aria-disabled="true"] { opacity: 0.35; cursor: default; }
+
+.gallery-arrow svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.motion .gallery-dot { transition: width 0.4s var(--ease); }
+.motion .gallery-dot::before { transition: width 0.4s var(--ease), background 0.4s var(--ease); }
+
+/* ================= Toolkit: where each skill was used ================= */
+/* The script turns each skill into a button; picking one marks the roles and projects that used it */
+.marquee li:has(> .skill) { padding: 0; border: 0; background: none; }
+
+.skill {
+    padding: 0.8rem 1.4rem;
+    border: 1px solid var(--light-line);
+    border-radius: 980px;
+    background: var(--light-tile);
+    color: var(--text);
+    font: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color 0.3s, background 0.3s, color 0.3s;
+}
+
+.skill:hover { border-color: rgba(var(--accent-rgb), 0.6); }
+.skill:focus-visible { outline-offset: 1px; }
+.skill.on { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+
+.skill-hits {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 0.9rem;
+    margin-top: 1.5rem;
+    font-family: var(--font);
+    font-size: 0.9rem;
+}
+
+.skill-hits:empty { margin-top: 0; }
+.skill-lead { color: var(--text-2); }
+.skill-lead strong { font-weight: 600; color: var(--text); }
+.skill-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+.skill-link {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.45rem;
+    padding: 0.35rem 0.85rem;
+    border: 1px solid rgba(var(--accent-rgb), 0.45);
+    border-radius: 980px;
+    color: var(--text);
+    transition: background 0.3s, border-color 0.3s;
+}
+
+.skill-link:hover { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.1); }
+
+.skill-kind {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.skill-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.35rem 0.2rem;
+    border: 0;
+    background: none;
+    color: var(--text-2);
+    font: inherit;
+    cursor: pointer;
+}
+
+.skill-clear:hover { color: var(--text); }
+
+.skill-clear svg {
+    width: 12px;
+    height: 12px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.motion .skill-hits > * { animation: hitIn 0.5s var(--ease) both; }
+.motion .skill-hits > :nth-child(2) { animation-delay: 0.06s; }
+.motion .skill-hits > :nth-child(3) { animation-delay: 0.12s; }
+
+@keyframes hitIn {
+    from { opacity: 0; transform: translateY(6px); }
+}
+
+/* The work that used the picked skill stays marked until it's cleared */
+.chips li.chip-hit { background: var(--accent); color: var(--accent-ink); }
+.job.skill-hit .job-side h3 { color: var(--accent); }
+.card.skill-hit { border-color: var(--accent); }
+.motion .chips li { transition: background 0.4s var(--ease), color 0.4s var(--ease); }
+.motion .job-side h3 { transition: color 0.4s var(--ease); }
+
+/* A ring pulses where a jump lands */
+.card.flash,
+.job.flash::before,
+.motion .job.lit.flash::before { animation: ringPulse 1.4s var(--ease); }
+
+@keyframes ringPulse {
+    from { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.5); }
+    to { box-shadow: 0 0 0 18px rgba(var(--accent-rgb), 0); }
+}
+
+/* ================= Signature ================= */
+/* My signature stands in for my name in the top bar and footer. With motion on, it signs itself on a loop:
+   the mask's strokes follow the pen and uncover the ink, it rests a few seconds, then fades and signs again.
+   Both copies run on the same clock, so they stay in step. */
+.sig {
+    display: block;
+    width: 88px;
+    height: auto;
+    overflow: visible;
+}
+
+.footer-name .sig { width: 80px; }
+
+/* A whisper of outline keeps the pen line from breaking up at this size without making it heavy */
+.sig-ink {
+    fill: currentColor;
+    fill-rule: evenodd;
+    stroke: currentColor;
+    stroke-width: 0.15px;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
+
+.sig-pen {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 24;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 1 2;
+}
+
+.motion .sig-ink { animation: sigFade 10s linear infinite; }
+.motion .sig-pen { stroke-dashoffset: 1.05; animation: 10s linear infinite; }
+.motion .sig-pen:nth-child(1) { animation-name: sigPen1; }
+.motion .sig-pen:nth-child(2) { animation-name: sigPen2; }
+.motion .sig-pen:nth-child(3) { animation-name: sigPen3; }
+
+/* Each pen stroke starts when the one before it lifts. The strokes reset only while the ink is faded out,
+   and the ink comes back only after they have, so the loop never flashes the whole signature at the restart. */
+@keyframes sigPen1 {
+    0%, 4% { stroke-dashoffset: 1.05; animation-timing-function: cubic-bezier(0.45, 0.05, 0.55, 0.95); }
+    19.53%, 98.5% { stroke-dashoffset: 0; }
+    99%, 100% { stroke-dashoffset: 1.05; }
+}
+
+@keyframes sigPen2 {
+    0%, 20.93% { stroke-dashoffset: 1.05; animation-timing-function: cubic-bezier(0.45, 0.05, 0.55, 0.95); }
+    26.34%, 98.5% { stroke-dashoffset: 0; }
+    99%, 100% { stroke-dashoffset: 1.05; }
+}
+
+@keyframes sigPen3 {
+    0%, 27.74% { stroke-dashoffset: 1.05; animation-timing-function: cubic-bezier(0.45, 0.05, 0.55, 0.95); }
+    29.34%, 98.5% { stroke-dashoffset: 0; }
+    99%, 100% { stroke-dashoffset: 1.05; }
+}
+
+/* The top bar's signature rests during the hand-off, so it signs from the start when it comes back */
+.handoff .nav-mark .sig-pen,
+.handoff .nav-mark .sig-ink { animation: none; }
+
+/* The footer's signature waits for the hand-off, then signs once and stays */
+.motion .footer-name .sig-ink,
+.motion .footer-name .sig-pen { animation: none; }
+.motion.handoff .footer-name .sig-pen { animation: sigDraw 1.55s cubic-bezier(0.45, 0.05, 0.55, 0.95) 0.2s forwards; }
+.motion.handoff .footer-name .sig-pen:nth-child(2) { animation-duration: 0.54s; animation-delay: 1.89s; }
+.motion.handoff .footer-name .sig-pen:nth-child(3) { animation-duration: 0.16s; animation-delay: 2.57s; }
+
+@keyframes sigDraw {
+    to { stroke-dashoffset: 0; }
+}
+
+@keyframes sigFade {
+    0%, 3% { opacity: 0; }
+    3.5%, 92% { opacity: 1; }
+    97.5%, 100% { opacity: 0; }
+}
+
+/* ================= Paper grain ================= */
+/* A faint grain on the page backgrounds. Its light and dark specks are balanced, so the average color doesn't change. */
+body, .hero, .story, .dark, .light, .footer {
+    background-image: url("../img/grain-light.png");
+    background-size: 128px 128px;
+}
+
+:root[data-theme="dark"] :is(body, .hero, .story, .dark, .light, .footer) { background-image: url("../img/grain-dark.png"); }
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) :is(body, .hero, .story, .dark, .light, .footer) { background-image: url("../img/grain-dark.png"); }
+}
+
+/* ================= Hidden surprise ================= */
+.confetti {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 1.5rem;
+    z-index: 301;
+    max-width: calc(100vw - 32px);
+    padding: 0.7rem 1.1rem;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 0.9rem;
+    box-shadow: 0 16px 40px -16px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transform: translate(-50%, 12px);
+    pointer-events: none;
+    transition: opacity 0.35s var(--ease), transform 0.35s var(--ease);
+}
+
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
 /* ================= Touch screens ================= */
 /* Blur has to be repainted on every frame of a scroll, which phones struggle with,
    so on touch screens the motion uses only fades and movement. */
@@ -2117,6 +2561,8 @@ main [tabindex="-1"]:focus { outline: none; }
     .edu-facts { grid-template-columns: 1fr; }
     .headline br { display: none; }
     .footer-inner { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+    .footer-actions { display: none; }
+    .footer { padding-bottom: 5.5rem; } /* room for the round back-to-top button under the text */
 
     .to-top {
         position: fixed;
@@ -2159,7 +2605,7 @@ main [tabindex="-1"]:focus { outline: none; }
         border-radius: 20px 20px 0 0;
     }
 
-    .motion .panel[open] { animation-name: sheetIn; }
+    .motion .panel[open]:not(.grown) { animation-name: sheetIn; }
 
     @keyframes sheetIn {
         from { transform: translateY(48px); opacity: 0; }
