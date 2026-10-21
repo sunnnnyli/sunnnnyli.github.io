@@ -1,8 +1,11 @@
 {
     "name": "Sunny Li — Salesforce Developer",
     "short_name": "Sunny Li",
+    "id": "/",
+    "description": "Sunny Li, Salesforce Developer at Justworks.",
     "start_url": "/",
-    "display": "browser",
+    "scope": "/",
+    "display": "minimal-ui",
     "background_color": "#1c1c1d",
     "theme_color": "#1c1c1d",
     "icons": [

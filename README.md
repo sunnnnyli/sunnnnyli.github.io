@@ -23,18 +23,23 @@ I built it from scratch with plain HTML, CSS, and JavaScript. There's no framewo
 | **Smooth on phones** | Touch screens get lighter effects, so scrolling never feels sluggish |
 | **Skills linked to work** | Pick a skill in the toolkit to see the roles and projects where I used it |
 | **Little details** | Project cards open into their write-ups, the timeline fills as you scroll, and my signature signs the top bar and footer. There's also a secret if you know an old cheat code |
-| **Accessible** | A skip link, native dialogs, keyboard focus styles, and alt text |
-| **Print-friendly** | Printing the page gives you a clean, light copy |
-| **Shares nicely** | Link previews, search-friendly structured data, a sitemap, and a friendly 404 page |
+| **Accessible** | A skip link, native dialogs, keyboard focus styles, alt text, and stronger contrast when your system asks for it |
+| **Print-friendly** | Printing the page gives you a clean, light copy, and the résumé page prints on one sheet |
+| **Shares nicely** | Every section and project write-up has its own link, plus link previews, structured data, a sitemap, and a friendly 404 page |
+| **Works offline** | After your first visit it loads fast and still opens without a connection |
 
 ## Files
 
 ```
 index.html              the page itself
+resume.html             my résumé as a web page
 404.html                where you land if a link is wrong
-Sunny-Li-Resume.pdf     my résumé
+Sunny-Li-Resume.pdf     my résumé as a PDF
+sw.js                   keeps a copy of the site for fast repeat visits and offline use
 assets/css/styles.css   styles for both themes
+assets/css/resume.css   the résumé page's layout and one-page print
 assets/js/main.js       scroll effects, theme and motion toggles, the Ctrl+K menu, copy-email button
+assets/js/resume.js     the résumé page's theme toggle and Print button
 assets/img/             my photo, company logos, the paper grain, and the link-preview image
 assets/icons/           favicons and app icons
 ```

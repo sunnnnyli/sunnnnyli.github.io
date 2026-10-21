@@ -434,6 +434,20 @@
         vt.ready.catch(() => {});
         vt.finished.then(done, done);
     };
+    // Each write-up has its own link (#vm, #pocer, #journal). Opening one puts its link in the address bar,
+    // closing it puts the address back, and visiting the link opens the write-up straight away.
+    const slugOf = (panel) => panel.id.replace(/^panel-/, '');
+    const panelFromHash = () => {
+        let slug = '';
+        try { slug = decodeURIComponent(location.hash.slice(1)); } catch (e) {}
+        const el = slug && document.getElementById(`panel-${slug}`);
+        return el && el.classList.contains('panel') ? el : null;
+    };
+    const showPanelUrl = (panel) => {
+        const hash = `#${slugOf(panel)}`;
+        panel._returnUrl = location.hash === hash ? location.pathname + location.search : location.href;
+        if (location.hash !== hash) history.replaceState(history.state, '', hash);
+    };
     const openPanel = (panel) => {
         if (panel.open) return;
         const card = panelCard.get(panel);
@@ -441,6 +455,7 @@
         panel.classList.toggle('grown', grow);
         if (grow) morph(card, panel, () => panel.showModal());
         else panel.showModal();
+        showPanelUrl(panel);
     };
     const closePanel = (panel) => {
         if (!panel.open) return;
@@ -463,6 +478,32 @@
             e.preventDefault();
             closePanel(panel);
         });
+        panel.addEventListener('close', () => {
+            if (location.hash === `#${slugOf(panel)}`) history.replaceState(history.state, '', panel._returnUrl || location.pathname + location.search);
+        });
+
+        // Copy link: a link that opens this write-up directly
+        const linkBtn = panel.querySelector('.panel-link');
+        const linkLabel = linkBtn.querySelector('.panel-link-label');
+        const linkStatus = panel.querySelector('.panel-status');
+        let linkTimer;
+        linkBtn.addEventListener('click', async () => {
+            const ok = await copyText(`${location.origin}${location.pathname}#${slugOf(panel)}`);
+            linkBtn.classList.toggle('copied', ok);
+            linkLabel.textContent = ok ? 'Copied' : 'Copy failed';
+            linkStatus.textContent = ok ? 'Link copied' : 'Could not copy the link';
+            clearTimeout(linkTimer);
+            linkTimer = setTimeout(() => {
+                linkBtn.classList.remove('copied');
+                linkLabel.textContent = 'Copy link';
+                linkStatus.textContent = '';
+            }, 2000);
+        });
+    });
+    // A write-up link followed while the page is already open
+    window.addEventListener('hashchange', () => {
+        const panel = panelFromHash();
+        if (panel && !panel.open) openPanel(panel);
     });
 
     /* ---------- Footer: last updated ---------- */
@@ -488,7 +529,7 @@
             t.value = text;
             t.setAttribute('readonly', '');
             t.style.cssText = 'position:fixed;opacity:0';
-            document.body.append(t);
+            (document.querySelector('dialog[open]') || document.body).append(t); // a box outside an open dialog can't be selected
             t.select();
             try { ok = document.execCommand('copy'); } catch (err) {}
             t.remove();
@@ -642,7 +683,7 @@
                 run: async () => ((await copyText(email)) ? 'Email copied' : 'Couldn’t copy. Try the button in Contact.'),
             });
         }
-        [['Résumé', 'a[href$=".pdf"]', 'resume cv pdf'], ['GitHub', 'a[href*="github.com/"]', 'code repos'], ['LinkedIn', 'a[href*="linkedin.com/"]', 'profile']]
+        [['Résumé', 'a[href="resume.html"]', 'resume cv pdf'], ['GitHub', 'a[href*="github.com/"]', 'code repos'], ['LinkedIn', 'a[href*="linkedin.com/"]', 'profile']]
             .forEach(([name, sel, keys]) => {
                 const href = firstHref(sel);
                 if (href) list.push({ group: 'Actions', label: `Open ${name}`, keys, icon: ICON.open, run: () => { window.open(href, '_blank', 'noopener'); } });
@@ -817,6 +858,17 @@
     const scrollRowTo = (card) => {
         if (pinnedDist === null) row.scrollBy({ left: offCenter(card), behavior: motion ? 'smooth' : 'auto' });
     };
+    // Brings a project card into view: when the row is pinned it slides with the page, so scroll the page to
+    // where the card reaches the middle; otherwise scroll down to the row and then along it.
+    const scrollToCard = (card, behavior = motion ? 'smooth' : 'auto') => {
+        if (pinnedDist !== null) {
+            const top = gallery.getBoundingClientRect().top + window.scrollY;
+            window.scrollTo({ top: top + clamp(card._c, 0, pinnedDist), behavior });
+        } else {
+            row.scrollIntoView({ behavior, block: 'start' });
+            row.scrollBy({ left: offCenter(card), behavior });
+        }
+    };
     let dotQueued = false;
     let currentDot = -1;
     // Where the last click is headed, so quick repeat clicks on an arrow keep stepping while the row is still sliding
@@ -910,14 +962,7 @@
 
     const showWork = (el) => {
         if (el.classList.contains('card')) {
-            if (pinnedDist !== null) {
-                // The pinned row slides with the page, so scroll to where this card reaches the middle
-                const top = gallery.getBoundingClientRect().top + window.scrollY;
-                window.scrollTo({ top: top + clamp(el._c, 0, pinnedDist), behavior: motion ? 'smooth' : 'auto' });
-            } else {
-                row.scrollIntoView({ behavior: motion ? 'smooth' : 'auto', block: 'start' });
-                scrollRowTo(el);
-            }
+            scrollToCard(el);
             if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
             el.focus({ preventScroll: true });
         } else {
@@ -1099,6 +1144,146 @@
         toast('You found my secret. Thanks for poking around!');
         if (motion) confetti();
     });
+
+    /* ---------- Links to sections ---------- */
+    // A small link button beside each section's label copies a link straight to that section
+    const LINK_ICON = '<svg class="i-link" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13.5a4 4 0 0 0 5.7.3l3-3a4 4 0 0 0-5.7-5.6l-1.3 1.3"/><path d="M14 10.5a4 4 0 0 0-5.7-.3l-3 3a4 4 0 0 0 5.7 5.6l1.3-1.3"/></svg>';
+    const CHECK_ICON = '<svg class="i-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+    checkpoints.forEach(({ a, sec }) => {
+        const label = sec.querySelector('.eyebrow');
+        if (!label) return;
+        const name = a.textContent.trim();
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'anchor-btn';
+        b.title = 'Copy link';
+        b.setAttribute('aria-label', `Copy a link to ${name}`);
+        b.innerHTML = LINK_ICON + CHECK_ICON;
+        label.after(b);
+        let timer;
+        b.addEventListener('click', async () => {
+            const ok = await copyText(`${location.origin}${location.pathname}#${sec.id}`);
+            b.classList.toggle('copied', ok);
+            toast(ok ? `Link to ${name} copied` : 'Couldn’t copy the link');
+            clearTimeout(timer);
+            timer = setTimeout(() => b.classList.remove('copied'), 1800);
+        });
+    });
+
+    /* ---------- Dot grid in the intro ---------- */
+    // With a mouse and motion on, the intro's dots are drawn on a canvas, so the ones near the pointer can light up
+    // in the accent color and ease outward a little. It only draws while something is changing.
+    const dotGrid = document.querySelector('.dot-grid');
+    if (dotGrid && finePointer.matches) {
+        const cv = document.createElement('canvas');
+        cv.setAttribute('aria-hidden', 'true');
+        dotGrid.append(cv);
+        dotGrid.classList.add('live');
+        const ctx = cv.getContext('2d');
+        const GAP = 28; // the CSS grid's spacing, so the canvas dots sit exactly where the CSS ones were
+        const REACH = 150; // how far from the pointer the dots respond
+        const pt = { x: 0, y: 0, tx: 0, ty: 0, k: 0, tk: 0 };
+        let w = 0;
+        let h = 0;
+        let dpr = 1;
+        let ink = '';
+        let glow = '';
+        let raf = 0;
+        const readColors = () => {
+            const cs = getComputedStyle(root);
+            ink = cs.getPropertyValue('--ink-rgb').trim();
+            glow = cs.getPropertyValue('--accent-rgb').trim();
+        };
+        const fit = () => {
+            dpr = Math.min(2, window.devicePixelRatio || 1);
+            w = dotGrid.clientWidth;
+            h = dotGrid.clientHeight;
+            cv.width = Math.round(w * dpr);
+            cv.height = Math.round(h * dpr);
+        };
+        const draw = () => {
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, w, h);
+            // Resting dots go in one path; the ones near the pointer are drawn after, bigger and in the accent color
+            const lit = [];
+            ctx.beginPath();
+            for (let y = GAP / 2; y < h; y += GAP) {
+                for (let x = GAP / 2; x < w; x += GAP) {
+                    const dx = x - pt.x;
+                    const dy = y - pt.y;
+                    const d = Math.hypot(dx, dy);
+                    const t = pt.k * clamp(1 - d / REACH);
+                    if (t < 0.01) {
+                        ctx.moveTo(x + 1, y);
+                        ctx.arc(x, y, 1, 0, Math.PI * 2);
+                    } else {
+                        const e = t * t * (3 - 2 * t);
+                        const push = d ? (e * 7) / d : 0;
+                        lit.push([x + dx * push, y + dy * push, 1 + e * 1.4, e]);
+                    }
+                }
+            }
+            ctx.fillStyle = `rgba(${ink}, 0.05)`;
+            ctx.fill();
+            lit.forEach(([x, y, r, e]) => {
+                ctx.fillStyle = `rgba(${glow}, ${(0.08 + e * 0.6).toFixed(3)})`;
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        };
+        const tick = () => {
+            raf = 0;
+            pt.x += (pt.tx - pt.x) * 0.22;
+            pt.y += (pt.ty - pt.y) * 0.22;
+            pt.k += (pt.tk - pt.k) * 0.12;
+            const settled = Math.abs(pt.tk - pt.k) < 0.005 && Math.abs(pt.tx - pt.x) < 0.3 && Math.abs(pt.ty - pt.y) < 0.3;
+            if (settled) pt.k = pt.tk;
+            draw();
+            if (!settled) raf = requestAnimationFrame(tick);
+        };
+        const wake = () => { if (!raf) raf = requestAnimationFrame(tick); };
+        const area = document.querySelector('.hero-sticky');
+        area.addEventListener('pointermove', (e) => {
+            if (!motion || e.pointerType !== 'mouse') return;
+            const r = dotGrid.getBoundingClientRect();
+            pt.tx = e.clientX - r.left;
+            pt.ty = e.clientY - r.top;
+            // Coming in fresh, the glow starts at the pointer instead of sliding over from where it last was
+            if (pt.k < 0.01) {
+                pt.x = pt.tx;
+                pt.y = pt.ty;
+            }
+            pt.tk = 1;
+            wake();
+        });
+        area.addEventListener('pointerleave', () => {
+            pt.tk = 0;
+            wake();
+        });
+        readColors();
+        fit();
+        draw();
+        new ResizeObserver(() => { fit(); draw(); }).observe(dotGrid);
+        new MutationObserver(() => { readColors(); draw(); }).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+    }
+
+    /* ---------- Offline copy ---------- */
+    // sw.js keeps a copy of the site, so repeat visits load fast and it still opens without a connection
+    if ('serviceWorker' in navigator && window.isSecureContext) {
+        window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+    }
+
+    /* ---------- Arriving on a shared write-up link ---------- */
+    // The write-up opens over its project card, so closing it leaves the visitor right at the project
+    const linkedPanel = panelFromHash();
+    if (linkedPanel) {
+        const card = panelCard.get(linkedPanel);
+        if (card) scrollToCard(card, 'instant');
+        linkedPanel.classList.remove('grown');
+        linkedPanel.showModal();
+        showPanelUrl(linkedPanel);
+    }
 
     /* ---------- A hello for anyone who opens the developer console ---------- */
     const accent = getComputedStyle(root).getPropertyValue('--accent').trim() || '#e0b25c';

@@ -1,0 +1,213 @@
+/* Résumé page. It shares the site's colors, fonts, and theme toggle (styles.css) and lays the résumé out
+   as a single sheet that prints on one Letter page, close to the PDF. */
+
+/* ================= Top bar ================= */
+.r-bar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 1px solid rgba(var(--ink-rgb), 0.08);
+    background: rgba(var(--bg-rgb), 0.96);
+    font-family: var(--font);
+}
+
+.r-bar-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: min(816px, 100% - 2 * var(--gutter));
+    height: var(--nav-h);
+    margin-inline: auto;
+}
+
+.r-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.9rem;
+    color: var(--text-2);
+}
+
+.r-back:hover { color: var(--text); }
+
+.r-actions { display: flex; align-items: center; gap: 0.5rem; }
+
+.r-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    height: 30px;
+    padding: 0 0.85rem;
+    border: 1px solid rgba(var(--ink-rgb), 0.14);
+    border-radius: 980px;
+    background: transparent;
+    color: var(--text-2);
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: color 0.3s, border-color 0.3s;
+}
+
+.r-btn:hover { color: var(--text); border-color: rgba(var(--ink-rgb), 0.3); }
+
+.r-back svg,
+.r-btn svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* ================= The sheet ================= */
+.sheet {
+    width: min(816px, 100% - 2 * var(--gutter));
+    margin: clamp(1.5rem, 4vw, 3rem) auto clamp(3rem, 8vw, 5rem);
+    padding: clamp(1.75rem, 5vw, 3.25rem) clamp(1.25rem, 6vw, 3.75rem);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.r-head { text-align: center; }
+
+.r-head h1 {
+    font-size: clamp(2.2rem, 6vw, 3rem);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+}
+
+.r-contact {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.35rem 1.1rem;
+    margin-top: 0.8rem;
+    font-family: var(--font);
+    font-size: 0.85rem;
+    color: var(--text-2);
+}
+
+.r-contact li,
+.r-contact a { display: inline-flex; align-items: center; gap: 0.4rem; }
+.r-contact a { color: var(--accent); }
+.r-contact .lk-ic { width: 14px; height: 14px; margin: 0; }
+
+.r-section { margin-top: 1.75rem; }
+
+.r-section h2 {
+    margin-bottom: 0.9rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--line);
+    font-family: var(--font);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.r-item + .r-item { margin-top: 1.15rem; }
+
+.r-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.1rem 1rem;
+}
+
+.r-item h3 {
+    font-size: 1.08rem;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+}
+
+.r-where,
+.r-when {
+    font-family: var(--font);
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-2);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.r-sub { margin-top: 0.1rem; }
+.r-role { font-style: italic; color: var(--text-2); }
+
+/* No bullet marks: a thin rule runs beside each list instead */
+.r-points {
+    display: grid;
+    gap: 0.3rem;
+    margin-top: 0.55rem;
+    padding-left: 0.9rem;
+    border-left: 1px solid var(--line);
+    color: var(--text-2);
+}
+
+.r-skills { display: grid; gap: 0.45rem; }
+
+.r-skills div {
+    display: grid;
+    grid-template-columns: 9.5rem 1fr;
+    align-items: baseline;
+    gap: 1rem;
+}
+
+.r-skills dt {
+    font-family: var(--font);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.r-skills dd { color: var(--text-2); }
+
+@media (max-width: 600px) {
+    .sheet {
+        width: 100%;
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+        padding: 2rem var(--gutter) 3.5rem;
+    }
+
+    .r-skills div { grid-template-columns: 1fr; gap: 0.1rem; }
+    .r-btn { padding: 0 0.7rem; }
+}
+
+/* ================= Print: one Letter page ================= */
+@media print {
+    @page { size: letter; margin: 0.4in 0.5in; }
+
+    .r-bar { display: none !important; }
+
+    .sheet {
+        width: auto;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: none;
+        font-size: 9.2pt;
+        line-height: 1.28;
+    }
+
+    .r-head h1 { font-size: 21pt; }
+    .r-contact { margin-top: 4pt; font-size: 8.6pt; }
+    .r-section { margin-top: 7pt; }
+    .r-section h2 { margin-bottom: 5pt; padding-bottom: 2pt; font-size: 8pt; }
+    .r-item + .r-item { margin-top: 5.5pt; }
+    .r-item h3 { font-size: 10.2pt; }
+    .r-where, .r-when { font-size: 8.3pt; }
+    .r-points { gap: 1pt; margin-top: 2.5pt; padding-left: 7pt; }
+    .r-skills { gap: 1.5pt; }
+    .r-item, .r-points li { break-inside: avoid; }
+}

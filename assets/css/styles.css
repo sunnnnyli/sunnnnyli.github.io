@@ -681,6 +681,11 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
     mask-image: radial-gradient(ellipse at 40% 50%, #000 20%, transparent 70%);
 }
 
+/* With motion on and a mouse, the script draws the same dots on a canvas, so the ones near the pointer can light up and lift */
+.dot-grid canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.motion .dot-grid.live { background-image: none; }
+html:not(.motion) .dot-grid canvas { display: none; }
+
 .hero-layout {
     position: relative;
     display: grid;
@@ -1600,8 +1605,8 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
 
     @page { margin: 14mm; }
 
-    body, .hero, .story, .dark, .light, .footer { background-image: none !important; }
-    .gallery-dots, .skill-hits, .toolkit-hint, .toast, .confetti { display: none !important; }
+    body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky { background-image: none !important; }
+    .gallery-dots, .skill-hits, .toolkit-hint, .toast, .confetti, .anchor-btn { display: none !important; }
     .sig-pen { stroke-dashoffset: 0 !important; animation: none !important; }
     .sig-ink { opacity: 1 !important; animation: none !important; }
 
@@ -1801,6 +1806,45 @@ html:has(.panel[open]) { overflow: hidden; }
 }
 
 .panel-close:hover { color: var(--text); border-color: rgba(var(--ink-rgb), 0.3); }
+
+.panel-tools { display: flex; align-items: center; gap: 0.5rem; }
+
+.panel-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    height: 36px;
+    padding: 0 0.9rem;
+    border: 1px solid rgba(var(--ink-rgb), 0.14);
+    border-radius: 980px;
+    background: transparent;
+    color: var(--text-2);
+    font-family: var(--font);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: color 0.3s, border-color 0.3s;
+}
+
+.panel-link:hover { color: var(--text); border-color: rgba(var(--ink-rgb), 0.3); }
+.panel-link.copied { color: var(--accent); }
+
+.panel-link svg,
+.anchor-btn svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.panel-link .i-check,
+.panel-link.copied .i-link,
+.anchor-btn .i-check,
+.anchor-btn.copied .i-link { display: none; }
+.panel-link.copied .i-check,
+.anchor-btn.copied .i-check { display: block; }
 
 .panel-close svg {
     width: 16px;
@@ -2379,16 +2423,51 @@ html:not(.motion) .gallery-dots,
 }
 
 /* ================= Paper grain ================= */
-/* A faint grain on the page backgrounds. Its light and dark specks are balanced, so the average color doesn't change. */
-body, .hero, .story, .dark, .light, .footer {
+/* A faint grain on the page backgrounds. Its light and dark specks are balanced, so the average color doesn't change.
+   The pinned scenes (intro, story, projects) carry their own copy, so the grain holds still with them while they're
+   pinned instead of scrolling past behind the text. */
+.hero-sticky, .story-sticky, .gallery-sticky { background-color: var(--dark); }
+
+body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky {
     background-image: url("../img/grain-light.png");
     background-size: 128px 128px;
 }
 
-:root[data-theme="dark"] :is(body, .hero, .story, .dark, .light, .footer) { background-image: url("../img/grain-dark.png"); }
+:root[data-theme="dark"] :is(body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky) { background-image: url("../img/grain-dark.png"); }
 
 @media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) :is(body, .hero, .story, .dark, .light, .footer) { background-image: url("../img/grain-dark.png"); }
+    :root:not([data-theme]) :is(body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky) { background-image: url("../img/grain-dark.png"); }
+}
+
+/* ================= Links to sections ================= */
+/* A small link beside each section's label copies a link straight to it. It shows on hover and keyboard focus;
+   the negative right margin keeps a centered label (Contact) exactly centered. */
+.anchor-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    margin: -3px calc(-26px - 0.3rem) 0 0.3rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--text-3);
+    vertical-align: top;
+    opacity: 0;
+    cursor: pointer;
+    transition: opacity 0.25s, color 0.25s, background 0.25s;
+}
+
+.anchor-btn svg { width: 14px; height: 14px; stroke-width: 2; }
+.container:has(> :is(.eyebrow, .headline, .contact-sub):hover) > .anchor-btn { opacity: 1; }
+.anchor-btn:hover,
+.anchor-btn:focus-visible,
+.anchor-btn.copied { opacity: 1; color: var(--accent); background: rgba(var(--accent-rgb), 0.1); }
+
+/* Touch screens can't hover to find it, so it stays out of the way there */
+@media (hover: none) {
+    .anchor-btn { display: none; }
 }
 
 /* ================= Hidden surprise ================= */
@@ -2622,3 +2701,57 @@ body, .hero, .story, .dark, .light, .footer {
 /* ================= Picture wrapper ================= */
 /* The profile photo sits in a <picture> so browsers can pick WebP; the wrapper shouldn't affect layout. */
 picture { display: contents; }
+
+/* ================= More contrast ================= */
+/* When the visitor's system asks for more contrast: secondary text and lines get stronger, nothing is dimmed,
+   and the grain and faded edges step aside */
+@media (prefers-contrast: more) {
+    :root,
+    :root[data-theme="light"] {
+        --text-2: #3b424b;
+        --text-3: #3b424b;
+        --line: #8a939e;
+        --emph-text-2: #dde2e8;
+        --story-dim: 1;
+        --story-dim-hl: 1;
+        --feat-dim: 1;
+    }
+
+    :root[data-theme="dark"] {
+        --text-2: #d8d5cf;
+        --text-3: #cdcac4;
+        --line: #77757b;
+        --emph-text-2: #d8d5cf;
+        --story-dim: 1;
+        --story-dim-hl: 1;
+        --feat-dim: 1;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme]) {
+            --text-2: #d8d5cf;
+            --text-3: #cdcac4;
+            --line: #77757b;
+            --emph-text-2: #d8d5cf;
+            --story-dim: 1;
+            --story-dim-hl: 1;
+            --feat-dim: 1;
+        }
+    }
+
+    body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky { background-image: none !important; } /* beats the per-theme grain rules */
+    .motion .card { opacity: 1; }
+    .motion .marquee { -webkit-mask-image: none; mask-image: none; }
+    .gallery-dot::before { background: var(--text-2); }
+    .nav-links a, .theme-btn, .motion-btn, .panel-close, .panel-link, .gallery-arrow, .r-btn { border-color: var(--line); }
+}
+
+/* Windows high contrast: the drawn lines and indicators use the system's colors */
+@media (forced-colors: active) {
+    .sep, .gallery-dot::before { background: CanvasText; }
+    .gallery-dot[aria-current="true"]::before,
+    .nav-track span,
+    .nav-progress span,
+    .gallery-progress span,
+    .motion .jobs::before { background: Highlight; }
+}
