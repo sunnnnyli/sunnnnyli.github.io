@@ -14,6 +14,7 @@ const CORE = [
     './assets/js/resume.js',
     './assets/fonts/newsreader-latin.woff2',
     './assets/fonts/newsreader-italic-latin.woff2',
+    './assets/fonts/newsreader-pinyin.woff2',
     './assets/fonts/instrument-sans-latin.woff2',
     './assets/fonts/jetbrains-mono-latin.woff2',
     './assets/fonts/ma-shan-zheng-proverb.woff2',

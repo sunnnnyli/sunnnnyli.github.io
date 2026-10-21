@@ -121,6 +121,7 @@
 /* ================= Fonts ================= */
 /* Served from this site's own font folder instead of Google Fonts. Each file is a variable font covering
    every weight used here, split into Latin and extended Latin so browsers only fetch what a page needs.
+   Newsreader is trimmed to the 400–500 weights below, which makes its files about a third smaller.
    The fonts' licenses sit next to the files (*-OFL.txt). */
 @font-face {
     font-family: "Newsreader";
@@ -138,6 +139,17 @@
     font-display: swap;
     src: url("../fonts/newsreader-latin-ext.woff2") format("woff2");
     unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Just the proverb's pinyin marks (ā ē ī and a caron), about 3 KB. Declared after the extended Latin file above,
+   so browsers take these four from here and the page skips that much larger file. */
+@font-face {
+    font-family: "Newsreader";
+    font-style: normal;
+    font-weight: 400 500;
+    font-display: swap;
+    src: url("../fonts/newsreader-pinyin.woff2") format("woff2");
+    unicode-range: U+0101, U+0113, U+012B, U+02C7;
 }
 
 @font-face {
@@ -316,15 +328,6 @@ img, svg { -webkit-user-drag: none; }
     line-height: 1.08;
 }
 
-.lede {
-    max-width: 40rem;
-    margin-top: 1.25rem;
-    font-size: clamp(1.1rem, 1.8vw, 1.3rem);
-    color: var(--on-light-2);
-}
-
-.dark .lede { color: var(--on-dark-2); }
-
 /* Buttons and links */
 .pill {
     display: inline-flex;
@@ -348,7 +351,6 @@ img, svg { -webkit-user-drag: none; }
 }
 
 .pill-sm { padding: 0.32rem 0.85rem; font-size: 0.78rem; }
-.pill-lg { padding: 1rem 1.9rem; font-size: clamp(1rem, 2vw, 1.2rem); }
 
 .link {
     display: inline-flex;
@@ -1086,6 +1088,10 @@ html:not(.motion) .dot-grid canvas { display: none; }
     transition: opacity 0.25s linear;
 }
 
+/* ================= Looping animations ================= */
+/* They pause while out of view: the script marks the intro, diagrams, and marquees idle when they're off screen */
+.idle * { animation-play-state: paused !important; }
+
 /* ================= Reveal on enter ================= */
 .motion .rv,
 .motion .rv-scale {
@@ -1095,10 +1101,11 @@ html:not(.motion) .dot-grid canvas { display: none; }
 }
 
 .motion .rv { transform: translate3d(0, 40px, 0); filter: blur(6px); }
-.motion .rv-scale { transform: translate3d(0, 40px, 0) scale(0.94); }
+.motion .rv.in { opacity: 1; transform: none; filter: none; }
 
-.motion .rv.in,
-.motion .rv-scale.in { opacity: 1; transform: none; filter: none; }
+/* The tiles rise with the separate translate and scale properties, which leaves transform free for their tilt */
+.motion .rv-scale { translate: 0 40px; scale: 0.94; transition-property: opacity, translate, scale; }
+.motion .rv-scale.in { opacity: 1; translate: none; scale: none; }
 
 /* ================= Impact bento ================= */
 .bento {
@@ -1409,8 +1416,6 @@ html:not(.motion) .dot-grid canvas { display: none; }
 .motion .dg-node text { animation: dgStepText 4s ease-in-out infinite; animation-delay: calc(var(--i) * 1s); }
 .motion .dg-node:first-of-type rect { stroke: var(--line); }
 .motion .dg-node:first-of-type text { fill: var(--text-2); }
-
-.art-dg:not(.in-view) * { animation-play-state: paused !important; }
 
 @keyframes dgFlow { to { stroke-dashoffset: -20; } }
 
@@ -1777,12 +1782,15 @@ html:not(.motion) .dot-grid canvas { display: none; }
         overflow: visible !important;
     }
 
-    .hero-copy, .hero-photo-wrap, .hero-photo, .gallery-track, .card, .rv, .rv-scale, .load,
+    .hero-copy, .hero-photo-wrap, .hero-photo, .gallery-track, .card, .tile, .skill, .rv, .rv-scale, .load,
     .hero-title, .hero-title .ch, .story .w, .feats li {
         opacity: 1 !important;
         transform: none !important;
+        translate: none !important;
+        scale: none !important;
         filter: none !important;
         animation: none !important;
+        transition: none !important;
     }
 
     .section, .contact, .projects-head, .story-sticky { padding: 1.25rem 0 !important; }
@@ -1810,7 +1818,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
 
     .tile, .card, .job, .feats li, .found, .marquee { break-inside: avoid; }
     .eyebrow { display: block !important; }
-    .eyebrow, .headline, .section-head { break-after: avoid; page-break-after: avoid; }
+    .eyebrow, .headline { break-after: avoid; page-break-after: avoid; }
     .hero-actions { display: none !important; }
 
     /* Paper is narrow enough to trigger the phone layout; put the two-column layouts back */
@@ -2286,7 +2294,8 @@ html.vt-morph::view-transition-new(root) { animation: vtIn 0.4s var(--ease) both
 }
 
 /* ================= Gentle 3D tilt (mouse only) ================= */
-/* The script tilts cards and the portrait toward the pointer; a soft glare slides the other way */
+/* The script leans the portrait, project cards, tiles, and toolkit skills toward the pointer, and a soft glare
+   slides across them as it moves */
 :root,
 :root[data-theme="light"] { --sheen: rgba(255, 255, 255, 0.6); }
 :root[data-theme="dark"] { --sheen: rgba(255, 255, 255, 0.06); }
@@ -2295,7 +2304,27 @@ html.vt-morph::view-transition-new(root) { animation: vtIn 0.4s var(--ease) both
     :root:not([data-theme]) { --sheen: rgba(255, 255, 255, 0.06); }
 }
 
-.card::after {
+/* Dark and filled surfaces get a fainter glare, so it doesn't wash them out in the light theme */
+.tile-dark,
+.minor-tile { --sheen: rgba(255, 255, 255, 0.07); }
+.skill.on { --sheen: rgba(255, 255, 255, 0.3); }
+
+/* Tiles and skills only take a 3D transform while tilted, so at rest they don't each hold a GPU layer. Tiles also
+   rise in on scroll (with translate and scale), so the tilt keeps its own quicker transition. */
+.motion .tile {
+    transition:
+        opacity 1.2s var(--ease) var(--d, 0s),
+        translate 1.2s var(--ease) var(--d, 0s),
+        scale 1.2s var(--ease) var(--d, 0s),
+        transform 0.5s var(--ease);
+}
+
+.motion .tile.tilted { transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); }
+.motion .skill.tilted { transform: perspective(500px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); }
+
+.card::after,
+.tile::after,
+.skill::after {
     content: '';
     position: absolute;
     inset: 0;
@@ -2319,7 +2348,7 @@ html.vt-morph::view-transition-new(root) { animation: vtIn 0.4s var(--ease) both
     pointer-events: none;
 }
 
-.motion .card.tilted::after,
+.motion :is(.card, .tile, .skill).tilted::after,
 .motion .hero-photo.tilted .photo-inner::after { opacity: 1; }
 
 /* ================= Page dots for the project row ================= */
@@ -2396,6 +2425,7 @@ html:not(.motion) .gallery-dots,
 .marquee li:has(> .skill) { padding: 0; border: 0; background: none; }
 
 .skill {
+    position: relative;
     padding: 0.8rem 1.4rem;
     border: 1px solid var(--light-line);
     border-radius: 980px;
@@ -2404,7 +2434,7 @@ html:not(.motion) .gallery-dots,
     font: inherit;
     white-space: nowrap;
     cursor: pointer;
-    transition: border-color 0.3s, background 0.3s, color 0.3s;
+    transition: border-color 0.3s, background 0.3s, color 0.3s, transform 0.5s var(--ease);
 }
 
 .skill:hover { border-color: rgba(var(--accent-rgb), 0.6); }
@@ -2669,8 +2699,7 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
     .motion .load { animation-name: fadeUpLite; }
     .motion .hero-photo { animation-name: photoInLite; }
     .motion .story .w { transition: none; }
-    .motion .rv { filter: none; }
-    .motion .rv, .motion .rv-scale { transition-property: opacity, transform; }
+    .motion .rv { filter: none; transition-property: opacity, transform; }
 }
 
 @keyframes charInLite {

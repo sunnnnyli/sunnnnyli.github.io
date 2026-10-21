@@ -4,7 +4,7 @@
 
 I'm a Salesforce Developer at Justworks, where I build the automations and integrations that keep the Revenue team moving.
 
-**[sunnnnyli.github.io](https://sunnnnyli.github.io/)** &nbsp;|&nbsp; [Résumé](https://sunnnnyli.github.io/Sunny-Li-Resume.pdf) &nbsp;|&nbsp; [LinkedIn](https://www.linkedin.com/in/sunnyli2003) &nbsp;|&nbsp; [Email](mailto:sunnyli2003@gmail.com)
+**[sunnnnyli.github.io](https://sunnnnyli.github.io/)** &nbsp;|&nbsp; [Résumé](https://sunnnnyli.github.io/resume.html) &nbsp;|&nbsp; [LinkedIn](https://www.linkedin.com/in/sunnyli2003) &nbsp;|&nbsp; [Email](mailto:sunnyli2003@gmail.com)
 
 </div>
 
@@ -20,9 +20,10 @@ I built it from scratch with plain HTML, CSS, and JavaScript. There's no framewo
 | --- | --- |
 | **Light and dark themes** | It follows your system setting, and the toggle remembers what you pick |
 | **Motion you can turn off** | The scroll animations respect your reduced-motion setting, and there's a switch in the nav too |
-| **Smooth on phones** | Touch screens get lighter effects, so scrolling never feels sluggish |
+| **Light on any device** | Self-hosted fonts trimmed to the weights and characters in use, photos sized for each screen, lighter effects on touch screens, and looping animations that pause while they're off screen |
 | **Skills linked to work** | Pick a skill in the toolkit to see the roles and projects where I used it |
-| **Little details** | Project cards open into their write-ups, the timeline fills as you scroll, and my signature signs the top bar and footer. There's also a secret if you know an old cheat code |
+| **Little details** | Cards, tiles, and skills lean toward your mouse, project cards open into their write-ups, the timeline fills as you scroll, the proverb under my photo shows its pinyin, and my signature signs the top bar and footer. There's also a secret if you know an old cheat code |
+| **Résumé page** | My résumé as a web page, with the same theme, contrast, and motion switches, gentle animations, a reading progress line, and a PDF download |
 | **Accessible** | A skip link, native dialogs, keyboard focus styles, alt text, and a high-contrast switch that also follows your system setting |
 | **Print-friendly** | Printing the page gives you a clean, light copy, and the résumé page prints on one sheet |
 | **Shares nicely** | Every section and project write-up has its own link, plus link previews, structured data, a sitemap, and a friendly 404 page |
@@ -36,12 +37,14 @@ resume.html             my résumé as a web page
 404.html                where you land if a link is wrong
 Sunny-Li-Resume.pdf     my résumé as a PDF
 sw.js                   keeps a copy of the site for fast repeat visits and offline use
-assets/css/styles.css   styles for both themes
-assets/css/resume.css   the résumé page's layout and one-page print
-assets/js/main.js       scroll effects, theme and motion toggles, the Ctrl+K menu, copy-email button
-assets/js/resume.js     the résumé page's theme toggle and Print button
+assets/css/styles.css   the shared styles: both themes, high contrast, motion, and print
+assets/css/resume.css   the résumé page's layout, animations, and one-page print
+assets/js/main.js       scroll effects, the tilt, the theme, contrast, and motion switches, the Ctrl+K menu, and the toolkit
+assets/js/resume.js     the résumé page's switches, reveals, and Back and Print buttons
+assets/fonts/           self-hosted fonts, with their licenses
 assets/img/             my photo, company logos, the paper grain, and the link-preview image
 assets/icons/           favicons and app icons
+.github/                checks that run on every push: broken links, plus Lighthouse audits of both pages
 ```
 
 The rest of the root is the small stuff browsers and search engines look for: `favicon.ico`, `apple-touch-icon.png`, `site.webmanifest`, `robots.txt`, `sitemap.xml`, and `.nojekyll`.

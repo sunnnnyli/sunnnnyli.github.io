@@ -2,6 +2,9 @@
     const root = document.documentElement;
     let motion = root.classList.contains('motion');
     const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
+    // Saved choices (theme, contrast, motion). Storage can be blocked, e.g. in some private windows.
+    const stored = (key) => { try { return localStorage.getItem(key); } catch (e) { return null; } };
+    const store = (key, value) => { try { localStorage.setItem(key, value); } catch (e) {} };
     // Browsers with scroll-driven animations track each scene's progress in CSS (see "Scroll timelines" in styles.css),
     // so the script only measures scenes and cards itself where that isn't supported.
     const sda = !!(window.CSS && CSS.supports && CSS.supports('animation-timeline', 'view()'));
@@ -23,15 +26,6 @@
     navLinks.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => setMenu(false)));
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(false); });
     matchMedia('(min-width: 1061px)').addEventListener('change', () => setMenu(false));
-
-    /* ---------- Cursor spotlight ---------- */
-    document.querySelectorAll('.spot').forEach((el) => {
-        el.addEventListener('pointermove', (e) => {
-            const r = el.getBoundingClientRect();
-            el.style.setProperty('--mx', `${e.clientX - r.left}px`);
-            el.style.setProperty('--my', `${e.clientY - r.top}px`);
-        });
-    });
 
     const nav = document.querySelector('.nav');
     // The bar's full height. It slims down once the page scrolls, but sections are still measured against the full bar.
@@ -375,7 +369,7 @@
 
         motion = on;
         root.classList.toggle('motion', on);
-        try { localStorage.setItem('motion', on ? 'on' : 'off'); } catch (e) {}
+        store('motion', on ? 'on' : 'off');
 
         if (on) {
             initMotion(false);
@@ -576,7 +570,7 @@
     };
     const setTheme = (t, remember, origin) => {
         theme = t;
-        if (remember) { try { localStorage.setItem('theme', t); } catch (e) {} }
+        if (remember) store('theme', t);
         const apply = () => { root.dataset.theme = theme; syncThemeBtn(); };
         // The new theme spreads out in a circle from the button; instant otherwise or with motion off.
         if (motion && document.startViewTransition) {
@@ -603,9 +597,7 @@
     });
     // Follow system changes until the visitor picks a theme themselves.
     matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
-        let saved = null;
-        try { saved = localStorage.getItem('theme'); } catch (err) {}
-        if (!saved) setTheme(e.matches ? 'light' : 'dark', false);
+        if (!stored('theme')) setTheme(e.matches ? 'light' : 'dark', false);
     });
     syncThemeBtn();
     syncMotionBtn();
@@ -621,14 +613,12 @@
     const setContrast = (on, remember) => {
         contrast = on;
         root.classList.toggle('contrast', on);
-        if (remember) { try { localStorage.setItem('contrast', on ? 'more' : 'normal'); } catch (e) {} }
+        if (remember) store('contrast', on ? 'more' : 'normal');
         syncContrastBtn();
     };
     contrastBtn.addEventListener('click', () => setContrast(!contrast, true));
     matchMedia('(prefers-contrast: more)').addEventListener('change', (e) => {
-        let saved = null;
-        try { saved = localStorage.getItem('contrast'); } catch (err) {}
-        if (!saved) setContrast(e.matches, false);
+        if (!stored('contrast')) setContrast(e.matches, false);
     });
     syncContrastBtn();
 
@@ -654,13 +644,15 @@
         }
         request();
     });
-
-    /* ---------- Project diagrams animate only while on screen ---------- */
-    const artObserver = new IntersectionObserver((entries) => {
-        entries.forEach((e) => e.target.classList.toggle('in-view', e.isIntersecting));
-    });
-    document.querySelectorAll('.art-dg').forEach((el) => artObserver.observe(el));
+    // Late fonts change line lengths, so measure again once they're in
     if (document.fonts) document.fonts.ready.then(() => { layoutGallery(); measureLayout(); request(); });
+
+    /* ---------- Looping animations rest while off screen ---------- */
+    // The intro's glow and ring, the project diagrams, and the toolkit marquees pause whenever they're out of view
+    const idleObserver = new IntersectionObserver((entries) => {
+        entries.forEach((e) => e.target.classList.toggle('idle', !e.isIntersecting));
+    });
+    document.querySelectorAll('.hero-sticky, .art-dg, .marquee').forEach((el) => idleObserver.observe(el));
 
     /* ---------- Command menu (Ctrl+K / ⌘K) ---------- */
     const cmdk = document.getElementById('cmdk');
@@ -850,28 +842,54 @@
     const footSig = document.querySelector('.footer-name .sig');
     if (footSig) new IntersectionObserver(([entry]) => root.classList.toggle('handoff', entry.isIntersecting)).observe(footSig);
 
-    /* ---------- Gentle 3D tilt on the project cards and the portrait ---------- */
-    const tilt = (el, max) => {
-        el.addEventListener('pointermove', (e) => {
-            if (!motion || !finePointer.matches) return;
-            const r = el.getBoundingClientRect();
-            const x = clamp((e.clientX - r.left) / r.width) - 0.5;
-            const y = clamp((e.clientY - r.top) / r.height) - 0.5;
-            el.style.setProperty('--rx', `${(-y * max).toFixed(2)}deg`);
-            el.style.setProperty('--ry', `${(x * max).toFixed(2)}deg`);
-            el.style.setProperty('--gx', `${((x + 0.5) * 100).toFixed(1)}%`);
-            el.style.setProperty('--gy', `${((y + 0.5) * 100).toFixed(1)}%`);
-            el.classList.add('tilted');
-        });
-        el.addEventListener('pointerleave', () => {
-            el.classList.remove('tilted');
-            el.style.setProperty('--rx', '0deg');
-            el.style.setProperty('--ry', '0deg');
-        });
+    /* ---------- Spotlight and gentle 3D tilt ---------- */
+    // The portrait, project cards, impact and education tiles, and toolkit skills lean toward a mouse pointer while a
+    // soft glare slides across them, and cards and tiles light up under it. One listener covers them all (the
+    // marquee's copied skills too), and it reads and writes at most once per frame.
+    const TILT = [['.hero-photo', 10], ['.card', 5], ['.tile', 5], ['.skill', 12]]; // the most each one leans, in degrees
+    const tiltTargets = TILT.map(([sel]) => sel).join(', ');
+    let tiltEl = null;
+    let lastPointer = null;
+    let pointerQueued = false;
+    const untilt = () => {
+        if (!tiltEl) return;
+        tiltEl.classList.remove('tilted');
+        tiltEl.style.setProperty('--rx', '0deg');
+        tiltEl.style.setProperty('--ry', '0deg');
+        tiltEl = null;
     };
-    cards.forEach((card) => tilt(card, 5));
-    const photo = document.querySelector('.hero-photo');
-    if (photo) tilt(photo, 10);
+    const followPointer = () => {
+        pointerQueued = false;
+        const e = lastPointer;
+        const el = e.target.closest(tiltTargets);
+        if (el !== tiltEl) untilt();
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        if (el.classList.contains('spot')) {
+            el.style.setProperty('--mx', `${e.clientX - r.left}px`);
+            el.style.setProperty('--my', `${e.clientY - r.top}px`);
+        }
+        if (!motion || e.pointerType !== 'mouse' || !finePointer.matches) return;
+        const [, max] = TILT.find(([sel]) => el.matches(sel));
+        const x = clamp((e.clientX - r.left) / r.width) - 0.5;
+        const y = clamp((e.clientY - r.top) / r.height) - 0.5;
+        // Wide or tall things lean less along that side, so a full-width tile doesn't swing out at its edges
+        el.style.setProperty('--rx', `${(-y * max * Math.min(1, 640 / r.height)).toFixed(2)}deg`);
+        el.style.setProperty('--ry', `${(x * max * Math.min(1, 640 / r.width)).toFixed(2)}deg`);
+        el.style.setProperty('--gx', `${((x + 0.5) * 100).toFixed(1)}%`);
+        el.style.setProperty('--gy', `${((y + 0.5) * 100).toFixed(1)}%`);
+        el.classList.add('tilted');
+        tiltEl = el;
+    };
+    document.addEventListener('pointermove', (e) => {
+        lastPointer = e;
+        if (pointerQueued) return;
+        pointerQueued = true;
+        requestAnimationFrame(followPointer);
+    }, { passive: true });
+    // Settle back when the pointer leaves the window, or when scrolling moves things out from under it
+    document.addEventListener('pointerout', (e) => { if (!e.relatedTarget) untilt(); });
+    window.addEventListener('scroll', untilt, { passive: true });
 
     /* ---------- Page dots for the swipeable project row ---------- */
     // Shown when the row scrolls sideways on its own (phones, or with motion off) instead of following the page.

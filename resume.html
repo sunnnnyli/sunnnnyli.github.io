@@ -25,7 +25,7 @@
     <link rel="preload" href="assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="assets/fonts/instrument-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="assets/fonts/newsreader-italic-latin.woff2" as="font" type="font/woff2" crossorigin>
-    <!-- Same theme as the rest of the site, set before the first paint -->
+    <!-- Same theme, contrast, and motion choices as the rest of the site, set before the first paint -->
     <script>
         (() => {
             let t = null;
@@ -39,6 +39,12 @@
             try { c = localStorage.getItem('contrast'); } catch (e) {}
             if (c ? c === 'more' : matchMedia('(prefers-contrast: more)').matches) document.documentElement.classList.add('contrast');
         })();
+        // Motion follows the visitor's OS setting unless they've picked otherwise with the toggle.
+        (() => {
+            let pref = null;
+            try { pref = localStorage.getItem('motion'); } catch (e) {}
+            if (pref ? pref === 'on' : !matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('motion');
+        })();
     </script>
     <link rel="stylesheet" href="assets/css/styles.css">
     <link rel="stylesheet" href="assets/css/resume.css">
@@ -49,20 +55,30 @@
 
     <header class="r-bar">
         <div class="r-bar-inner">
-            <a class="r-back" href="index.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg><span class="lk-t">Back to the site</span></a>
+            <a class="r-back" href="index.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg><span class="lk-t">Back<span class="r-long"> to the site</span></span></a>
             <div class="r-actions">
                 <a class="r-btn" href="Sunny-Li-Resume.pdf" download>
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>PDF
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg><span class="r-label">PDF</span>
                 </a>
                 <button class="r-btn" type="button" data-print="Sunny-Li-Resume.pdf">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2"/><rect x="7" y="14" width="10" height="6" rx="1"/></svg>Print
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2"/><rect x="7" y="14" width="10" height="6" rx="1"/></svg><span class="r-label">Print</span>
                 </button>
                 <button class="theme-btn" type="button" aria-label="Switch theme" title="Switch theme">
                     <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"/></svg>
                     <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
                 </button>
+                <button class="contrast-btn" type="button" aria-pressed="false" title="More contrast">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path class="i-half" d="M12 3.5a8.5 8.5 0 0 1 0 17z"/></svg>
+                    <span class="visually-hidden">More contrast</span>
+                </button>
+                <button class="motion-btn" type="button" aria-pressed="false" title="Reduce motion">
+                    <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12M15 6v12"/></svg>
+                    <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg>
+                    <span class="visually-hidden">Reduce motion</span>
+                </button>
             </div>
         </div>
+        <div class="r-progress" aria-hidden="true"><span></span></div>
     </header>
 
     <main class="sheet" id="resume">
@@ -77,9 +93,9 @@
         </header>
 
         <section class="r-section" aria-labelledby="r-work">
-            <h2 id="r-work">Work experience</h2>
+            <h2 class="rv" id="r-work">Work experience</h2>
 
-            <article class="r-item">
+            <article class="r-item rv">
                 <div class="r-row"><h3>Justworks</h3><span class="r-where">New York, NY</span></div>
                 <div class="r-row r-sub"><span class="r-role">Salesforce Developer</span><span class="r-when">Nov 2026 – Present</span></div>
                 <ul class="r-points">
@@ -89,7 +105,7 @@
                 </ul>
             </article>
 
-            <article class="r-item">
+            <article class="r-item rv">
                 <div class="r-row"><h3>NYC Office of Technology and Innovation (OTI)</h3><span class="r-where">New York, NY</span></div>
                 <div class="r-row r-sub"><span class="r-role">Salesforce Developer/Administrator</span><span class="r-when">Jun 2024 – Sep 2026</span></div>
                 <ul class="r-points">
@@ -99,7 +115,7 @@
                 </ul>
             </article>
 
-            <article class="r-item">
+            <article class="r-item rv">
                 <div class="r-row"><h3>Olympix</h3><span class="r-where">New York, NY</span></div>
                 <div class="r-row r-sub"><span class="r-role">Software Engineering Intern</span><span class="r-when">Sep 2024 – May 2025</span></div>
                 <ul class="r-points">
@@ -111,9 +127,9 @@
         </section>
 
         <section class="r-section" aria-labelledby="r-projects">
-            <h2 id="r-projects">Projects</h2>
+            <h2 class="rv" id="r-projects">Projects</h2>
 
-            <article class="r-item">
+            <article class="r-item rv">
                 <div class="r-row"><h3>Vulnerability Management Case Automation</h3><span class="r-when">Jul 2025 – Aug 2026</span></div>
                 <p class="r-sub r-role">NYC OTI</p>
                 <ul class="r-points">
@@ -123,7 +139,7 @@
                 </ul>
             </article>
 
-            <article class="r-item">
+            <article class="r-item rv">
                 <div class="r-row"><h3>Journal Editorial Management System</h3><span class="r-when">Jan 2025 – May 2025</span></div>
                 <p class="r-sub r-role">React, Jest, Flask API</p>
                 <ul class="r-points">
@@ -134,21 +150,35 @@
         </section>
 
         <section class="r-section" aria-labelledby="r-education">
-            <h2 id="r-education">Education</h2>
-            <article class="r-item">
+            <h2 class="rv" id="r-education">Education</h2>
+            <article class="r-item rv">
                 <div class="r-row"><h3>New York University</h3><span class="r-where">New York, NY</span></div>
                 <div class="r-row r-sub"><span class="r-role">B.S. in Computer Science, Minors in Cybersecurity and Mathematics</span><span class="r-when">May 2025</span></div>
             </article>
         </section>
 
         <section class="r-section" aria-labelledby="r-skills">
-            <h2 id="r-skills">Skills</h2>
-            <dl class="r-skills">
+            <h2 class="rv" id="r-skills">Skills</h2>
+            <dl class="r-skills rv">
                 <div><dt>Languages</dt><dd>Apex, Python, Java, JavaScript, C#, C/C++, SQL, SOQL, Solidity, HTML/CSS</dd></div>
                 <div><dt>Salesforce</dt><dd>Batch &amp; Queueable Apex, Apex REST, Flow, Platform Events, Visualforce, Named Credentials, OAuth 2.0</dd></div>
                 <div><dt>Frameworks &amp; Tools</dt><dd>React, Jest, Flask, Git/GitHub, Heroku, Forge (Foundry), Microsoft Excel</dd></div>
             </dl>
         </section>
+
+        <!-- My signature to close the page; with motion on it signs itself when you reach it -->
+        <div class="r-sign" aria-hidden="true">
+            <svg class="sig" viewBox="0 0 611 263" aria-hidden="true">
+                <defs>
+                    <mask id="sig-pen-resume" maskUnits="userSpaceOnUse" x="0" y="0" width="611" height="263">
+                        <path class="sig-pen" pathLength="1" d="m4 208l5 2 17-5 26-15 54-37 40-32 27-28 5 1 1-2 5-8 3-8 11-14 0-4 2-5 4-4 2 0 4-5 0-6 3-6 9-11 3-3 2 0 10-12-10 12 1 6-8 12-5 6-5 0-4 6-2 1-4 4-2 5 0 4-11 14-3 8-7 10 1 2-4 8-15 30-5 7-15 28-11 16-7 2 1 5-4 8-12 13 1-3-2-4 1-4 8-14 8-2-1-5 4-9-4 9 1 11-4 8 8 6 6 1 7-3 17-14 2 0 7-8 5-8-5 8-6 8 3 6 4 3 10-5 10-10 4 0 8-10-8 10 2 10 3 4 3 0 8-4 17-14 3 0 5 4-5 12 5-10-1-2 4 0 6-6 5-2-2 2 4 10 5 6 6 1 6-4 13-13 5-2 2-2-2 4 3 10-5 9 5-9-3-6 0-6 0 6 3 5 2 0 7-7 6-2-2 2 2 3-1 10 3 5 4 1 9-7 3 0 2-6 8-11-2-3 2 3-10 15 0 2 6 4 8-2 14-23-15 23 1 6-4 9 1 3-2 4-9 10-3-1-5 5-20 14-5 6-1 4 5 4 5 0 10-5 8-7 7-15-1-5 10-14 5 1 15-11 11-4"/>
+                        <path class="sig-pen" pathLength="1" d="m468 167l4-5 19-14 8-4 7-2 52-59-6 6-8 12-22 24-18 19 0 3-2 4-46 48-1 5-15 13 15-14 9 0 20-11 16-4 10 2 10 8 16 8 11 2 30 0 6 2 5 4 17 2"/>
+                        <path class="sig-pen" pathLength="1" d="m563 168l3 0 4 2 4-2"/>
+                    </mask>
+                </defs>
+                <path class="sig-ink" mask="url(#sig-pen-resume)" d="m237 3l-4 3-9 8-12 15-9 14-15 28-6 3 1 2-1 6-3 5-2 3-6 2 0 2-10 10-14 13-2 3-42 32-47 32-14 9-17 9-11 4-6 1-5-1-1 2 2 3 4 1 8-1 11-4 26-14 9-7 7-4 13-9 6-5 8-4 11-9 3-4 3-1 3-3 9-5 6-7 13-10 4-4 3-1 3-5 15-14 1-3 5-4-1 3-18 35-1 3-4 6-4 8-3 3-15 28-2 2-1-1 3-8-3-3-1 0-3 2-10 15-11 21-1 5 2 6 3 1 3-3 10-11 6 4 5 1 6-1 8-5 14-11 1 0 1 6 3 2 5 1 5-2 11-9 5-4 0 8 2 3 5 3 4-1 7-4 7-5 2-3 9-6 1 6-2 8 1 2 3 1 11-14 1-3 3-2 2 7 5 8 8 3 3-2 3-3 4-1 4-6 3-1 5-6 1 1-3 17 0 2 2 1 2 0 2-2 3-6 2-1 7-9 2 1-1 8 1 5 3 4 3 1 2 0 7-2 4-4 6 4 2 0 6-3-1 3-9 18-14 11-19 14-6 9 1 5 3 2 3 2 5-1 5-1 12-7 9-12 1-6 4-6 1-5 3-4 11-7 6-2 5-6 11-5-1-4-3 0-9 5-12 9-3 1-1 0 4-10 1-3 12-21 1-6-1-1-2-1-3 1-10 15-5 6-3 2-2 0-1-2 2-2 0-3 6-10-2-3-4 0-10 17-5 5-5 2-3-2 1-17-3-3-3 0-11 9 0-3 3-8-3-3-4 2-7 7-4 1-3 5-7 7-4 0-4-1-3-5-1-10-2-3-2-1-3 2-8 8-1-1-1-5-3-2-2 0-17 14-11 7-2 1-2-1 1-7 6-13-2-3-3-1-3 2-2 4-15 14-6 5-4 0-2-1 0-4 9-15-2-4-3-1-4 4-5 9-10 10-11 8-6 2-5 0-2-1-2-2 1-5 14-20 21-37 2-3 3-7 2-3 13-27 10-20 8-11 0-3 2 1 8-9 17-23 5-8 1-5 3-3 0-3 5-4 1-4-2-3zm-6 12l0 1 1 0zm-5 7l-5 3-1 3-6 7-1 5 7-6 5-7 1-5zm-14 18l-1 3 1-1zm-7 12l-4 7-1 3 3-3 3-6zm353 29l-4 0-9 10-30 38-16 12-10 6-13 9-10 8-2 3 1 2 1 1 2 0 3-2 1-3 5-2 1-2 8-4 6-6 4-2 3-3 1 0 1 2-37 39-20 19-7 10 0 2 2 2 1 0 3-1 18-12 3-1 2-2 16-7 10-4 10-2 6 2 3 1 2 4 8 5 13 6 14 1 24 1 6-1 4 2 1 3 2 1 9 3 11-1 3-1-1-2-3-1-3-1-5-2-4 0-5 1-1-2-8-3-31-3-16-3-11-7-8-7-9-2-12 1-20 9-7 4-5 2 12-14 2-1 6-7 4-3 3-4 2-2 3-5 7-5 21-27 16-16 4-2 3-5 8-10 7-12 4-3 0-3zm-15 20l1 1 0-1zm32 63l-4 1-7 0-2 2 0 2 10 7 1 0 3-3-2-3 3-2 0-3zm-457 23l-10 15 0 4 1 0 7-8zm197 41l-2 3-3 3-3 1-2 3-9 5-3 4-4 2-1 6 2 0 6 0 5-2 5-4 4-5 4-7 3-9z"/>
+            </svg>
+        </div>
     </main>
 </body>
 </html>

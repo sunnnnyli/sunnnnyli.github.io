@@ -45,7 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Audits the page three times and fails if accessibility, best practices,
+      # Audits the portfolio and résumé pages three times each and fails if accessibility, best practices,
       # or SEO drop below 90. Performance only warns, since shared runners vary.
       - name: Audit with Lighthouse
         uses: treosh/lighthouse-ci-action@v12
