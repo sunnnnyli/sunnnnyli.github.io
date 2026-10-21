@@ -194,6 +194,17 @@
     unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
+/* Ma Shan Zheng, cut down to just the characters of the proverb under my photo (about 5 KB), so the brush
+   calligraphy looks the same on every device. License: ma-shan-zheng-OFL.txt. */
+@font-face {
+    font-family: "Ma Shan Zheng";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../fonts/ma-shan-zheng-proverb.woff2") format("woff2");
+    unicode-range: U+300C-300D, U+585E, U+5931, U+7109, U+77E5, U+798F, U+7FC1, U+975E, U+9A6C, U+FF0C;
+}
+
 /* Local fonts tuned to Newsreader and Instrument Sans (measured), so text barely shifts when the web fonts arrive */
 @font-face {
     font-family: "Newsreader Fallback";
@@ -493,24 +504,36 @@ a { color: inherit; text-decoration: none; }
 
 .nav-right { display: flex; align-items: center; gap: 0.5rem; }
 
-.motion-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    height: 28px;
-    padding: 0 0.75rem 0 0.6rem;
+/* Motion and contrast toggles: round icon buttons like the theme toggle; pressed when the setting is on */
+.motion-btn,
+.contrast-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
     border: 1px solid rgba(var(--ink-rgb), 0.14);
-    border-radius: 980px;
+    border-radius: 50%;
     background: transparent;
     color: var(--on-dark-2);
-    font: inherit;
-    font-size: 0.75rem;
     cursor: pointer;
     transition: color 0.3s, background 0.3s, border-color 0.3s;
 }
 
-.motion-btn:hover { color: var(--on-dark); border-color: rgba(var(--ink-rgb), 0.3); }
-.motion-btn[aria-pressed="true"] { background: rgba(var(--ink-rgb), 0.12); color: var(--on-dark); }
+.motion-btn:hover,
+.contrast-btn:hover { color: var(--on-dark); border-color: rgba(var(--ink-rgb), 0.3); }
+.motion-btn[aria-pressed="true"],
+.contrast-btn[aria-pressed="true"] { background: rgba(var(--ink-rgb), 0.12); color: var(--on-dark); }
+
+.contrast-btn svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+}
+
+.contrast-btn .i-half { fill: currentColor; stroke: none; }
 
 .motion-btn svg {
     width: 14px;
@@ -699,6 +722,63 @@ html:not(.motion) .dot-grid canvas { display: none; }
     transform-origin: 0 50%;
     opacity: calc(1 - var(--p, 0) * 1.5);
     filter: blur(calc(var(--p, 0) * 12px));
+}
+
+/* The photo with the proverb under it */
+.hero-photo-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.6rem;
+}
+
+.hero-quote {
+    width: clamp(15rem, 26vw, 21rem);
+    margin: 0;
+    text-align: center;
+}
+
+.hero-quote blockquote { margin: 0; }
+
+.quote-zh {
+    margin-right: -0.14em; /* the letter spacing after the last character, so the line stays centered */
+    font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", "Songti SC", "Noto Serif SC", var(--serif);
+    font-size: clamp(1.3rem, 2vw, 1.6rem);
+    letter-spacing: 0.14em;
+    line-height: 1.3;
+    color: var(--text);
+}
+
+/* The pinyin sits over each character; its room is kept, so the line doesn't move when it shows */
+.quote-zh rt {
+    font-family: var(--font);
+    font-size: 0.42em;
+    letter-spacing: 0;
+    color: var(--accent);
+    opacity: 0;
+}
+
+.quote-zh:hover rt,
+.quote-zh:focus rt { opacity: 1; }
+.quote-zh:focus { outline: none; }
+.quote-zh:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; }
+.motion .quote-zh rt { transition: opacity 0.35s var(--ease); }
+
+.quote-en {
+    margin-top: 0.55rem;
+    text-wrap: balance;
+    font-size: 0.98rem;
+    font-style: italic;
+    line-height: 1.45;
+    color: var(--text-2);
+}
+
+/* The lead-in makes clear these are borrowed words, not mine */
+.quote-lead {
+    margin-bottom: 0.1rem;
+    font-family: var(--serif);
+    font-size: 0.92rem;
+    color: var(--text-3);
 }
 
 .motion .hero-photo-wrap {
@@ -1475,7 +1555,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
 .contact-actions .pill { overflow-wrap: anywhere; }
 
 .reply-note {
-    margin-top: 1.4rem;
+    margin-top: 1rem;
     font-size: 0.98rem;
     color: var(--text-3);
 }
@@ -1515,6 +1595,9 @@ html:not(.motion) .dot-grid canvas { display: none; }
 /* Email reads as a quiet link; the copy icon sits beside it and only darkens on hover */
 .email-group { display: inline-flex; flex-basis: 100%; justify-content: center; align-items: center; gap: 0.35rem; }
 .hero-actions .email-group { justify-content: flex-start; }
+
+/* In Contact the address itself sits dead center; the copy button hangs off to its right without counting */
+.contact .copy-btn { margin-right: calc(-32px - 0.35rem); }
 
 .email-link {
     font-size: clamp(1.15rem, 2vw, 1.35rem);
@@ -1639,6 +1722,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
     .hero-layout { grid-template-columns: 1fr auto !important; }
     .hero-photo-wrap { order: 0 !important; }
     .hero-photo { width: 7.5rem !important; }
+    .hero-quote { display: none !important; }
     .hero-title { font-size: 40pt !important; }
     .headline { font-size: 22pt !important; }
     .story-text { max-width: none; font-size: 14pt !important; }
@@ -2547,22 +2631,17 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
     .found { grid-template-columns: 1fr; }
 }
 
+/* Mid-size screens: the tabs sit a little closer so the whole top bar fits on one line */
 @media (max-width: 1180px) {
-    .motion-btn { justify-content: center; width: 34px; height: 34px; padding: 0; }
-
-    .motion-label {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-        clip: rect(0 0 0 0);
-        white-space: nowrap;
-    }
+    .nav-links { gap: 0.8rem; }
+    .nav-links ul { gap: 1.1rem; }
+    .nav-links a { padding: 0.3rem 0.75rem; }
 }
 
-@media (max-width: 980px) {
+/* Below this the tabs move into the menu */
+@media (max-width: 1060px) {
     .menu-btn { display: block; }
-    .theme-btn { width: 34px; height: 34px; }
+    .theme-btn, .motion-btn, .contrast-btn { width: 34px; height: 34px; }
 
     .nav-links {
         position: absolute;
@@ -2624,8 +2703,12 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
 @media (max-width: 760px) {
     .hero-sticky { align-items: flex-start; padding-top: calc(var(--nav-h) + 1rem); }
     .hero-layout { grid-template-columns: 1fr; gap: 1rem; }
-    .hero-photo-wrap { order: -1; }
-    .hero-photo { width: 5.25rem; }
+    .hero-photo-wrap { order: -1; flex-direction: row; align-items: center; gap: 1rem; }
+    .hero-photo { flex: none; width: 5.25rem; }
+    .hero-quote { flex: 1; width: auto; text-align: left; }
+    .quote-zh { font-size: 1.15rem; }
+    .quote-en { margin-top: 0.3rem; font-size: 0.82rem; line-height: 1.35; }
+    .quote-lead { margin-bottom: 0; font-size: 0.8rem; }
     .hero-sub { margin-top: 0.9rem; }
     .hero-lede { margin-top: 0.75rem; font-size: 1rem; line-height: 1.5; }
     .hero-actions { gap: 0.9rem 1.25rem; }
@@ -2698,53 +2781,50 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
     .scroll-cue { display: none; }
 }
 
+/* Narrow phones: the top bar's signature, toggles, Résumé, and menu tighten up to share one row */
+@media (max-width: 420px) {
+    .nav-right { gap: 0.35rem; }
+    .theme-btn, .motion-btn, .contrast-btn { width: 32px; height: 32px; }
+    .nav-mark .sig { width: 78px; }
+    .menu-btn { width: 36px; }
+    .menu-btn span { left: 9px; }
+    .nav-resume-sm { padding: 0.32rem 0.7rem; }
+}
+
+/* The smallest phones keep Résumé in the intro's links instead */
+@media (max-width: 350px) {
+    .nav-resume-sm { display: none; }
+}
+
 /* ================= Picture wrapper ================= */
 /* The profile photo sits in a <picture> so browsers can pick WebP; the wrapper shouldn't affect layout. */
 picture { display: contents; }
 
 /* ================= More contrast ================= */
-/* When the visitor's system asks for more contrast: secondary text and lines get stronger, nothing is dimmed,
-   and the grain and faded edges step aside */
-@media (prefers-contrast: more) {
-    :root,
-    :root[data-theme="light"] {
-        --text-2: #3b424b;
-        --text-3: #3b424b;
-        --line: #8a939e;
-        --emph-text-2: #dde2e8;
-        --story-dim: 1;
-        --story-dim-hl: 1;
-        --feat-dim: 1;
-    }
-
-    :root[data-theme="dark"] {
-        --text-2: #d8d5cf;
-        --text-3: #cdcac4;
-        --line: #77757b;
-        --emph-text-2: #d8d5cf;
-        --story-dim: 1;
-        --story-dim-hl: 1;
-        --feat-dim: 1;
-    }
-
-    @media (prefers-color-scheme: dark) {
-        :root:not([data-theme]) {
-            --text-2: #d8d5cf;
-            --text-3: #cdcac4;
-            --line: #77757b;
-            --emph-text-2: #d8d5cf;
-            --story-dim: 1;
-            --story-dim-hl: 1;
-            --feat-dim: 1;
-        }
-    }
-
-    body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky { background-image: none !important; } /* beats the per-theme grain rules */
-    .motion .card { opacity: 1; }
-    .motion .marquee { -webkit-mask-image: none; mask-image: none; }
-    .gallery-dot::before { background: var(--text-2); }
-    .nav-links a, .theme-btn, .motion-btn, .panel-close, .panel-link, .gallery-arrow, .r-btn { border-color: var(--line); }
+/* On with the contrast toggle, or when the visitor's system asks for more contrast (the page sets .contrast):
+   secondary text and lines get stronger, nothing is dimmed, and the grain and faded edges step aside */
+:root.contrast {
+    --text-2: #3b424b;
+    --text-3: #3b424b;
+    --line: #8a939e;
+    --emph-text-2: #dde2e8;
+    --story-dim: 1;
+    --story-dim-hl: 1;
+    --feat-dim: 1;
 }
+
+:root.contrast[data-theme="dark"] {
+    --text-2: #d8d5cf;
+    --text-3: #cdcac4;
+    --line: #77757b;
+    --emph-text-2: #d8d5cf;
+}
+
+.contrast :is(body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky) { background-image: none !important; } /* beats the per-theme grain rules */
+.motion.contrast .card { opacity: 1; }
+.motion.contrast .marquee { -webkit-mask-image: none; mask-image: none; }
+.contrast .gallery-dot::before { background: var(--text-2); }
+.contrast :is(.nav-links a, .theme-btn, .motion-btn, .contrast-btn, .panel-close, .panel-link, .gallery-arrow, .r-btn) { border-color: var(--line); }
 
 /* Windows high contrast: the drawn lines and indicators use the system's colors */
 @media (forced-colors: active) {

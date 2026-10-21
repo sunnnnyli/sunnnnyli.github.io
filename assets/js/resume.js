@@ -24,6 +24,20 @@
     });
     syncThemeBtn();
 
+    // Back to the site: coming from the portfolio in this tab, step back in history, so it returns to where you were
+    document.querySelector('.r-back').addEventListener('click', (e) => {
+        let from = null;
+        try { from = document.referrer ? new URL(document.referrer) : null; } catch (err) {}
+        if (from && from.origin === location.origin && /\/(index\.html)?$/.test(from.pathname) && history.length > 1) {
+            e.preventDefault();
+            history.back();
+            return;
+        }
+        // Otherwise (opened from disk, where browsers don't say where you came from), leave a note for the
+        // portfolio to put the visitor back where they were
+        try { sessionStorage.setItem('fromResume', '1'); } catch (err) {}
+    });
+
     // Print sends the PDF itself (the same file as the PDF button) to the printer, by loading it into a hidden frame
     // and printing that. Safari, and pages opened straight from disk, can't print a PDF that way, so there it opens
     // in a new tab to print from.

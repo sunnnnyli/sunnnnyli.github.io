@@ -22,7 +22,7 @@
     menuBtn.addEventListener('click', () => setMenu(!root.classList.contains('menu-open')));
     navLinks.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => setMenu(false)));
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(false); });
-    matchMedia('(min-width: 981px)').addEventListener('change', () => setMenu(false));
+    matchMedia('(min-width: 1061px)').addEventListener('change', () => setMenu(false));
 
     /* ---------- Cursor spotlight ---------- */
     document.querySelectorAll('.spot').forEach((el) => {
@@ -610,6 +610,28 @@
     syncThemeBtn();
     syncMotionBtn();
 
+    /* ---------- More contrast ---------- */
+    // The toggle remembers the visitor's choice; until they make one, it follows their system setting.
+    const contrastBtn = document.querySelector('.contrast-btn');
+    let contrast = root.classList.contains('contrast');
+    const syncContrastBtn = () => {
+        contrastBtn.setAttribute('aria-pressed', String(contrast));
+        contrastBtn.title = contrast ? 'Turn high contrast off' : 'More contrast';
+    };
+    const setContrast = (on, remember) => {
+        contrast = on;
+        root.classList.toggle('contrast', on);
+        if (remember) { try { localStorage.setItem('contrast', on ? 'more' : 'normal'); } catch (e) {} }
+        syncContrastBtn();
+    };
+    contrastBtn.addEventListener('click', () => setContrast(!contrast, true));
+    matchMedia('(prefers-contrast: more)').addEventListener('change', (e) => {
+        let saved = null;
+        try { saved = localStorage.getItem('contrast'); } catch (err) {}
+        if (!saved) setContrast(e.matches, false);
+    });
+    syncContrastBtn();
+
     layoutGallery();
     measureLayout();
     frame();
@@ -653,6 +675,7 @@
         open: svg('<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>'),
         theme: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
         motion: svg('<path d="M3 12h4l3-8 4 16 3-8h4"/>'),
+        contrast: svg('<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor" stroke="none"/>'),
     };
     const firstHref = (sel) => { const a = document.querySelector(sel); return a ? a.href : null; };
     const copyBtnEl = document.querySelector('.copy-btn');
@@ -670,8 +693,10 @@
 
     // Built each time the menu opens, so the theme and motion labels match the current state.
     const buildCommands = () => {
-        const list = [{ group: 'Go to', label: 'Top of the page', keys: 'intro home start hero', icon: ICON.go, nav: '#top' }];
-        checkpoints.forEach(({ a }) => list.push({ group: 'Go to', label: a.textContent.trim(), keys: a.hash.slice(1), icon: ICON.go, nav: a.hash }));
+        const list = [];
+        checkpoints.forEach(({ a }) => list.push({
+            group: 'Go to', label: a.textContent.trim(), keys: a.hash === '#top' ? 'top intro home start hero story' : a.hash.slice(1), icon: ICON.go, nav: a.hash,
+        }));
         document.querySelectorAll('[data-panel]').forEach((btn) => {
             const panel = document.getElementById(btn.dataset.panel);
             const title = panel && panel.querySelector('h2, h3');
@@ -683,14 +708,16 @@
                 run: async () => ((await copyText(email)) ? 'Email copied' : 'Couldn’t copy. Try the button in Contact.'),
             });
         }
-        [['Résumé', 'a[href="resume.html"]', 'resume cv pdf'], ['GitHub', 'a[href*="github.com/"]', 'code repos'], ['LinkedIn', 'a[href*="linkedin.com/"]', 'profile']]
-            .forEach(([name, sel, keys]) => {
+        [['Résumé', 'a[href="resume.html"]', 'resume cv pdf', true], ['GitHub', 'a[href*="github.com/"]', 'code repos'], ['LinkedIn', 'a[href*="linkedin.com/"]', 'profile']]
+            .forEach(([name, sel, keys, sameTab]) => {
                 const href = firstHref(sel);
-                if (href) list.push({ group: 'Actions', label: `Open ${name}`, keys, icon: ICON.open, run: () => { window.open(href, '_blank', 'noopener'); } });
+                const run = sameTab ? () => { location.href = href; } : () => { window.open(href, '_blank', 'noopener'); };
+                if (href) list.push({ group: 'Actions', label: `Open ${name}`, keys, icon: ICON.open, run });
             });
         const next = theme === 'dark' ? 'light' : 'dark';
         list.push({ group: 'Actions', label: `Switch to ${next} theme`, keys: 'dark light mode color', icon: ICON.theme, run: () => { setTheme(next, true); } });
         list.push({ group: 'Actions', label: motion ? 'Turn animations off' : 'Turn animations back on', keys: 'reduce motion animation', icon: ICON.motion, run: () => { setMotion(!motion); } });
+        list.push({ group: 'Actions', label: contrast ? 'Turn high contrast off' : 'Turn high contrast on', keys: 'contrast accessibility readability', icon: ICON.contrast, run: () => { setContrast(!contrast, true); } });
         return list.map((c) => ({ ...c, text: `${c.label} ${c.keys} ${c.group}`.toLowerCase() }));
     };
 
@@ -1172,7 +1199,8 @@
 
     /* ---------- Dot grid in the intro ---------- */
     // With a mouse and motion on, the intro's dots are drawn on a canvas, so the ones near the pointer can light up
-    // in the accent color and ease outward a little. It only draws while something is changing.
+    // in the accent color and ease outward a little. Dots behind the text stay quiet, so it's always easy to read.
+    // It only draws while something is changing.
     const dotGrid = document.querySelector('.dot-grid');
     if (dotGrid && finePointer.matches) {
         const cv = document.createElement('canvas');
@@ -1182,6 +1210,7 @@
         const ctx = cv.getContext('2d');
         const GAP = 28; // the CSS grid's spacing, so the canvas dots sit exactly where the CSS ones were
         const REACH = 150; // how far from the pointer the dots respond
+        const CLEAR = 24; // dots fade out over this distance as they get near text
         const pt = { x: 0, y: 0, tx: 0, ty: 0, k: 0, tk: 0 };
         let w = 0;
         let h = 0;
@@ -1201,9 +1230,31 @@
             cv.width = Math.round(w * dpr);
             cv.height = Math.round(h * dpr);
         };
+        // The boxes of every line of text in the intro (and the proverb), relative to the dot grid
+        const textBoxes = () => {
+            const g = dotGrid.getBoundingClientRect();
+            const range = document.createRange();
+            const boxes = [];
+            document.querySelectorAll('.hero-copy > *, .hero-quote').forEach((el) => {
+                range.selectNodeContents(el);
+                [...range.getClientRects()].forEach((r) => {
+                    if (r.width && r.height) boxes.push([r.left - g.left, r.top - g.top, r.right - g.left, r.bottom - g.top]);
+                });
+            });
+            return boxes;
+        };
+        const nearText = (boxes, x, y) => {
+            let d = Infinity;
+            for (const [l, t, r, b] of boxes) {
+                d = Math.min(d, Math.hypot(Math.max(l - x, 0, x - r), Math.max(t - y, 0, y - b)));
+                if (d === 0) break;
+            }
+            return clamp(d / CLEAR);
+        };
         const draw = () => {
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             ctx.clearRect(0, 0, w, h);
+            const boxes = pt.k > 0.01 ? textBoxes() : [];
             // Resting dots go in one path; the ones near the pointer are drawn after, bigger and in the accent color
             const lit = [];
             ctx.beginPath();
@@ -1212,21 +1263,22 @@
                     const dx = x - pt.x;
                     const dy = y - pt.y;
                     const d = Math.hypot(dx, dy);
-                    const t = pt.k * clamp(1 - d / REACH);
+                    let t = pt.k * clamp(1 - d / REACH);
+                    if (t >= 0.01) t *= nearText(boxes, x, y);
                     if (t < 0.01) {
                         ctx.moveTo(x + 1, y);
                         ctx.arc(x, y, 1, 0, Math.PI * 2);
                     } else {
                         const e = t * t * (3 - 2 * t);
-                        const push = d ? (e * 7) / d : 0;
-                        lit.push([x + dx * push, y + dy * push, 1 + e * 1.4, e]);
+                        const push = d ? (e * 6) / d : 0;
+                        lit.push([x + dx * push, y + dy * push, 1 + e * 1.2, e]);
                     }
                 }
             }
             ctx.fillStyle = `rgba(${ink}, 0.05)`;
             ctx.fill();
             lit.forEach(([x, y, r, e]) => {
-                ctx.fillStyle = `rgba(${glow}, ${(0.08 + e * 0.6).toFixed(3)})`;
+                ctx.fillStyle = `rgba(${glow}, ${(0.06 + e * 0.45).toFixed(3)})`;
                 ctx.beginPath();
                 ctx.arc(x, y, r, 0, Math.PI * 2);
                 ctx.fill();
@@ -1272,6 +1324,25 @@
     // sw.js keeps a copy of the site, so repeat visits load fast and it still opens without a connection
     if ('serviceWorker' in navigator && window.isSecureContext) {
         window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+    }
+
+    /* ---------- Coming back from the résumé ---------- */
+    // The page remembers where it was when the visitor leaves. If they come back through the résumé's Back link
+    // without the browser's own Back (see resume.js), it puts them at the same spot, again once the fonts settle.
+    window.addEventListener('pagehide', () => {
+        try { sessionStorage.setItem('returnY', String(Math.round(window.scrollY))); } catch (e) {}
+    });
+    let returnY = 0;
+    try {
+        if (sessionStorage.getItem('fromResume')) returnY = Number(sessionStorage.getItem('returnY')) || 0;
+        sessionStorage.removeItem('fromResume');
+    } catch (e) {}
+    if (returnY) {
+        window.scrollTo({ top: returnY, behavior: 'instant' });
+        // Text can shift a little as the fonts arrive, so set it once more then, unless the visitor has started scrolling
+        let moved = false;
+        ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach((type) => window.addEventListener(type, () => { moved = true; }, { once: true, passive: true }));
+        if (document.fonts) document.fonts.ready.then(() => { if (!moved) window.scrollTo({ top: returnY, behavior: 'instant' }); });
     }
 
     /* ---------- Arriving on a shared write-up link ---------- */

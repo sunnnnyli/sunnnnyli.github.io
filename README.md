@@ -23,7 +23,7 @@ I built it from scratch with plain HTML, CSS, and JavaScript. There's no framewo
 | **Smooth on phones** | Touch screens get lighter effects, so scrolling never feels sluggish |
 | **Skills linked to work** | Pick a skill in the toolkit to see the roles and projects where I used it |
 | **Little details** | Project cards open into their write-ups, the timeline fills as you scroll, and my signature signs the top bar and footer. There's also a secret if you know an old cheat code |
-| **Accessible** | A skip link, native dialogs, keyboard focus styles, alt text, and stronger contrast when your system asks for it |
+| **Accessible** | A skip link, native dialogs, keyboard focus styles, alt text, and a high-contrast switch that also follows your system setting |
 | **Print-friendly** | Printing the page gives you a clean, light copy, and the résumé page prints on one sheet |
 | **Shares nicely** | Every section and project write-up has its own link, plus link previews, structured data, a sitemap, and a friendly 404 page |
 | **Works offline** | After your first visit it loads fast and still opens without a connection |
