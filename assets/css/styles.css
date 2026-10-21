@@ -892,10 +892,22 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
 
 .story-text p + p { margin-top: 0.8em; }
 
-.story .hl { font-style: italic; color: var(--accent); }
+.story .hl { font-style: italic; color: var(--story-hl); }
+
+/* The faded words start just bright enough to meet the 4.5:1 contrast minimum, so the
+   light-up effect stays readable at every step. Highlights need a little more in light mode. */
+:root,
+:root[data-theme="light"] { --story-dim: 0.68; --story-dim-hl: 0.82; --story-hl: #8a3a27; }
+:root[data-theme="dark"] { --story-dim: 0.55; --story-dim-hl: 0.7; --story-hl: var(--accent); }
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) { --story-dim: 0.55; --story-dim-hl: 0.7; --story-hl: var(--accent); }
+}
+
+.story .hl .w { --story-dim: var(--story-dim-hl); }
 
 .motion .story .w {
-    opacity: clamp(0.18, calc(var(--p, 0) * (var(--n, 1) + 10) - var(--i, 0)), 1);
+    opacity: clamp(var(--story-dim), calc(var(--p, 0) * (var(--n, 1) + 10) - var(--i, 0)), 1);
     transition: opacity 0.25s linear;
 }
 
@@ -1072,8 +1084,17 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
 .feats li:first-child { padding-top: 0; border-top: 0; }
 .feats strong { font-weight: 500; color: var(--on-light); }
 
+/* Bullets away from the middle of the screen dim only as far as the 4.5:1 contrast minimum allows */
+:root,
+:root[data-theme="light"] { --feat-dim: 0.95; }
+:root[data-theme="dark"] { --feat-dim: 0.81; }
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) { --feat-dim: 0.81; }
+}
+
 .motion .feats li {
-    opacity: 0.25;
+    opacity: var(--feat-dim);
     transition: opacity 0.8s var(--ease);
 }
 
@@ -1437,26 +1458,29 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
     color: var(--on-dark-3);
 }
 
-/* One centered line, with the same thin drawn dividers between its parts */
+/* One bar: the details sit at the left edge, the shortcut and Back to top at the right */
 .footer-inner {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
-    gap: 0.5rem 0;
-    text-align: center;
+    gap: 0.6rem 2rem;
 }
 
-.footer-inner > * + *::before {
-    content: "";
-    display: inline-block;
-    width: 1px;
-    height: 0.95em;
-    margin: 0 0.6em;
-    background: currentColor;
-    opacity: 0.35;
-    vertical-align: -0.12em;
+.footer-side {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 0;
 }
+
+.footer-name {
+    font-family: var(--serif);
+    font-size: 1.05rem;
+    color: var(--on-dark);
+}
+
+.footer a { color: var(--on-dark-2); }
 
 .footer a:hover { color: var(--on-dark); }
 
@@ -1787,6 +1811,174 @@ html:has(.panel[open]) { overflow: hidden; }
 /* ================= Back to top (phones) ================= */
 .to-top { display: none; }
 
+/* ================= Scroll timelines ================= */
+/* Where the browser supports scroll-driven animations, it tracks each scene's progress itself, in step
+   with the scroll, and the script stops measuring the page on every frame. Same numbers as the script:
+   pinned scenes run from their top reaching the top of the screen to their bottom reaching the bottom;
+   "enter" scenes run over the first 80% of a screen height as they rise into view. */
+@property --sp {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 0;
+}
+
+@keyframes scene-progress {
+    from { --sp: 0; }
+    to { --sp: 1; }
+}
+
+@supports (animation-timeline: view()) {
+    .motion [data-scene] {
+        --p: var(--sp);
+        animation: scene-progress linear both;
+        animation-timeline: view(block 0px 0px);
+        animation-range: contain 0% contain 100%;
+    }
+
+    .motion [data-scene="enter"] { animation-range: cover 0% cover 80vh; }
+
+    /* Cards grow as they near the middle: 1 minus their distance from the middle, over 90% of the screen.
+       The script sets each card's starting offset (--c), the slide distance (--dist), and the screen width (--vw). */
+    .motion .gallery:not(.gallery--free) .card {
+        --f: clamp(0, 1 - max(var(--c, 0) - var(--p, 0) * var(--dist, 0), var(--p, 0) * var(--dist, 0) - var(--c, 0)) / (0.9 * var(--vw, 1)), 1);
+    }
+}
+
+/* ================= Command menu (Ctrl+K / ⌘K) ================= */
+.cmdk {
+    width: min(560px, calc(100vw - 32px));
+    max-height: min(520px, calc(100dvh - 120px));
+    margin: 12vh auto auto;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+}
+
+.cmdk[open] { display: flex; flex-direction: column; }
+.cmdk::backdrop { background: rgba(var(--bg-rgb), 0.55); }
+.motion .cmdk[open] { animation: cmdkIn 0.22s var(--ease); }
+
+@keyframes cmdkIn {
+    from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+}
+
+.cmdk-search {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.cmdk-search-icon {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    fill: none;
+    stroke: var(--text-3);
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.cmdk-input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 1rem;
+}
+
+.cmdk-input::placeholder { color: var(--text-3); }
+
+.cmdk-list {
+    flex: 1;
+    margin: 0;
+    padding: 0.4rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    list-style: none;
+}
+
+.cmdk-sub { margin: 0; padding: 0; list-style: none; }
+
+/* Sections the menu jumps to take focus so Tab carries on from there; no outline needed on them */
+main [tabindex="-1"]:focus { outline: none; }
+
+.cmdk-group {
+    padding: 0.7rem 0.7rem 0.3rem;
+    font-family: var(--font);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-3);
+}
+
+.cmdk-item {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.6rem 0.7rem;
+    border-radius: 10px;
+    font-family: var(--font);
+    font-size: 0.95rem;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.cmdk-item[aria-selected="true"] { background: rgba(var(--accent-rgb), 0.14); }
+.cmdk-item .cmdk-ic { width: 18px; height: 18px; flex: none; color: var(--text-2); }
+.cmdk-item[aria-selected="true"] .cmdk-ic { color: var(--accent); }
+.cmdk-hint { margin-left: auto; font-size: 0.8rem; color: var(--text-3); }
+.cmdk-empty { padding: 1.2rem 0.7rem; font-family: var(--font); color: var(--text-2); }
+
+.cmdk-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.1rem;
+    padding: 0.65rem 1rem;
+    border-top: 1px solid var(--line);
+    font-family: var(--font);
+    font-size: 0.78rem;
+    color: var(--text-3);
+}
+
+.cmdk-status { margin-left: auto; color: var(--accent); font-weight: 600; }
+
+.cmdk kbd,
+.footer-kbd kbd {
+    display: inline-block;
+    min-width: 1.5em;
+    margin-right: 0.15em;
+    padding: 0.05em 0.4em;
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: var(--bg);
+    font-family: var(--font);
+    font-size: 0.85em;
+    line-height: 1.4;
+    text-align: center;
+    color: var(--text-2);
+}
+
+.cmdk-esc { flex: none; }
+
+/* In the footer the keys sit inline with the text without making the line taller */
+.footer-kbd kbd { padding: 0 0.35em; border-bottom-width: 1px; line-height: 1.25; vertical-align: 0.05em; }
+
+/* Phones and touch screens have no keyboard shortcut to advertise */
+@media (pointer: coarse) {
+    .footer-kbd { display: none !important; }
+}
+
 /* ================= Touch screens ================= */
 /* Blur has to be repainted on every frame of a scroll, which phones struggle with,
    so on touch screens the motion uses only fades and movement. */
@@ -1924,8 +2116,7 @@ html:has(.panel[open]) { overflow: hidden; }
 
     .edu-facts { grid-template-columns: 1fr; }
     .headline br { display: none; }
-    .footer-inner { flex-direction: column; gap: 0.45rem; }
-    .footer-inner > * + *::before { display: none; }
+    .footer-inner { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
 
     .to-top {
         position: fixed;

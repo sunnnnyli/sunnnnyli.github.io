@@ -2,6 +2,10 @@
     const root = document.documentElement;
     let motion = root.classList.contains('motion');
     const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
+    // Browsers with scroll-driven animations track each scene's progress in CSS (see "Scroll timelines" in styles.css),
+    // so the script only measures scenes and cards itself where that isn't supported.
+    const sda = !!(window.CSS && CSS.supports && CSS.supports('animation-timeline', 'view()'));
+    const isMac = /Mac|iPhone|iPad/i.test((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '');
 
     document.getElementById('year').textContent = new Date().getFullYear();
 
@@ -179,6 +183,12 @@
         pinnedDist = dist;
         gallery.style.setProperty('--dist', dist);
         gallery.style.height = `${dist + window.innerHeight}px`;
+        // Each card's offset from the middle of the screen before the track slides, for the CSS card scaling.
+        gallery.style.setProperty('--vw', window.innerWidth);
+        cards.forEach((card) => {
+            card._c = card.offsetLeft + card.offsetWidth / 2 - window.innerWidth / 2;
+            card.style.setProperty('--c', card._c.toFixed(1));
+        });
     };
 
     const navTrack = document.querySelector('.nav-track');
@@ -187,14 +197,27 @@
     // Piecewise map from scroll position to the line: the fill hits each tab's center
     // exactly when its section reaches the top bar, and the line's end at the bottom of the page.
     // The same positions decide which tabs are passed and which one is current, so the tabs and line always agree.
-    const measureTrack = (y, max) => {
-        const width = navTrack.offsetWidth;
+    // Section positions, tab positions and page height only change when the layout does,
+    // so they're measured then (see the ResizeObserver below), never while scrolling.
+    let lay = null;
+    const measureLayout = () => {
+        const y = window.scrollY;
         const navH = nav.offsetHeight;
+        lay = {
+            docH: document.documentElement.scrollHeight,
+            width: navTrack.offsetWidth,
+            secTops: checkpoints.map(({ sec }) => sec.getBoundingClientRect().top + y - navH),
+            tabX: checkpoints.map(({ a }) => a.offsetLeft + a.offsetWidth / 2),
+        };
+    };
+
+    const measureTrack = (y, max) => {
+        const { width, secTops, tabX } = lay;
         const pts = [[0, 0]];
         let prev = 0;
-        const tops = checkpoints.map(({ a, sec }) => {
-            const top = Math.min(max, Math.max(prev, sec.getBoundingClientRect().top + y - navH));
-            pts.push([top, a.offsetLeft + a.offsetWidth / 2]);
+        const tops = secTops.map((t, i) => {
+            const top = Math.min(max, Math.max(prev, t));
+            pts.push([top, tabX[i]]);
             prev = top;
             return top;
         });
@@ -233,28 +256,25 @@
         ticking = false;
         const vh = window.innerHeight;
         const y = window.scrollY;
-        const max = document.documentElement.scrollHeight - vh;
+        if (!lay) measureLayout();
+        const max = lay.docH - vh;
 
         // Read every position first, then write. Mixing the two makes the browser
         // redo the page layout after each change, which is what makes phones stutter.
         const track = measureTrack(y, max);
-        const sceneP = motion ? scenes.map((sc) => {
+        const sceneP = motion && !sda ? scenes.map((sc) => {
             const r = sc.getBoundingClientRect();
             if (r.bottom < -vh || r.top > vh * 2) return null;
             return sc.dataset.scene === 'enter'
                 ? clamp((vh - r.top) / (vh * 0.8))
                 : clamp(-r.top / Math.max(1, r.height - vh));
         }) : [];
+        // Cards grow as they near the middle. Worked out from the gallery's progress (the same formula as the CSS),
+        // so they never lag a step behind the track after a jump.
         let cardF = null;
-        if (motion) {
-            const gr = gallery.getBoundingClientRect();
-            if (gr.bottom > 0 && gr.top < vh) {
-                const mid = window.innerWidth / 2;
-                cardF = cards.map((card) => {
-                    const r = card.getBoundingClientRect();
-                    return clamp(1 - Math.abs(r.left + r.width / 2 - mid) / (window.innerWidth * 0.9)).toFixed(3);
-                });
-            }
+        const galleryP = sceneP[scenes.indexOf(gallery)];
+        if (motion && !sda && pinnedDist !== null && galleryP != null) {
+            cardF = cards.map((card) => clamp(1 - Math.abs(card._c - galleryP * pinnedDist) / (window.innerWidth * 0.9)).toFixed(3));
         }
 
         toTop.classList.toggle('show', y > vh * 1.2);
@@ -314,6 +334,7 @@
         }
 
         layoutGallery();
+        measureLayout();
         if (mark) window.scrollTo({ top: window.scrollY + mark.getBoundingClientRect().top - before, behavior: 'instant' });
 
         // Anything already on screen or scrolled past shouldn't wait for a reveal.
@@ -351,31 +372,35 @@
     }
 
     /* ---------- Copy email ---------- */
+    const copyText = async (text) => {
+        // The clipboard API can hang waiting on a permission prompt, so give it a moment, then fall back.
+        let ok = false;
+        if (navigator.clipboard) {
+            ok = await Promise.race([
+                navigator.clipboard.writeText(text).then(() => true, () => false),
+                new Promise((r) => setTimeout(() => r(false), 800)),
+            ]);
+        }
+        if (!ok) {
+            // Older browsers and non-secure pages: copy from a hidden text box.
+            const t = document.createElement('textarea');
+            t.value = text;
+            t.setAttribute('readonly', '');
+            t.style.cssText = 'position:fixed;opacity:0';
+            document.body.append(t);
+            t.select();
+            try { ok = document.execCommand('copy'); } catch (err) {}
+            t.remove();
+        }
+        return ok;
+    };
+
     document.querySelectorAll('.copy-btn').forEach((copyBtn) => {
         const copyLabel = copyBtn.querySelector('.copy-label');
         const copyStatus = copyBtn.closest('.email-group').querySelector('.copy-status');
         let copyTimer;
         copyBtn.addEventListener('click', async () => {
-            const text = copyBtn.dataset.copy;
-            // The clipboard API can hang waiting on a permission prompt, so give it a moment, then fall back.
-            let ok = false;
-            if (navigator.clipboard) {
-                ok = await Promise.race([
-                    navigator.clipboard.writeText(text).then(() => true, () => false),
-                    new Promise((r) => setTimeout(() => r(false), 800)),
-                ]);
-            }
-            if (!ok) {
-                // Older browsers and non-secure pages: copy from a hidden text box.
-                const t = document.createElement('textarea');
-                t.value = text;
-                t.setAttribute('readonly', '');
-                t.style.cssText = 'position:fixed;opacity:0';
-                document.body.append(t);
-                t.select();
-                try { ok = document.execCommand('copy'); } catch (err) {}
-                t.remove();
-            }
+            const ok = await copyText(copyBtn.dataset.copy);
             copyBtn.classList.toggle('copied', ok);
             copyLabel.textContent = ok ? 'Copied' : 'Copy failed';
             copyStatus.textContent = ok ? 'Email address copied' : 'Could not copy the email address';
@@ -444,8 +469,11 @@
     syncMotionBtn();
 
     layoutGallery();
+    measureLayout();
     frame();
     window.addEventListener('scroll', request, { passive: true });
+    // Anything that changes the page's size (new widths, pinned heights, late fonts) re-measures the layout.
+    new ResizeObserver(() => { measureLayout(); request(); }).observe(document.body);
     // Phone browsers resize the window when the address bar slides away on the first scroll.
     // That only changes the height a little, so skip the full re-measure then.
     let lastW = window.innerWidth;
@@ -468,5 +496,189 @@
         entries.forEach((e) => e.target.classList.toggle('in-view', e.isIntersecting));
     });
     document.querySelectorAll('.art-dg').forEach((el) => artObserver.observe(el));
-    if (document.fonts) document.fonts.ready.then(() => { layoutGallery(); request(); });
+    if (document.fonts) document.fonts.ready.then(() => { layoutGallery(); measureLayout(); request(); });
+
+    /* ---------- Command menu (Ctrl+K / ⌘K) ---------- */
+    const cmdk = document.getElementById('cmdk');
+    const cmdkInput = document.getElementById('cmdk-input');
+    const cmdkList = document.getElementById('cmdk-list');
+    const cmdkStatus = cmdk.querySelector('.cmdk-status');
+    const svg = (paths) => `<svg class="cmdk-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+    const ICON = {
+        go: svg('<path d="M5 12h14M13 6l6 6-6 6"/>'),
+        read: svg('<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5zM4 20.5A2.5 2.5 0 0 0 6.5 21H20"/>'),
+        copy: svg('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>'),
+        open: svg('<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>'),
+        theme: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
+        motion: svg('<path d="M3 12h4l3-8 4 16 3-8h4"/>'),
+    };
+    const firstHref = (sel) => { const a = document.querySelector(sel); return a ? a.href : null; };
+    const copyBtnEl = document.querySelector('.copy-btn');
+    const email = copyBtnEl ? copyBtnEl.dataset.copy : null;
+
+    const goTo = (hash) => {
+        const target = document.querySelector(hash);
+        if (!target) return;
+        history.pushState(null, '', hash);
+        target.scrollIntoView({ behavior: motion ? 'smooth' : 'auto', block: 'start' });
+        // Keyboard focus moves there too, so Tab carries on from the new spot.
+        if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+        target.focus({ preventScroll: true });
+    };
+
+    // Built each time the menu opens, so the theme and motion labels match the current state.
+    const buildCommands = () => {
+        const list = [{ group: 'Go to', label: 'Top of the page', keys: 'intro home start hero', icon: ICON.go, nav: '#top' }];
+        checkpoints.forEach(({ a }) => list.push({ group: 'Go to', label: a.textContent.trim(), keys: a.hash.slice(1), icon: ICON.go, nav: a.hash }));
+        document.querySelectorAll('[data-panel]').forEach((btn) => {
+            const panel = document.getElementById(btn.dataset.panel);
+            const title = panel && panel.querySelector('h2, h3');
+            if (title) list.push({ group: 'Projects', label: title.textContent.trim(), keys: 'project read case study', icon: ICON.read, panel });
+        });
+        if (email) {
+            list.push({
+                group: 'Actions', label: 'Copy email address', hint: email, keys: 'mail contact', icon: ICON.copy,
+                run: async () => ((await copyText(email)) ? 'Email copied' : 'Couldn’t copy. Try the button in Contact.'),
+            });
+        }
+        [['Résumé', 'a[href$=".pdf"]', 'resume cv pdf'], ['GitHub', 'a[href*="github.com/"]', 'code repos'], ['LinkedIn', 'a[href*="linkedin.com/"]', 'profile']]
+            .forEach(([name, sel, keys]) => {
+                const href = firstHref(sel);
+                if (href) list.push({ group: 'Actions', label: `Open ${name}`, keys, icon: ICON.open, run: () => { window.open(href, '_blank', 'noopener'); } });
+            });
+        const next = theme === 'dark' ? 'light' : 'dark';
+        list.push({ group: 'Actions', label: `Switch to ${next} theme`, keys: 'dark light mode color', icon: ICON.theme, run: () => { setTheme(next, true); } });
+        list.push({ group: 'Actions', label: motion ? 'Turn animations off' : 'Turn animations back on', keys: 'reduce motion animation', icon: ICON.motion, run: () => { setMotion(!motion); } });
+        return list.map((c) => ({ ...c, text: `${c.label} ${c.keys} ${c.group}`.toLowerCase() }));
+    };
+
+    let commands = [];
+    let items = [];
+    let active = 0;
+    let restoreTo = null;
+
+    const setActive = (i) => {
+        if (!items.length) { cmdkInput.removeAttribute('aria-activedescendant'); return; }
+        active = (i + items.length) % items.length;
+        items.forEach(({ el }, k) => el.setAttribute('aria-selected', String(k === active)));
+        cmdkInput.setAttribute('aria-activedescendant', items[active].el.id);
+        items[active].el.scrollIntoView({ block: 'nearest' });
+    };
+
+    const render = () => {
+        const words = cmdkInput.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+        const matches = commands.filter((c) => words.every((w) => c.text.includes(w)));
+        cmdkList.replaceChildren();
+        items = [];
+        let groupList = null;
+        let groupName = null;
+        matches.forEach((c) => {
+            if (c.group !== groupName) {
+                groupName = c.group;
+                const section = document.createElement('li');
+                section.setAttribute('role', 'presentation');
+                const heading = document.createElement('div');
+                heading.className = 'cmdk-group';
+                heading.id = `cmdk-g-${groupName.replace(/\W+/g, '-').toLowerCase()}`;
+                heading.textContent = groupName;
+                groupList = document.createElement('ul');
+                groupList.className = 'cmdk-sub';
+                groupList.setAttribute('role', 'group');
+                groupList.setAttribute('aria-labelledby', heading.id);
+                section.append(heading, groupList);
+                cmdkList.append(section);
+            }
+            const idx = items.length;
+            const li = document.createElement('li');
+            li.className = 'cmdk-item';
+            li.id = `cmdk-opt-${idx}`;
+            li.setAttribute('role', 'option');
+            li.innerHTML = c.icon;
+            const label = document.createElement('span');
+            label.textContent = c.label;
+            li.append(label);
+            if (c.hint) {
+                const hint = document.createElement('span');
+                hint.className = 'cmdk-hint';
+                hint.textContent = c.hint;
+                li.append(hint);
+                li.setAttribute('aria-label', `${c.label}, ${c.hint}`); // so screen readers don't run the two together
+            }
+            li.addEventListener('pointermove', () => { if (active !== idx) setActive(idx); });
+            li.addEventListener('click', () => runCommand(idx));
+            items.push({ el: li, cmd: c });
+            groupList.append(li);
+        });
+        if (!items.length) {
+            const none = document.createElement('li');
+            none.className = 'cmdk-empty';
+            none.setAttribute('role', 'presentation');
+            none.textContent = 'No matches. Try “projects”, “email”, or “theme”.';
+            cmdkList.append(none);
+        }
+        setActive(0);
+    };
+
+    const closeCmdk = () => { if (cmdk.open) cmdk.close(); };
+    const openCmdk = () => {
+        if (cmdk.open) return;
+        restoreTo = document.activeElement;
+        setMenu(false);
+        commands = buildCommands();
+        cmdkInput.value = '';
+        cmdkStatus.textContent = '';
+        render();
+        cmdk.showModal();
+        cmdkInput.focus();
+    };
+
+    const runCommand = async (i) => {
+        const { cmd } = items[i] || {};
+        if (!cmd) return;
+        if (cmd.nav || cmd.panel) {
+            restoreTo = null; // focus moves to the section or panel instead
+            closeCmdk();
+            if (cmd.nav) goTo(cmd.nav);
+            else cmd.panel.showModal();
+            return;
+        }
+        const message = await cmd.run();
+        if (message) {
+            cmdkStatus.textContent = message;
+            setTimeout(closeCmdk, 900);
+        } else {
+            closeCmdk();
+        }
+    };
+
+    cmdk.addEventListener('close', () => {
+        if (restoreTo && restoreTo.isConnected && restoreTo !== document.body) restoreTo.focus({ preventScroll: true });
+        restoreTo = null;
+    });
+    cmdk.addEventListener('click', (e) => { if (e.target === cmdk) closeCmdk(); }); // a click on the dimmed backdrop
+    cmdkInput.addEventListener('input', render);
+    cmdkInput.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); setActive(active + 1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(active - 1); }
+        else if (e.key === 'Enter') { e.preventDefault(); runCommand(active); }
+    });
+    document.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
+            e.preventDefault();
+            if (cmdk.open) closeCmdk();
+            else openCmdk();
+        }
+    });
+
+    // Footer hint, only on devices with a keyboard and mouse
+    const kbdHint = document.querySelector('.footer-kbd');
+    if (isMac) document.querySelectorAll('.kbd-mod').forEach((k) => { k.textContent = '⌘'; });
+    if (kbdHint && matchMedia('(pointer: fine)').matches) kbdHint.hidden = false;
+
+    /* ---------- A hello for anyone who opens the developer console ---------- */
+    const accent = getComputedStyle(root).getPropertyValue('--accent').trim() || '#e0b25c';
+    console.log('%cHi there, fellow developer!', `font: 600 15px/1.6 system-ui, sans-serif; color: ${accent}`);
+    console.log(`This site is plain HTML, CSS, and JavaScript, with no framework and no build step.
+Have a look at the source: https://github.com/sunnnnyli/sunnnnyli.github.io
+Tip: press ${isMac ? '⌘K' : 'Ctrl+K'} on the page to jump anywhere.`);
 })();

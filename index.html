@@ -131,9 +131,15 @@
                             <span class="photo-glow" aria-hidden="true"></span>
                             <span class="photo-ring" aria-hidden="true"></span>
                             <span class="photo-inner">
+                                <!-- Phones show the photo at 84px, desktops at up to 336px; each picks the smallest file that stays sharp. -->
                                 <picture>
-                                    <source srcset="assets/img/profile.webp" type="image/webp">
-                                    <img class="photo-img" src="assets/img/profile.jpg" alt="Portrait of Sunny Li" width="640" height="640" fetchpriority="high">
+                                    <source type="image/webp"
+                                            srcset="assets/img/profile-160.webp 160w, assets/img/profile-320.webp 320w, assets/img/profile-480.webp 480w, assets/img/profile.webp 640w"
+                                            sizes="(max-width: 960px) 84px, (max-width: 1292px) 26vw, 336px">
+                                    <img class="photo-img" src="assets/img/profile.jpg"
+                                         srcset="assets/img/profile-160.jpg 160w, assets/img/profile-320.jpg 320w, assets/img/profile-480.jpg 480w, assets/img/profile.jpg 640w"
+                                         sizes="(max-width: 960px) 84px, (max-width: 1292px) 26vw, 336px"
+                                         alt="Portrait of Sunny Li" width="640" height="640" fetchpriority="high">
                                 </picture>
                             </span>
                         </figure>
@@ -452,9 +458,15 @@
 
     <footer class="footer">
         <div class="container footer-inner">
-            <p>Designed and built by Sunny Li<span class="sep"><span class="visually-hidden">, </span></span>© <span id="year">2026</span></p>
-            <p class="footer-meta">Last updated <span id="updated">October 2026</span></p>
-            <a href="#top">Back to top ↑</a>
+            <p class="footer-side">
+                <span class="footer-name">Sunny Li</span><span class="sep"><span class="visually-hidden">, </span></span>
+                <span>© <span id="year">2026</span></span><span class="sep"><span class="visually-hidden">, </span></span>
+                <span class="footer-meta">Last updated <span id="updated">October 2026</span></span>
+            </p>
+            <p class="footer-side">
+                <span class="footer-kbd" hidden><kbd class="kbd-mod">Ctrl</kbd> <kbd>K</kbd> to jump anywhere<span class="sep"><span class="visually-hidden">, </span></span></span>
+                <a href="#top">Back to top ↑</a>
+            </p>
         </div>
     </footer>
 
@@ -514,6 +526,23 @@
                 <h3>What I built</h3>
                 <p>The dashboard: it fetches each manuscript's valid actions from the backend workflow API, shows only the ones the viewer's role (editor, author, or referee) allows, and sends transitions through an Axios client with inline error handling. I also built the login flow and landing page, with Jest and React Testing Library component tests, shipped through a branch-and-merge workflow to a deployed Heroku app.</p>
             <ul class="chips" aria-label="Technologies"><li>React</li><li>Jest</li><li>React Testing Library</li><li>Axios</li><li>Flask API</li><li>Heroku</li></ul>
+        </div>
+    </dialog>
+
+    <!-- Command menu: Ctrl+K (⌘K on a Mac). The script fills in the commands. -->
+    <dialog class="cmdk" id="cmdk" aria-label="Command menu">
+        <div class="cmdk-search">
+            <svg class="cmdk-search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>
+            <input class="cmdk-input" id="cmdk-input" type="text" role="combobox" autocomplete="off" spellcheck="false"
+                   placeholder="Jump to a section, copy my email…" aria-label="Search commands"
+                   aria-expanded="true" aria-controls="cmdk-list" aria-autocomplete="list">
+            <kbd class="cmdk-esc">Esc</kbd>
+        </div>
+        <ul class="cmdk-list" id="cmdk-list" role="listbox" aria-label="Commands"></ul>
+        <div class="cmdk-foot">
+            <span><kbd>↑</kbd><kbd>↓</kbd> to move</span>
+            <span><kbd>↵</kbd> to select</span>
+            <span class="cmdk-status" role="status" aria-live="polite"></span>
         </div>
     </dialog>
 </body>
