@@ -6,7 +6,7 @@
          Opened straight from disk there's no root, so the script points them at this file's folder instead. -->
     <base href="/">
     <script>if (location.protocol === 'file:') document.querySelector('base').href = location.href.replace(/[^/]*$/, '');</script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Page not found | Sunny Li</title>
     <meta name="description" content="This page isn't on Sunny Li's portfolio. Head back to the portfolio or jump straight to a section.">
     <meta name="robots" content="noindex">
@@ -51,7 +51,7 @@
             place-items: center;
             min-height: calc(100vh - var(--nav-h));
             min-height: calc(100svh - var(--nav-h));
-            padding: 2rem var(--gutter) 5rem;
+            padding: 2rem var(--gutter) calc(5rem + var(--safe-bottom));
             overflow: hidden;
         }
 
@@ -85,6 +85,20 @@
             font-size: clamp(1.1rem, 2.2vw, 1.3rem);
             line-height: 1.5;
             color: var(--text-2);
+        }
+
+        /* The page's best guess at what the mistyped address meant */
+        .nf-guess {
+            margin-top: 1rem;
+            font-size: clamp(1.05rem, 2vw, 1.2rem);
+            color: var(--text);
+        }
+
+        .nf-guess a {
+            color: var(--accent);
+            text-decoration: underline;
+            text-decoration-thickness: 1px;
+            text-underline-offset: 0.2em;
         }
 
         .nf-actions {
@@ -174,6 +188,7 @@
             <p class="eyebrow grad-text"><span class="eyebrow-num">404</span><span class="sep"><span class="visually-hidden">, </span></span>Page not found</p>
             <h1>This page <em>wandered off.</em></h1>
             <p class="nf-lede">The link might be mistyped, or the page may have moved. Everything I've built is one click away.</p>
+            <p class="nf-guess" hidden>Looking for <a href="index.html">the portfolio</a>?</p>
             <div class="nf-actions">
                 <a class="pill pill-blue" href="index.html">Back to the portfolio <span aria-hidden="true">→</span></a>
                 <a class="link" href="resume.html"><svg class="lk-ic lk-stroke" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span class="lk-t">Résumé</span> <span class="chev" aria-hidden="true">›</span></a>
@@ -225,6 +240,60 @@
                 sync();
             });
             sync();
+
+            // A mistyped address often still names what someone wanted (/project, /resum, /contact-me), so offer the
+            // closest page, section, or write-up. Opened straight from disk or as /404.html, there's nothing to read.
+            const places = [
+                ['the portfolio', 'index.html', 'home index main top intro hello about'],
+                ['Impact', 'index.html#impact', 'impact numbers results stats metrics'],
+                ['Experience', 'index.html#experience', 'experience jobs job career history roles employment justworks oti olympix'],
+                ['Projects', 'index.html#projects', 'projects project work builds'],
+                ['Education', 'index.html#education', 'education school nyu university college degree courses coursework toolkit skills'],
+                ['Contact', 'index.html#contact', 'contact email mail hire connect reach'],
+                ['my résumé', 'resume.html', 'resume cv'],
+                ['the résumé PDF', 'Sunny-Li-Resume.pdf', 'pdf download'],
+                ['the Vulnerability Management write-up', 'index.html#vm', 'vm vulnerability vulnerabilities cve notices'],
+                ['the Bug PoCer write-up', 'index.html#pocer', 'pocer poc bug exploit exploits web3 solidity agents'],
+                ['the Journal Editorial write-up', 'index.html#journal', 'journal editorial editor'],
+            ];
+            const wordsOf = (text) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+                .split(/[^a-z0-9]+/).filter((w) => w.length > 1 && !['html', 'htm', 'php', 'www'].includes(w));
+            // How many single-letter edits turn one word into the other
+            const edits = (a, b) => {
+                let row = [...Array(b.length + 1).keys()];
+                for (let i = 1; i <= a.length; i++) {
+                    const next = [i];
+                    for (let j = 1; j <= b.length; j++) next[j] = Math.min(row[j] + 1, next[j - 1] + 1, row[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+                    row = next;
+                }
+                return row[b.length];
+            };
+            // 3 for the same word, 2 when one starts the other ("proj"), 1 for a near miss ("expereince")
+            const likeness = (typed, word) => {
+                if (typed === word) return 3;
+                if (Math.min(typed.length, word.length) >= 3 && (word.startsWith(typed) || typed.startsWith(word))) return 2;
+                return edits(typed, word) <= (word.length >= 7 ? 2 : word.length >= 4 ? 1 : 0) ? 1 : 0;
+            };
+            const guess = document.querySelector('.nf-guess');
+            if (location.protocol !== 'file:' && !/\/404(\.html)?$/.test(location.pathname)) {
+                let typed = [];
+                try { typed = wordsOf(decodeURIComponent(`${location.pathname} ${location.search} ${location.hash}`)); } catch (e) {}
+                let best = null;
+                let bestScore = 0;
+                places.forEach(([label, href, keys]) => {
+                    const score = typed.reduce((sum, t) => sum + Math.max(...keys.split(' ').map((k) => likeness(t, k))), 0);
+                    if (score > bestScore) {
+                        best = [label, href];
+                        bestScore = score;
+                    }
+                });
+                if (best) {
+                    const link = guess.querySelector('a');
+                    link.textContent = best[0];
+                    link.setAttribute('href', best[1]);
+                    guess.hidden = false;
+                }
+            }
         })();
     </script>
 </body>

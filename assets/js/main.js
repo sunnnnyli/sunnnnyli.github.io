@@ -495,21 +495,77 @@
         panel._returnUrl = location.hash === hash ? location.pathname + location.search : location.href;
         if (location.hash !== hash) history.replaceState(history.state, '', hash);
     };
+    // Inside a write-up, the headings, paragraphs, and chips below the first screen rise in as you scroll to them.
+    // What's on screen when it opens shows at once.
+    const partsOf = (panel) => panel.querySelectorAll('.panel-inner > :is(h3, p:not(.panel-meta), .chips, .panel-next)');
+    const settleParts = (panel) => {
+        panel.scrollTop = 0;
+        if (!motion) return;
+        if (!panel._parts) {
+            panel._parts = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (!entry.isIntersecting) return;
+                    entry.target.classList.remove('now');
+                    entry.target.classList.add('in');
+                    panel._parts.unobserve(entry.target);
+                });
+            }, { root: panel, rootMargin: '0px 0px -6% 0px' });
+        }
+        const fold = panel.clientHeight * 0.94;
+        partsOf(panel).forEach((el) => {
+            const shown = el.offsetTop < fold;
+            el.classList.add('pr');
+            el.classList.toggle('in', shown);
+            el.classList.toggle('now', shown);
+            if (!shown) panel._parts.observe(el);
+        });
+    };
     const openPanel = (panel) => {
         if (panel.open) return;
         const card = panelCard.get(panel);
         const grow = motion && !!document.startViewTransition && !morphing && !!card && onScreen(card);
         panel.classList.toggle('grown', grow);
-        if (grow) morph(card, panel, () => panel.showModal());
-        else panel.showModal();
+        panel._shrink = grow; // closing shrinks it back into its card
+        const show = () => {
+            panel.showModal();
+            settleParts(panel);
+        };
+        if (grow) morph(card, panel, show);
+        else show();
         showPanelUrl(panel);
     };
     const closePanel = (panel) => {
         if (!panel.open) return;
         const card = panelCard.get(panel);
-        if (panel.classList.contains('grown') && card && onScreen(card)) morph(panel, card, () => panel.close());
+        if (panel._shrink && card && onScreen(card)) morph(panel, card, () => panel.close());
         else panel.close();
     };
+    // "Next project" at the end of each write-up steps through them in card order without closing. The page behind
+    // moves to that project's card, so closing still shrinks back into the right one.
+    const panels = [...document.querySelectorAll('.panel')];
+    const switchPanel = (from, to) => {
+        const returnUrl = from._returnUrl; // closing the next one puts the address back to where the first began
+        from.close();
+        const card = panelCard.get(to);
+        if (card) scrollToCard(card, 'instant');
+        to.classList.remove('grown');
+        to._shrink = motion && !!card; // closePanel checks the card is on screen by then
+        to.showModal();
+        settleParts(to);
+        showPanelUrl(to);
+        to._returnUrl = returnUrl;
+    };
+    panels.forEach((panel, i) => {
+        const next = panels[(i + 1) % panels.length];
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'panel-next';
+        btn.innerHTML = '<span class="panel-next-label">Next project</span> <span class="panel-next-name"></span>';
+        btn.querySelector('.panel-next-name').textContent = next.querySelector('h2').textContent;
+        btn.insertAdjacentHTML('beforeend', '<span class="chev" aria-hidden="true">→</span>');
+        btn.addEventListener('click', () => switchPanel(panel, next));
+        panel.querySelector('.panel-inner').append(btn);
+    });
     document.querySelectorAll('[data-panel]').forEach((btn) => {
         const panel = document.getElementById(btn.dataset.panel);
         panelCard.set(panel, btn.closest('.card'));
@@ -521,7 +577,7 @@
         panel.addEventListener('click', (e) => { if (e.target === panel) closePanel(panel); });
         // Esc shrinks it back into its card as well
         panel.addEventListener('cancel', (e) => {
-            if (!panel.classList.contains('grown')) return;
+            if (!panel._shrink) return;
             e.preventDefault();
             closePanel(panel);
         });
@@ -537,6 +593,7 @@
         linkBtn.addEventListener('click', async () => {
             const ok = await copyText(`${location.origin}${location.pathname}#${slugOf(panel)}`);
             linkBtn.classList.toggle('copied', ok);
+            if (ok) tap();
             linkLabel.textContent = ok ? 'Copied' : 'Copy failed';
             linkStatus.textContent = ok ? 'Link copied' : 'Could not copy the link';
             clearTimeout(linkTimer);
@@ -547,6 +604,69 @@
             }, 2000);
         });
     });
+    // Phones: the write-up sheet can be pulled down from its top to close. It follows the finger, closes past a
+    // quarter of its height (or on a quick flick), and springs back otherwise. Scrolling inside it works as usual.
+    const sheetLayout = matchMedia('(max-width: 760px)');
+    panels.forEach((panel) => {
+        let startY = 0;
+        let startT = 0;
+        let pull = 0;
+        let state = 'idle'; // 'maybe' until the first move shows which way the finger is going, then 'drag'
+        const setPull = (px) => {
+            pull = px;
+            panel.style.transform = px ? `translateY(${px}px)` : '';
+            panel.style.setProperty('--pull', (px / panel.offsetHeight).toFixed(3));
+        };
+        panel.addEventListener('touchstart', (e) => {
+            state = sheetLayout.matches && e.touches.length === 1 && panel.scrollTop <= 0 ? 'maybe' : 'idle';
+            startY = e.touches[0].clientY;
+            startT = performance.now();
+        }, { passive: true });
+        panel.addEventListener('touchmove', (e) => {
+            if (state === 'idle') return;
+            const dy = e.touches[0].clientY - startY;
+            if (state === 'maybe') {
+                if (Math.abs(dy) < 6) return;
+                state = dy > 0 ? 'drag' : 'idle'; // a push up is an ordinary scroll
+                if (state === 'idle') return;
+                panel.style.transition = 'none';
+            }
+            e.preventDefault();
+            setPull(Math.max(0, dy));
+        }, { passive: false });
+        const release = () => {
+            if (state !== 'drag') {
+                state = 'idle';
+                return;
+            }
+            state = 'idle';
+            const flick = pull / Math.max(1, performance.now() - startT) > 0.6;
+            const close = pull > panel.offsetHeight * 0.25 || (flick && pull > 40);
+            panel.style.transition = motion ? 'transform 0.28s cubic-bezier(0.2, 0.7, 0.3, 1)' : 'none';
+            if (close) {
+                let closed = false;
+                const done = () => {
+                    if (closed) return;
+                    closed = true;
+                    panel.close();
+                    panel.style.transition = '';
+                    setPull(0);
+                };
+                if (!motion) {
+                    done();
+                    return;
+                }
+                setPull(panel.offsetHeight);
+                panel.addEventListener('transitionend', done, { once: true });
+                setTimeout(done, 400); // in case the slide never reports finishing
+            } else {
+                setPull(0);
+            }
+        };
+        panel.addEventListener('touchend', release);
+        panel.addEventListener('touchcancel', release);
+    });
+
     // A write-up link followed while the page is already open
     window.addEventListener('hashchange', () => {
         const panel = panelFromHash();
@@ -561,6 +681,13 @@
     }
 
     /* ---------- Copy email ---------- */
+    // A light tap of vibration when something's copied on a touch screen that supports it (Android; iPhones don't
+    // allow it, so it does nothing there)
+    const tap = () => {
+        if (navigator.vibrate && matchMedia('(pointer: coarse)').matches) {
+            try { navigator.vibrate(12); } catch (e) {}
+        }
+    };
     const copyText = async (text) => {
         // The clipboard API can hang waiting on a permission prompt, so give it a moment, then fall back.
         let ok = false;
@@ -591,6 +718,7 @@
         copyBtn.addEventListener('click', async () => {
             const ok = await copyText(copyBtn.dataset.copy);
             copyBtn.classList.toggle('copied', ok);
+            if (ok) tap();
             copyLabel.textContent = ok ? 'Copied' : 'Copy failed';
             copyStatus.textContent = ok ? 'Email address copied' : 'Could not copy the email address';
             clearTimeout(copyTimer);
@@ -719,8 +847,24 @@
 
     /* ---------- Looping animations rest while off screen ---------- */
     // The intro's glow and ring, the project diagrams, and the toolkit marquees pause whenever they're out of view
+    // The first time a project diagram comes into view it draws itself in (see "Diagrams draw in" in styles.css)
     const idleObserver = new IntersectionObserver((entries) => {
-        entries.forEach((e) => e.target.classList.toggle('idle', !e.isIntersecting));
+        entries.forEach((e) => {
+            e.target.classList.toggle('idle', !e.isIntersecting);
+            if (e.isIntersecting && e.target.matches('.art-dg')) e.target.classList.add('drawn');
+        });
+    });
+    // Each part of a diagram gets its place across it (--x, 0 to 1) so the drawing builds left to right, and each
+    // connecting line a length of 1 so it can draw along itself
+    document.querySelectorAll('.art-dg svg').forEach((svg) => {
+        const width = svg.viewBox.baseVal.width || 300;
+        [...svg.children].forEach((el) => {
+            if (el.matches('.dg-line')) el.setAttribute('pathLength', '1');
+            try {
+                const b = el.getBBox();
+                el.style.setProperty('--x', clamp((b.x + b.width / 2) / width).toFixed(2));
+            } catch (err) {}
+        });
     });
     document.querySelectorAll('.hero-sticky, .art-dg, .marquee').forEach((el) => idleObserver.observe(el));
 
@@ -1312,6 +1456,7 @@
         b.addEventListener('click', async () => {
             const ok = await copyText(`${location.origin}${location.pathname}#${sec.id}`);
             b.classList.toggle('copied', ok);
+            if (ok) tap();
             toast(ok ? `Link to ${name} copied` : 'Couldn’t copy the link');
             clearTimeout(timer);
             timer = setTimeout(() => b.classList.remove('copied'), 1800);

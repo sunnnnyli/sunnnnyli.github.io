@@ -21,7 +21,12 @@
 
     --nav-h: 52px;
     --nav-slim: 44px;
-    --gutter: 1rem;
+    /* The pages draw edge to edge on iPhones (viewport-fit=cover), so Safari's bottom toolbar floats over the page
+       instead of sitting on a solid strip. The safe-area insets keep text and buttons clear of the rounded corners,
+       the home indicator, and the camera cutout in landscape; they're 0 everywhere else. */
+    --safe-x: max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --gutter: max(1rem, var(--safe-x));
     --max: 1080px;
 }
 
@@ -115,7 +120,7 @@
 }
 
 @media (min-width: 768px) {
-    :root { --gutter: 2.5rem; }
+    :root { --gutter: max(2.5rem, var(--safe-x)); }
 }
 
 /* ================= Fonts ================= */
@@ -1457,6 +1462,22 @@ html:not(.motion) .dot-grid canvas { display: none; }
 
 @keyframes dgFlow { to { stroke-dashoffset: -20; } }
 
+/* Diagrams draw in: the first time a diagram comes into view (the script adds .drawn), it builds up from left to
+   right. The connecting lines draw along themselves, the boxes and labels pop in, and the accent dashes start
+   flowing last. --x is each part's place across the diagram, from 0 to 1. */
+.motion .art-dg svg > * {
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: opacity 0.45s var(--ease), transform 0.55s var(--ease), stroke-dashoffset 0.8s var(--ease);
+    transition-delay: calc(0.1s + var(--x, 0) * 0.7s);
+}
+
+.motion .art-dg:not(.drawn) svg > * { opacity: 0; transform: scale(0.9); }
+.motion .art-dg:not(.drawn) svg > text { transform: translateY(4px); }
+.motion .art-dg svg > .dg-line[pathLength] { stroke-dasharray: 1; }
+.motion .art-dg:not(.drawn) svg > .dg-line { opacity: 1; transform: none; stroke-dashoffset: 1; }
+.motion .art-dg.drawn svg > .dg-flow { transition-delay: calc(0.8s + var(--x, 0) * 0.7s); }
+
 @keyframes dgStep {
     0%, 26%, 100% { stroke: var(--line); fill: var(--surface); }
     6%, 20% { stroke: var(--accent); fill: rgba(var(--accent-rgb), 0.16); }
@@ -1673,7 +1694,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
 
 /* ================= Footer ================= */
 .footer {
-    padding: 1.5rem 0 2rem;
+    padding: 1.5rem 0 calc(2rem + var(--safe-bottom));
     border-top: 1px solid var(--dark-line);
     background: var(--dark);
     font-size: 0.75rem;
@@ -1974,7 +1995,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
 
 html:has(.panel[open]) { overflow: hidden; }
 
-.panel-inner { padding: clamp(1.4rem, 4vw, 2.5rem); }
+.panel-inner { padding: clamp(1.4rem, 4vw, 2.5rem); padding-bottom: calc(clamp(1.4rem, 4vw, 2.5rem) + var(--safe-bottom)); }
 
 .panel-top {
     display: flex;
@@ -2091,6 +2112,47 @@ html:has(.panel[open]) { overflow: hidden; }
 
 .panel p:not(.panel-meta) { font-size: 1.05rem; line-height: 1.6; color: var(--text-2); }
 .panel .chips { margin-top: 1.75rem; }
+
+/* Below the first screen, a write-up's parts rise in as you scroll to them (the script marks them .pr) */
+.motion .pr { opacity: 0; transform: translate3d(0, 16px, 0); transition: opacity 0.6s var(--ease), transform 0.7s var(--ease); }
+.motion .pr.in { opacity: 1; transform: none; }
+.motion .pr.now { transition: none; }
+
+/* Next project, at the end of each write-up */
+.panel-next {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 0.25rem 1rem;
+    width: 100%;
+    margin-top: 2.5rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.3s, background 0.3s;
+}
+
+.panel-next:hover { border-color: rgba(var(--accent-rgb), 0.6); background: rgba(var(--accent-rgb), 0.06); }
+
+.panel-next-label {
+    grid-column: 1;
+    font-family: var(--font);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.panel-next-name { grid-column: 1; font-size: 1.15rem; line-height: 1.3; }
+.panel-next .chev { grid-column: 2; grid-row: 1 / span 2; font-size: 1.3rem; color: var(--accent); }
+.motion .panel-next .chev { transition: transform 0.35s var(--ease); }
+.motion .panel-next:hover .chev { transform: translateX(4px); }
 
 /* ================= Link icons ================= */
 .lk-ic { width: 15px; height: 15px; margin-right: 0.15rem; fill: currentColor; flex: none; }
@@ -2759,7 +2821,7 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
 .toast {
     position: fixed;
     left: 50%;
-    bottom: 1.5rem;
+    bottom: calc(1.5rem + var(--safe-bottom));
     z-index: 301;
     max-width: calc(100vw - 32px);
     padding: 0.7rem 1.1rem;
@@ -2920,12 +2982,12 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
     .headline br { display: none; }
     .footer-inner { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
     .footer-actions { display: none; }
-    .footer { padding-bottom: 5.5rem; } /* room for the round back-to-top button under the text */
+    .footer { padding-bottom: calc(5.5rem + var(--safe-bottom)); } /* room for the round back-to-top button under the text */
 
     .to-top {
         position: fixed;
-        right: 16px;
-        bottom: 16px;
+        right: calc(16px + env(safe-area-inset-right, 0px));
+        bottom: calc(16px + var(--safe-bottom));
         z-index: 90;
         display: grid;
         place-items: center;
@@ -2977,6 +3039,19 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
     }
 
     .motion .panel[open]:not(.grown) { animation-name: sheetIn; }
+
+    /* A handle at the top shows the sheet can be pulled down to close; the backdrop clears as it's pulled */
+    .panel-inner::before {
+        content: '';
+        display: block;
+        width: 40px;
+        height: 4px;
+        margin: -0.5rem auto 0.9rem;
+        border-radius: 2px;
+        background: var(--line);
+    }
+
+    .panel::backdrop { opacity: calc(1 - var(--pull, 0)); }
 
     @keyframes sheetIn {
         from { transform: translateY(48px); opacity: 0; }
