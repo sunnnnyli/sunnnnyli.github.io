@@ -327,7 +327,11 @@ html.arrived :is(.sheet, .r-head h1, .r-contact li) { animation: none; }
 .resume-page .rv.now::after,
 .resume-page .now .r-points li::before { transition: none; }
 
-:root:active-view-transition-type(page)::view-transition-old(root) { animation: pageBack 0.5s var(--page-fade) both; }
+/* The sheet is its own layer only on the way in (the head script sets .vt-in for that transition); on the way out
+   the whole page leaves together, as styles.css describes */
+:root.vt-in .sheet { view-transition-name: r-sheet; }
+
+:root:active-view-transition-type(page)::view-transition-old(root) { z-index: auto; animation: pageBack 0.5s var(--page-fade) both; }
 :root:active-view-transition-type(page)::view-transition-new(root) { animation: vtIn 0.4s var(--page-fade) both; }
 :root:active-view-transition-type(page)::view-transition-new(r-sheet) { animation: sheetRise 0.7s var(--page-move) 0.05s both; }
 

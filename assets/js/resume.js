@@ -14,12 +14,34 @@
         themeBtn.title = `Switch to ${next} theme`;
         themeMeta.content = root.dataset.theme === 'dark' ? '#1c1c1d' : '#f2f4f6';
     };
-    const setTheme = (t, remember) => {
+    const applyTheme = (t) => {
         root.dataset.theme = t;
-        if (remember) store('theme', t);
         syncThemeBtn();
     };
-    themeBtn.addEventListener('click', () => setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark', true));
+    // Like the portfolio: with motion on, the new theme spreads out in a circle from the button. Without a button
+    // to start from (a system change, or catching up after a back/forward), it switches at once.
+    const setTheme = (t, remember, origin) => {
+        if (remember) store('theme', t);
+        if (!origin || !root.classList.contains('motion') || !document.startViewTransition) {
+            applyTheme(t);
+            return;
+        }
+        const vt = document.startViewTransition(() => applyTheme(t));
+        vt.ready.then(() => {
+            const { x, y } = origin;
+            const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+            root.animate(
+                { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] },
+                { duration: 650, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', pseudoElement: '::view-transition-new(root)' }
+            );
+        }).catch(() => {});
+        // If the browser never paints the transition (background tab, busy renderer), switch anyway
+        setTimeout(() => { if (root.dataset.theme !== t) applyTheme(t); }, 300);
+    };
+    themeBtn.addEventListener('click', () => {
+        const r = themeBtn.getBoundingClientRect();
+        setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark', true, { x: r.left + r.width / 2, y: r.top + r.height / 2 });
+    });
     // Follow system changes until the visitor picks a theme themselves
     matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
         if (!stored('theme')) setTheme(e.matches ? 'light' : 'dark', false);

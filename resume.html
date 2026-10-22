@@ -45,8 +45,14 @@
             try { pref = localStorage.getItem('motion'); } catch (e) {}
             if (pref ? pref === 'on' : !matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('motion');
         })();
-        // Arriving with a page transition, the transition brings the sheet in, so the page's own opening stands down
-        addEventListener('pagereveal', (e) => { if (e.viewTransition) document.documentElement.classList.add('arrived'); });
+        // Arriving with a page transition, the transition brings the sheet in, so the page's own opening stands down.
+        // vt-in lasts only for that transition, so leaving later moves the page as one piece.
+        addEventListener('pagereveal', (e) => {
+            if (!e.viewTransition) return;
+            const html = document.documentElement;
+            html.classList.add('arrived', 'vt-in');
+            e.viewTransition.finished.then(() => html.classList.remove('vt-in'));
+        });
     </script>
     <link rel="stylesheet" href="assets/css/styles.css">
     <link rel="stylesheet" href="assets/css/resume.css">
