@@ -27,6 +27,7 @@
             try { t = localStorage.getItem('theme'); c = localStorage.getItem('contrast'); m = localStorage.getItem('motion'); } catch (e) {}
             if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
             root.dataset.theme = t;
+            document.querySelector('meta[name="color-scheme"]').content = t;
             if (c ? c === 'more' : matchMedia('(prefers-contrast: more)').matches) root.classList.add('contrast');
             if (m ? m === 'on' : !matchMedia('(prefers-reduced-motion: reduce)').matches) root.classList.add('motion');
         })();
@@ -214,15 +215,6 @@
             // With the <base> above, a bare "#main" would point at the home page, so the skip link points here
             document.querySelector('.skip-link').href = `${location.href.split('#')[0]}#main`;
 
-            // No page transition from here on iPhone and iPad, where Safari shows solid bars while one runs
-            if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
-                addEventListener('pageswap', (e) => {
-                    if (!e.viewTransition) return;
-                    e.viewTransition.ready.catch(() => {});
-                    e.viewTransition.skipTransition();
-                });
-            }
-
             const root = document.documentElement;
             const themeBtn = document.querySelector('.theme-btn');
             const contrastBtn = document.querySelector('.contrast-btn');
@@ -232,6 +224,7 @@
                 themeBtn.setAttribute('aria-label', `Switch to ${next} theme`);
                 themeBtn.title = `Switch to ${next} theme`;
                 themeMeta.content = root.dataset.theme === 'dark' ? '#1c1c1d' : '#f2f4f6';
+                document.querySelector('meta[name="color-scheme"]').content = root.dataset.theme;
                 const more = root.classList.contains('contrast');
                 contrastBtn.setAttribute('aria-pressed', String(more));
                 contrastBtn.title = more ? 'Turn high contrast off' : 'More contrast';

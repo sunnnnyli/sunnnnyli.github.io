@@ -2,27 +2,19 @@
 // progress, the Back and Print buttons, and the offline cache.
 (() => {
     const root = document.documentElement;
-    // Safari on iPhone and iPad shows solid bars behind its toolbar while a view transition runs, so there the theme
-    // switches at once and pages change without a cross-fade
-    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    if (isIOS) {
-        window.addEventListener('pageswap', (e) => {
-            if (!e.viewTransition) return;
-            e.viewTransition.ready.catch(() => {}); // skipping it rejects this, and there's nothing to report
-            e.viewTransition.skipTransition();
-        });
-    }
     // Saved choices, shared with the portfolio. Storage can be blocked, e.g. in some private windows.
     const stored = (key) => { try { return localStorage.getItem(key); } catch (e) { return null; } };
     const store = (key, value) => { try { localStorage.setItem(key, value); } catch (e) {} };
     const themeBtn = document.querySelector('.theme-btn');
     const themeMeta = document.querySelector('meta[name="theme-color"]');
+    const schemeMeta = document.querySelector('meta[name="color-scheme"]');
 
     const syncThemeBtn = () => {
         const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
         themeBtn.setAttribute('aria-label', `Switch to ${next} theme`);
         themeBtn.title = `Switch to ${next} theme`;
         themeMeta.content = root.dataset.theme === 'dark' ? '#1c1c1d' : '#f2f4f6';
+        schemeMeta.content = root.dataset.theme; // Safari on iPhone tints its bars to match
     };
     const applyTheme = (t) => {
         root.dataset.theme = t;
@@ -32,7 +24,7 @@
     // to start from (a system change, or catching up after a back/forward), it switches at once.
     const setTheme = (t, remember, origin) => {
         if (remember) store('theme', t);
-        if (!origin || !root.classList.contains('motion') || !document.startViewTransition || isIOS) {
+        if (!origin || !root.classList.contains('motion') || !document.startViewTransition) {
             applyTheme(t);
             return;
         }

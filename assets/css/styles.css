@@ -404,25 +404,16 @@ img, svg { -webkit-user-drag: none; }
 .spot { --spot: rgba(var(--accent-rgb), 0.07); }
 
 /* ================= Nav ================= */
+/* Safari on iPhone colors its status bar from this bar's own background, so the bar keeps its color on itself */
 .nav {
     position: fixed;
     inset: 0 0 auto;
     z-index: 100;
     padding-top: var(--safe-top);
-    border-bottom: 1px solid rgba(var(--ink-rgb), 0.08);
-}
-
-/* The bar's tinted glass is a layer of its own. Safari on iPhone colors its status bar from a top bar's own
-   background (and lags behind when the theme changes), so leaving the bar itself clear lets the page show there. */
-.nav::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
     background: rgba(var(--bg-rgb), 0.94);
     -webkit-backdrop-filter: saturate(140%) blur(20px);
     backdrop-filter: saturate(140%) blur(20px);
-    pointer-events: none;
+    border-bottom: 1px solid rgba(var(--ink-rgb), 0.08);
 }
 
 .nav-inner {
@@ -1832,8 +1823,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
 
     @page { margin: 14mm; }
 
-    body, .hero, .story, .dark, .light, .footer { background-image: none !important; }
-    :is(.hero-sticky, .story-sticky, .gallery-sticky)::before { display: none !important; }
+    body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky { background-image: none !important; }
     .gallery-dots, .skill-hits, .toolkit-hint, .toast, .confetti, .anchor-btn { display: none !important; }
     .sig-pen { stroke-dashoffset: 0 !important; animation: none !important; }
     .sig-ink { opacity: 1 !important; animation: none !important; }
@@ -1988,7 +1978,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
     padding: 0;
     border: 0;
     border-left: 1px solid var(--line);
-    background: transparent; /* the sheet's color is on .panel-inner, so Safari on iPhone doesn't paint solid bars from it */
+    background: var(--surface);
     color: var(--text);
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -2008,12 +1998,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
 
 html:has(.panel[open]) { overflow: hidden; }
 
-.panel-inner {
-    min-height: 100%;
-    padding: clamp(1.4rem, 4vw, 2.5rem);
-    padding-bottom: calc(clamp(1.4rem, 4vw, 2.5rem) + var(--safe-bottom));
-    background: var(--surface);
-}
+.panel-inner { padding: clamp(1.4rem, 4vw, 2.5rem); padding-bottom: calc(clamp(1.4rem, 4vw, 2.5rem) + var(--safe-bottom)); }
 
 .panel-top {
     display: flex;
@@ -2778,36 +2763,36 @@ html:not(.motion) .gallery-dots,
     97.5%, 100% { opacity: 0; }
 }
 
+/* ================= iPhone and iPad: Safari's bottom bar ================= */
+/* Safari paints a solid bar behind its bottom toolbar in the color of any sticky element touching the bottom of the
+   screen, and doesn't recolor it when the theme changes. The pinned scenes stop 8px short of that edge there, which
+   sits under the toolbar anyway, so the page shows through the toolbar like it does everywhere else.
+   (-webkit-touch-callout is only supported by Safari on iOS and iPadOS.) */
+@supports (-webkit-touch-callout: none) {
+    .motion :is(.hero-sticky, .story-sticky, .gallery-sticky) { height: calc(100svh - 8px); }
+
+    /* The intro's glow fades out just above that edge, so the 8px of plain page below doesn't show as a line */
+    .motion .aurora {
+        -webkit-mask-image: linear-gradient(#000 calc(100% - 56px), transparent);
+        mask-image: linear-gradient(#000 calc(100% - 56px), transparent);
+    }
+}
+
 /* ================= Paper grain ================= */
 /* A faint grain on the page backgrounds. Its light and dark specks are balanced, so the average color doesn't change.
    The pinned scenes (intro, story, projects) carry their own copy, so the grain holds still with them while they're
-   pinned instead of scrolling past behind the text. That copy is a layer behind each scene rather than the scene's own
-   background: a pinned scene touches the bottom of the screen, and Safari on iPhone would otherwise paint a solid
-   bar of its color behind the toolbar. */
-.hero-sticky, .story-sticky, .gallery-sticky { isolation: isolate; }
-.story-sticky, .gallery-sticky { position: relative; }
+   pinned instead of scrolling past behind the text. */
+.hero-sticky, .story-sticky, .gallery-sticky { background-color: var(--dark); }
 
-:is(.hero-sticky, .story-sticky, .gallery-sticky)::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background-color: var(--dark);
-    pointer-events: none;
-}
-
-body, .hero, .story, .dark, .light, .footer,
-:is(.hero-sticky, .story-sticky, .gallery-sticky)::before {
+body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky {
     background-image: url("../img/grain-light.png");
     background-size: 128px 128px;
 }
 
-:root[data-theme="dark"] :is(body, .hero, .story, .dark, .light, .footer),
-:root[data-theme="dark"] :is(.hero-sticky, .story-sticky, .gallery-sticky)::before { background-image: url("../img/grain-dark.png"); }
+:root[data-theme="dark"] :is(body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky) { background-image: url("../img/grain-dark.png"); }
 
 @media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) :is(body, .hero, .story, .dark, .light, .footer),
-    :root:not([data-theme]) :is(.hero-sticky, .story-sticky, .gallery-sticky)::before { background-image: url("../img/grain-dark.png"); }
+    :root:not([data-theme]) :is(body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky) { background-image: url("../img/grain-dark.png"); }
 }
 
 /* ================= Links to sections ================= */
@@ -2877,8 +2862,8 @@ body, .hero, .story, .dark, .light, .footer,
 /* Blur has to be repainted on every frame of a scroll, which phones struggle with,
    so on touch screens the motion uses only fades and movement. */
 @media (max-width: 760px), (pointer: coarse) {
-    .nav::before {
-        background: rgba(var(--bg-rgb), 0.98);
+    .nav {
+        background: rgb(var(--bg-rgb));
         -webkit-backdrop-filter: none;
         backdrop-filter: none;
     }
@@ -3137,8 +3122,7 @@ picture { display: contents; }
     --emph-text-2: #d8d5cf;
 }
 
-.contrast :is(body, .hero, .story, .dark, .light, .footer),
-.contrast :is(.hero-sticky, .story-sticky, .gallery-sticky)::before { background-image: none !important; } /* beats the per-theme grain rules */
+.contrast :is(body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky) { background-image: none !important; } /* beats the per-theme grain rules */
 .motion.contrast .card { opacity: 1; }
 .motion.contrast .marquee { -webkit-mask-image: none; mask-image: none; }
 .contrast .gallery-dot::before { background: var(--text-2); }

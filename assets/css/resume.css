@@ -8,18 +8,8 @@
     z-index: 10;
     padding-top: var(--safe-top);
     border-bottom: 1px solid rgba(var(--ink-rgb), 0.08);
+    background: rgb(var(--bg-rgb)); /* solid, so Safari on iPhone colors its status bar to match */
     font-family: var(--font);
-}
-
-/* The bar's color is a layer of its own, so Safari on iPhone sees a clear bar and shows the page behind its status
-   bar instead of a solid band (see the same note on .nav in styles.css) */
-.r-bar::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background: rgba(var(--bg-rgb), 0.96);
-    pointer-events: none;
 }
 
 .r-bar-inner {
