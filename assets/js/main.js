@@ -9,6 +9,16 @@
     // so the script only measures scenes and cards itself where that isn't supported.
     const sda = !!(window.CSS && CSS.supports && CSS.supports('animation-timeline', 'view()'));
     const isMac = /Mac|iPhone|iPad/i.test((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '');
+    // Safari on iPhone and iPad shows solid bars behind its toolbar and status bar while a view transition runs, so
+    // there the theme switches at once, cards open with their slide-in, and pages change without a cross-fade
+    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (isIOS) {
+        window.addEventListener('pageswap', (e) => {
+            if (!e.viewTransition) return;
+            e.viewTransition.ready.catch(() => {}); // skipping it rejects this, and there's nothing to report
+            e.viewTransition.skipTransition();
+        });
+    }
     // Tilt only follows a mouse or trackpad
     const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
 
@@ -461,7 +471,7 @@
     };
     let morphing = false;
     const morph = (from, to, update) => {
-        if (morphing || !motion || !document.startViewTransition) {
+        if (morphing || !motion || !document.startViewTransition || isIOS) {
             update();
             return;
         }
@@ -523,7 +533,7 @@
     const openPanel = (panel) => {
         if (panel.open) return;
         const card = panelCard.get(panel);
-        const grow = motion && !!document.startViewTransition && !morphing && !!card && onScreen(card);
+        const grow = motion && !!document.startViewTransition && !isIOS && !morphing && !!card && onScreen(card);
         panel.classList.toggle('grown', grow);
         panel._shrink = grow; // closing shrinks it back into its card
         const show = () => {
@@ -549,7 +559,7 @@
         const card = panelCard.get(to);
         if (card) scrollToCard(card, 'instant');
         to.classList.remove('grown');
-        to._shrink = motion && !!card; // closePanel checks the card is on screen by then
+        to._shrink = motion && !!document.startViewTransition && !isIOS && !!card; // closePanel checks the card is on screen by then
         to.showModal();
         settleParts(to);
         showPanelUrl(to);
@@ -754,7 +764,7 @@
         if (remember) store('theme', t);
         const apply = () => { root.dataset.theme = theme; syncThemeBtn(); };
         // The new theme spreads out in a circle from the button; instant otherwise or with motion off.
-        if (motion && document.startViewTransition) {
+        if (motion && document.startViewTransition && !isIOS) {
             const vt = document.startViewTransition(apply);
             if (origin) {
                 vt.ready.then(() => {

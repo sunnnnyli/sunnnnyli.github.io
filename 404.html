@@ -40,7 +40,7 @@
             justify-content: space-between;
             width: min(var(--max), 100% - 2 * var(--gutter));
             height: var(--nav-h);
-            margin-inline: auto;
+            margin: var(--safe-top) auto 0;
         }
 
         .nf-tools { display: flex; align-items: center; gap: 0.5rem; }
@@ -49,8 +49,8 @@
             position: relative;
             display: grid;
             place-items: center;
-            min-height: calc(100vh - var(--nav-h));
-            min-height: calc(100svh - var(--nav-h));
+            min-height: calc(100vh - var(--nav-h) - var(--safe-top));
+            min-height: calc(100svh - var(--nav-h) - var(--safe-top));
             padding: 2rem var(--gutter) calc(5rem + var(--safe-bottom));
             overflow: hidden;
         }
@@ -213,6 +213,15 @@
         (() => {
             // With the <base> above, a bare "#main" would point at the home page, so the skip link points here
             document.querySelector('.skip-link').href = `${location.href.split('#')[0]}#main`;
+
+            // No page transition from here on iPhone and iPad, where Safari shows solid bars while one runs
+            if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+                addEventListener('pageswap', (e) => {
+                    if (!e.viewTransition) return;
+                    e.viewTransition.ready.catch(() => {});
+                    e.viewTransition.skipTransition();
+                });
+            }
 
             const root = document.documentElement;
             const themeBtn = document.querySelector('.theme-btn');

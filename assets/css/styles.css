@@ -26,6 +26,7 @@
        the home indicator, and the camera cutout in landscape; they're 0 everywhere else. */
     --safe-x: max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
     --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
     --gutter: max(1rem, var(--safe-x));
     --max: 1080px;
 }
@@ -248,7 +249,7 @@ html {
     background: var(--dark);
     scroll-behavior: smooth;
     scrollbar-gutter: stable;
-    scroll-padding-top: var(--nav-h);
+    scroll-padding-top: calc(var(--nav-h) + var(--safe-top));
     -webkit-text-size-adjust: 100%;
 }
 
@@ -407,10 +408,21 @@ img, svg { -webkit-user-drag: none; }
     position: fixed;
     inset: 0 0 auto;
     z-index: 100;
+    padding-top: var(--safe-top);
+    border-bottom: 1px solid rgba(var(--ink-rgb), 0.08);
+}
+
+/* The bar's tinted glass is a layer of its own. Safari on iPhone colors its status bar from a top bar's own
+   background (and lags behind when the theme changes), so leaving the bar itself clear lets the page show there. */
+.nav::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
     background: rgba(var(--bg-rgb), 0.94);
     -webkit-backdrop-filter: saturate(140%) blur(20px);
     backdrop-filter: saturate(140%) blur(20px);
-    border-bottom: 1px solid rgba(var(--ink-rgb), 0.08);
+    pointer-events: none;
 }
 
 .nav-inner {
@@ -655,7 +667,7 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
     align-items: center;
     min-height: 100vh;
     min-height: 100svh;
-    padding: calc(var(--nav-h) + 2rem) 0 4.5rem;
+    padding: calc(var(--nav-h) + var(--safe-top) + 2rem) 0 4.5rem;
     overflow: hidden;
 }
 
@@ -1065,7 +1077,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
     align-items: center;
     height: 100vh;
     height: 100svh;
-    padding: var(--nav-h) 0 0;
+    padding: calc(var(--nav-h) + var(--safe-top)) 0 0;
 }
 
 .story-text {
@@ -1246,7 +1258,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
     align-items: start;
 }
 
-.job-side { position: sticky; top: calc(var(--nav-h) + 3rem); }
+.job-side { position: sticky; top: calc(var(--nav-h) + var(--safe-top) + 3rem); }
 
 /* Company logos at a shared height so wordmarks and marks line up */
 .job-logo {
@@ -1341,7 +1353,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
     justify-content: flex-start;
     height: 100vh;
     height: 100svh;
-    padding: calc(var(--nav-h) + 1.75rem) 0 0;
+    padding: calc(var(--nav-h) + var(--safe-top) + 1.75rem) 0 0;
     overflow: hidden;
     scroll-snap-type: none;
 }
@@ -1820,7 +1832,8 @@ html:not(.motion) .dot-grid canvas { display: none; }
 
     @page { margin: 14mm; }
 
-    body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky { background-image: none !important; }
+    body, .hero, .story, .dark, .light, .footer { background-image: none !important; }
+    :is(.hero-sticky, .story-sticky, .gallery-sticky)::before { display: none !important; }
     .gallery-dots, .skill-hits, .toolkit-hint, .toast, .confetti, .anchor-btn { display: none !important; }
     .sig-pen { stroke-dashoffset: 0 !important; animation: none !important; }
     .sig-ink { opacity: 1 !important; animation: none !important; }
@@ -1975,7 +1988,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
     padding: 0;
     border: 0;
     border-left: 1px solid var(--line);
-    background: var(--surface);
+    background: transparent; /* the sheet's color is on .panel-inner, so Safari on iPhone doesn't paint solid bars from it */
     color: var(--text);
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -1995,7 +2008,12 @@ html:not(.motion) .dot-grid canvas { display: none; }
 
 html:has(.panel[open]) { overflow: hidden; }
 
-.panel-inner { padding: clamp(1.4rem, 4vw, 2.5rem); padding-bottom: calc(clamp(1.4rem, 4vw, 2.5rem) + var(--safe-bottom)); }
+.panel-inner {
+    min-height: 100%;
+    padding: clamp(1.4rem, 4vw, 2.5rem);
+    padding-bottom: calc(clamp(1.4rem, 4vw, 2.5rem) + var(--safe-bottom));
+    background: var(--surface);
+}
 
 .panel-top {
     display: flex;
@@ -2763,18 +2781,33 @@ html:not(.motion) .gallery-dots,
 /* ================= Paper grain ================= */
 /* A faint grain on the page backgrounds. Its light and dark specks are balanced, so the average color doesn't change.
    The pinned scenes (intro, story, projects) carry their own copy, so the grain holds still with them while they're
-   pinned instead of scrolling past behind the text. */
-.hero-sticky, .story-sticky, .gallery-sticky { background-color: var(--dark); }
+   pinned instead of scrolling past behind the text. That copy is a layer behind each scene rather than the scene's own
+   background: a pinned scene touches the bottom of the screen, and Safari on iPhone would otherwise paint a solid
+   bar of its color behind the toolbar. */
+.hero-sticky, .story-sticky, .gallery-sticky { isolation: isolate; }
+.story-sticky, .gallery-sticky { position: relative; }
 
-body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky {
+:is(.hero-sticky, .story-sticky, .gallery-sticky)::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-color: var(--dark);
+    pointer-events: none;
+}
+
+body, .hero, .story, .dark, .light, .footer,
+:is(.hero-sticky, .story-sticky, .gallery-sticky)::before {
     background-image: url("../img/grain-light.png");
     background-size: 128px 128px;
 }
 
-:root[data-theme="dark"] :is(body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky) { background-image: url("../img/grain-dark.png"); }
+:root[data-theme="dark"] :is(body, .hero, .story, .dark, .light, .footer),
+:root[data-theme="dark"] :is(.hero-sticky, .story-sticky, .gallery-sticky)::before { background-image: url("../img/grain-dark.png"); }
 
 @media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) :is(body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky) { background-image: url("../img/grain-dark.png"); }
+    :root:not([data-theme]) :is(body, .hero, .story, .dark, .light, .footer),
+    :root:not([data-theme]) :is(.hero-sticky, .story-sticky, .gallery-sticky)::before { background-image: url("../img/grain-dark.png"); }
 }
 
 /* ================= Links to sections ================= */
@@ -2844,7 +2877,7 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
 /* Blur has to be repainted on every frame of a scroll, which phones struggle with,
    so on touch screens the motion uses only fades and movement. */
 @media (max-width: 760px), (pointer: coarse) {
-    .nav {
+    .nav::before {
         background: rgba(var(--bg-rgb), 0.98);
         -webkit-backdrop-filter: none;
         backdrop-filter: none;
@@ -2898,11 +2931,11 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
 
     .nav-links {
         position: absolute;
-        top: var(--nav-h);
+        top: calc(var(--nav-h) + var(--safe-top));
         left: 0;
         right: 0;
-        height: calc(100vh - var(--nav-h));
-        height: calc(100svh - var(--nav-h));
+        height: calc(100vh - var(--nav-h) - var(--safe-top));
+        height: calc(100svh - var(--nav-h) - var(--safe-top));
         padding: 1.5rem var(--gutter);
         background: rgba(var(--bg-rgb), 0.98);
         opacity: 0;
@@ -2954,7 +2987,7 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
 }
 
 @media (max-width: 760px) {
-    .hero-sticky { align-items: flex-start; padding-top: calc(var(--nav-h) + 1rem); }
+    .hero-sticky { align-items: flex-start; padding-top: calc(var(--nav-h) + var(--safe-top) + 1rem); }
     .hero-layout { grid-template-columns: 1fr; gap: 1.6rem; }
     .hero-photo-wrap { order: -1; flex-direction: row; align-items: center; gap: 1rem; }
     .hero-photo { flex: none; width: 5.25rem; }
@@ -3104,7 +3137,8 @@ picture { display: contents; }
     --emph-text-2: #d8d5cf;
 }
 
-.contrast :is(body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky) { background-image: none !important; } /* beats the per-theme grain rules */
+.contrast :is(body, .hero, .story, .dark, .light, .footer),
+.contrast :is(.hero-sticky, .story-sticky, .gallery-sticky)::before { background-image: none !important; } /* beats the per-theme grain rules */
 .motion.contrast .card { opacity: 1; }
 .motion.contrast .marquee { -webkit-mask-image: none; mask-image: none; }
 .contrast .gallery-dot::before { background: var(--text-2); }

@@ -2,6 +2,16 @@
 // progress, the Back and Print buttons, and the offline cache.
 (() => {
     const root = document.documentElement;
+    // Safari on iPhone and iPad shows solid bars behind its toolbar while a view transition runs, so there the theme
+    // switches at once and pages change without a cross-fade
+    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (isIOS) {
+        window.addEventListener('pageswap', (e) => {
+            if (!e.viewTransition) return;
+            e.viewTransition.ready.catch(() => {}); // skipping it rejects this, and there's nothing to report
+            e.viewTransition.skipTransition();
+        });
+    }
     // Saved choices, shared with the portfolio. Storage can be blocked, e.g. in some private windows.
     const stored = (key) => { try { return localStorage.getItem(key); } catch (e) { return null; } };
     const store = (key, value) => { try { localStorage.setItem(key, value); } catch (e) {} };
@@ -22,7 +32,7 @@
     // to start from (a system change, or catching up after a back/forward), it switches at once.
     const setTheme = (t, remember, origin) => {
         if (remember) store('theme', t);
-        if (!origin || !root.classList.contains('motion') || !document.startViewTransition) {
+        if (!origin || !root.classList.contains('motion') || !document.startViewTransition || isIOS) {
             applyTheme(t);
             return;
         }
