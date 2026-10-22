@@ -107,8 +107,9 @@
     if (root.classList.contains('arrived')) showOnScreen('now');
     window.addEventListener('pagereveal', (e) => { if (e.viewTransition) showOnScreen('now'); });
 
-    // Sections and roles rise in as they're reached, and the signature signs itself at the end. This watches even
-    // with motion off (nothing is hidden then), so turning motion on later never hides anything.
+    // Sections and roles rise in as they're reached, and the signature signs itself at the end. A role shows as soon
+    // as any of it comes into view, so a long one starting near the bottom of a phone screen doesn't leave a gap.
+    // This watches even with motion off (nothing is hidden then), so turning motion on later never hides anything.
     const reveal = (threshold) => new IntersectionObserver((entries, obs) => {
         entries.forEach((entry) => {
             if (!entry.isIntersecting) return;
@@ -116,7 +117,7 @@
             obs.unobserve(entry.target);
         });
     }, { rootMargin: '0px 0px -8% 0px', threshold });
-    const sections = reveal(0.12);
+    const sections = reveal(0);
     const signoff = reveal(0.6);
     // A beat after load, so the first screen's sections follow the header in
     setTimeout(() => {
