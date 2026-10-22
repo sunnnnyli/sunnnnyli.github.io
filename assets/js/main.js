@@ -49,6 +49,42 @@
     });
 
     /* ---------- Motion-only setup (runs once, the first time motion is on) ---------- */
+    // Wraps each word of an element's text in the span make(word, index) returns, keeping any markup around the words
+    const wrapWords = (el, make) => {
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        const nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+        let i = 0;
+        nodes.forEach((node) => {
+            const frag = document.createDocumentFragment();
+            node.textContent.split(/(\s+)/).forEach((part) => {
+                if (!part) return;
+                if (/^\s+$/.test(part)) { frag.append(' '); return; }
+                frag.append(make(part, i++));
+            });
+            node.replaceWith(frag);
+        });
+        return i;
+    };
+
+    // Which line each word of a split headline sits on, so the lines can rise one after another. It's measured as
+    // the headline comes into view, since where the lines break depends on the screen width and the fonts.
+    const numberLines = (headline) => {
+        let line = -1;
+        let top = -Infinity;
+        headline.querySelectorAll('.hl-w').forEach((w) => {
+            if (w.offsetTop > top + 2) {
+                line++;
+                top = w.offsetTop;
+            }
+            w.style.setProperty('--line', line);
+        });
+    };
+    const reveal = (el) => {
+        if (el.classList.contains('split')) numberLines(el);
+        el.classList.add('in');
+    };
+
     let motionReady = false;
     const initMotion = (initial) => {
         if (motionReady) return;
@@ -78,24 +114,27 @@
 
         // Story: wrap every word (keeping highlight spans) so each can light up with scroll.
         document.querySelectorAll('[data-words]').forEach((el) => {
-            const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-            const nodes = [];
-            while (walker.nextNode()) nodes.push(walker.currentNode);
-            let wi = 0;
-            nodes.forEach((node) => {
-                const frag = document.createDocumentFragment();
-                node.textContent.split(/(\s+)/).forEach((part) => {
-                    if (!part) return;
-                    if (/^\s+$/.test(part)) { frag.append(' '); return; }
-                    const s = document.createElement('span');
-                    s.className = 'w';
-                    s.style.setProperty('--i', wi++);
-                    s.textContent = part;
-                    frag.append(s);
-                });
-                node.replaceWith(frag);
+            const n = wrapWords(el, (word, i) => {
+                const s = document.createElement('span');
+                s.className = 'w';
+                s.style.setProperty('--i', i);
+                s.textContent = word;
+                return s;
             });
-            el.style.setProperty('--n', wi);
+            el.style.setProperty('--n', n);
+        });
+
+        // Section headlines: each word sits in its own clipped box, so it can rise into view from behind its edge
+        document.querySelectorAll('.headline').forEach((h) => {
+            wrapWords(h, (word) => {
+                const box = document.createElement('span');
+                box.className = 'hl-w';
+                const s = document.createElement('span');
+                s.textContent = word;
+                box.append(s);
+                return box;
+            });
+            h.classList.add('split');
         });
 
         // Marquees: repeat items until a row is wider than the screen, then double it for a seamless loop.
@@ -126,7 +165,7 @@
         const revealer = new IntersectionObserver((entries) => {
             entries.forEach((entry) => {
                 if (!entry.isIntersecting) return;
-                entry.target.classList.add('in');
+                reveal(entry.target);
                 revealer.unobserve(entry.target);
             });
         }, { rootMargin: '0px 0px -10% 0px', threshold: 0.12 });
@@ -138,32 +177,45 @@
         }, { rootMargin: '-32% 0px -32% 0px' });
         document.querySelectorAll('.feats li').forEach((li) => focus.observe(li));
 
-        // Count-up numbers (first load only; switching motion on later keeps the final values)
+        // Impact numbers roll into place like an odometer: each digit is a strip of 0-9 (twice over) that slides up
+        // to its value, the later digits spinning a little longer. Screen readers get the plain number.
+        // First load only; switching motion on later keeps the plain numbers.
         if (initial) {
-            const counters = document.querySelectorAll('[data-count]');
-            counters.forEach((el) => { el.textContent = fmt(el, 0); });
-            const counter = new IntersectionObserver((entries) => {
-                entries.forEach((entry) => {
-                    if (!entry.isIntersecting) return;
-                    counter.unobserve(entry.target);
-                    const el = entry.target;
-                    const end = Number(el.dataset.count);
-                    if (!motion) {
-                        el.textContent = fmt(el, end);
+            const rollers = document.querySelectorAll('[data-count]');
+            rollers.forEach((el) => {
+                const text = fmt(el, Number(el.dataset.count));
+                const plain = document.createElement('span');
+                plain.className = 'visually-hidden';
+                plain.textContent = text;
+                const odo = document.createElement('span');
+                odo.className = 'odo';
+                odo.setAttribute('aria-hidden', 'true');
+                let place = 0;
+                [...text].forEach((ch) => {
+                    if (!/\d/.test(ch)) {
+                        odo.append(ch);
                         return;
                     }
-                    const t0 = performance.now();
-                    const dur = 1900;
-                    const step = (t) => {
-                        const k = motion ? Math.min(1, (t - t0) / dur) : 1;
-                        const eased = k === 1 ? 1 : 1 - Math.pow(2, -10 * k);
-                        el.textContent = fmt(el, end * eased);
-                        if (k < 1) requestAnimationFrame(step);
-                    };
-                    requestAnimationFrame(step);
+                    const col = document.createElement('span');
+                    col.className = 'odo-col';
+                    col.style.setProperty('--n', ch);
+                    col.style.setProperty('--i', place++);
+                    const strip = document.createElement('span');
+                    strip.className = 'odo-strip';
+                    strip.textContent = [...'01234567890123456789'].join('\n');
+                    col.append(strip);
+                    odo.append(col);
+                });
+                el.replaceChildren(plain, odo);
+            });
+            const roller = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (!entry.isIntersecting) return;
+                    roller.unobserve(entry.target);
+                    entry.target.classList.add('rolled');
                 });
             }, { threshold: 0.6 });
-            counters.forEach((el) => counter.observe(el));
+            rollers.forEach((el) => roller.observe(el));
         }
     };
 
@@ -327,6 +379,7 @@
         if (scroll !== lastScroll) {
             lastScroll = scroll;
             nav.style.setProperty('--scroll', scroll);
+            toTop.style.setProperty('--scroll', scroll); // fills the ring around the phone's back-to-top button
         }
         applyTrack(y, track);
         sceneP.forEach((p, i) => {
@@ -385,7 +438,7 @@
         // Anything already on screen or scrolled past shouldn't wait for a reveal.
         if (on) {
             document.querySelectorAll('.rv:not(.in), .rv-scale:not(.in)').forEach((el) => {
-                if (el.getBoundingClientRect().top < window.innerHeight) el.classList.add('in');
+                if (el.getBoundingClientRect().top < window.innerHeight) reveal(el);
             });
         }
 
@@ -653,6 +706,39 @@
         entries.forEach((e) => e.target.classList.toggle('idle', !e.isIntersecting));
     });
     document.querySelectorAll('.hero-sticky, .art-dg, .marquee').forEach((el) => idleObserver.observe(el));
+
+    /* ---------- Toolkit marquees answer the scroll ---------- */
+    // Scrolling gives the skill rows a push: they run faster in the direction the page moves (backwards when
+    // scrolling up), then ease back to their usual drift.
+    const tracks = [...document.querySelectorAll('.marquee-track')];
+    let push = 0; // extra speed on top of the usual 1x
+    let pushY = window.scrollY;
+    let pushT = performance.now();
+    let pushing = false;
+    const setRate = (rate) => tracks.forEach((t) => t.getAnimations().forEach((a) => a.updatePlaybackRate(rate)));
+    const easePush = () => {
+        push *= 0.92;
+        if (Math.abs(push) < 0.02) {
+            push = 0;
+            pushing = false;
+            setRate(1);
+            return;
+        }
+        setRate(1 + push);
+        requestAnimationFrame(easePush);
+    };
+    window.addEventListener('scroll', () => {
+        const now = performance.now();
+        const speed = (window.scrollY - pushY) / Math.max(8, now - pushT); // px per ms
+        pushY = window.scrollY;
+        pushT = now;
+        if (!motion || tracks.every((t) => t.parentElement.classList.contains('idle'))) return;
+        push += (clamp(speed * 2.5, -4, 5) - push) * 0.4;
+        if (!pushing) {
+            pushing = true;
+            requestAnimationFrame(easePush);
+        }
+    }, { passive: true });
 
     /* ---------- Command menu (Ctrl+K / ⌘K) ---------- */
     const cmdk = document.getElementById('cmdk');
@@ -1345,13 +1431,17 @@
     }
 
     /* ---------- Pinyin over the proverb ---------- */
-    // Hovering the characters shows the pinyin (in CSS). Touch screens can't hover, so there a tap toggles it,
-    // and a tap anywhere else puts it away.
+    // Hovering the characters shows the pinyin (in CSS). Where that isn't possible a tap toggles it, and a tap anywhere
+    // else puts it away. Some phones and phone previews report taps as mouse clicks, so this goes by whether the
+    // pinyin is already showing from a hover, not by what kind of pointer the tap says it came from.
     const proverb = document.querySelector('.quote-zh');
     if (proverb) {
-        const touchTap = (e) => (e.pointerType ? e.pointerType !== 'mouse' : !matchMedia('(hover: hover)').matches);
-        proverb.addEventListener('click', (e) => { if (touchTap(e)) proverb.classList.toggle('show'); });
-        document.addEventListener('click', (e) => { if (!proverb.contains(e.target)) proverb.classList.remove('show'); });
+        const canHover = matchMedia('(hover: hover)');
+        proverb.addEventListener('click', () => {
+            if (canHover.matches && proverb.matches(':hover')) return; // a mouse is already showing it
+            proverb.classList.toggle('show');
+        });
+        document.addEventListener('pointerdown', (e) => { if (!proverb.contains(e.target)) proverb.classList.remove('show'); });
     }
 
     /* ---------- Coming back from the résumé ---------- */

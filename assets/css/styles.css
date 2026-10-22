@@ -582,9 +582,13 @@ html:not(.motion) .motion-btn .i-pause { display: none; }
     stroke-linejoin: round;
 }
 
-/* The icon shows where the button takes you */
-:root[data-theme="dark"] .theme-btn .i-moon,
-:root[data-theme="light"] .theme-btn .i-sun { display: none; }
+/* The icon shows where the button takes you: a sun in the dark theme, a moon in the light one. Switching folds the
+   sun's rays in and swells its core into the moon, and back. */
+.theme-btn .i-theme * { transform-origin: 12px 12px; }
+:root[data-theme="light"] .theme-btn .sun-rays { opacity: 0; transform: rotate(-90deg) scale(0.3); }
+:root[data-theme="light"] .theme-btn .sun-core { opacity: 0; transform: scale(1.9); }
+:root[data-theme="dark"] .theme-btn .moon { opacity: 0; transform: rotate(-60deg) scale(0.4); }
+.motion .theme-btn .i-theme * { transition: transform 0.6s var(--ease), opacity 0.4s var(--ease); }
 
 html:not(.motion) { scroll-behavior: auto; }
 
@@ -1107,6 +1111,21 @@ html:not(.motion) .dot-grid canvas { display: none; }
 .motion .rv-scale { translate: 0 40px; scale: 0.94; transition-property: opacity, translate, scale; }
 .motion .rv-scale.in { opacity: 1; translate: none; scale: none; }
 
+/* Section headlines don't fade in whole: each line rises into place from behind its own edge, one after another.
+   The script puts every word in a clipped box (.hl-w) and numbers the lines (--line). The clip reaches a little
+   past each word, so descenders and italics aren't cut off. */
+.hl-w { display: inline-block; clip-path: inset(-0.25em -0.2em -0.3em); }
+.hl-w > span { display: inline-block; }
+.motion .headline.split { opacity: 1; filter: none; transform: none; }
+
+.motion .headline.split .hl-w > span {
+    transform: translate3d(0, calc(100% + 0.4em), 0);
+    transition: transform 1.1s var(--ease);
+    transition-delay: calc(var(--d, 0s) + var(--line, 0) * 0.12s);
+}
+
+.motion .headline.split.in .hl-w > span { transform: none; }
+
 /* ================= Impact bento ================= */
 .bento {
     display: grid;
@@ -1165,6 +1184,19 @@ html:not(.motion) .dot-grid canvas { display: none; }
 
 .tile-xl .num { font-size: clamp(3.6rem, 7vw, 6rem); color: var(--accent-strong); }
 .light .tile-dark .num { color: var(--emph-accent); }
+
+/* Rolling numbers (motion on): each digit is a strip of 0-9, twice over, that slides up to its value. The later
+   digits spin a little longer, like an odometer settling. */
+.odo { display: inline-flex; align-items: flex-start; line-height: 1; }
+.odo-col { height: 1em; overflow: hidden; }
+
+.odo-strip {
+    display: block;
+    white-space: pre;
+    transition: transform calc(1.6s + var(--i, 0) * 0.35s) cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.rolled .odo-strip { transform: translateY(calc((10 + var(--n, 0)) * -1em)); }
 
 
 /* A short phrase in place of a number; allowed to wrap on narrow tiles */
@@ -1387,6 +1419,12 @@ html:not(.motion) .dot-grid canvas { display: none; }
     width: calc(100% - 2rem);
     height: calc(100% - 1.5rem);
     overflow: visible;
+}
+
+/* Depth: while the pinned row slides, each diagram drifts a little slower than its card. The offset follows the
+   card's distance from the middle of the screen (the same measure as the card scaling), up to 28px either way. */
+.motion .gallery:not(.gallery--free) .art-dg svg {
+    translate: clamp(-28px, (var(--c, 0) - var(--p, 0) * var(--dist, 0)) * -0.04px, 28px) 0;
 }
 .art-dg text { font-family: var(--mono); font-size: 10px; }
 
@@ -1783,7 +1821,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
     }
 
     .hero-copy, .hero-photo-wrap, .hero-photo, .gallery-track, .card, .tile, .skill, .rv, .rv-scale, .load,
-    .hero-title, .hero-title .ch, .story .w, .feats li {
+    .hero-title, .hero-title .ch, .story .w, .feats li, .headline .hl-w > span {
         opacity: 1 !important;
         transform: none !important;
         translate: none !important;
@@ -1792,6 +1830,8 @@ html:not(.motion) .dot-grid canvas { display: none; }
         animation: none !important;
         transition: none !important;
     }
+
+    .odo-strip { transform: translateY(calc((10 + var(--n, 0)) * -1em)) !important; transition: none !important; }
 
     .section, .contact, .projects-head, .story-sticky { padding: 1.25rem 0 !important; }
     .hero-sticky { padding-top: 0.5rem !important; }
@@ -2254,6 +2294,33 @@ html.vt-morph::view-transition-new(root) { animation: vtIn 0.4s var(--ease) both
 
 @keyframes vtIn { from { opacity: 0; } }
 @keyframes vtOut { to { opacity: 0; } }
+
+/* ================= Moving between pages ================= */
+/* Going between the portfolio, the résumé, and the 404 page eases one page into the next instead of a hard cut:
+   the top bar holds its place while the page under it cross-fades, the résumé's sheet rises in on arrival (its own
+   opening animation, in resume.css) and sinks away on the way back. Browsers without cross-page view transitions
+   simply change pages. The names only apply during these transitions, so the theme switch and card morph on
+   the portfolio are unaffected. */
+@view-transition {
+    navigation: auto;
+    types: page;
+}
+
+:root:active-view-transition-type(page) :is(.nav, .r-bar, .nf-bar) { view-transition-name: site-bar; }
+:root:active-view-transition-type(page) .sheet { view-transition-name: r-sheet; }
+
+:root:active-view-transition-type(page)::view-transition-old(root) { animation: vtOut 0.4s var(--ease) both; mix-blend-mode: plus-lighter; }
+:root:active-view-transition-type(page)::view-transition-new(root) { animation: vtIn 0.4s var(--ease) both; mix-blend-mode: plus-lighter; }
+:root:active-view-transition-type(page)::view-transition-group(site-bar) { animation-duration: 0.4s; animation-timing-function: var(--ease); }
+:root:active-view-transition-type(page)::view-transition-new(r-sheet) { animation: none; }
+:root:active-view-transition-type(page)::view-transition-old(r-sheet) { animation: sheetAway 0.4s var(--ease) both; }
+
+@keyframes sheetAway { to { opacity: 0; transform: translateY(36px); } }
+
+/* With motion off, the next page simply appears */
+:root:not(.motion):active-view-transition-type(page)::view-transition-group(*),
+:root:not(.motion):active-view-transition-type(page)::view-transition-old(*),
+:root:not(.motion):active-view-transition-type(page)::view-transition-new(*) { animation: none !important; }
 
 /* ================= Experience: the timeline fills as you scroll ================= */
 .jobs { position: relative; }
@@ -2858,6 +2925,19 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
         stroke-width: 1.8;
         stroke-linecap: round;
         stroke-linejoin: round;
+    }
+
+    /* A thin ring over the button's edge fills as you read down the page (the script sets --scroll) */
+    .to-top .to-top-ring {
+        position: absolute;
+        inset: -1px;
+        width: calc(100% + 2px);
+        height: calc(100% + 2px);
+        transform: rotate(-90deg);
+        stroke: var(--accent);
+        stroke-width: 1.5;
+        stroke-dasharray: 1;
+        stroke-dashoffset: calc(1 - var(--scroll, 0));
     }
 
     .panel {
