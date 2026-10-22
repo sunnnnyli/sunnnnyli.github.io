@@ -2296,26 +2296,34 @@ html.vt-morph::view-transition-new(root) { animation: vtIn 0.4s var(--ease) both
 @keyframes vtOut { to { opacity: 0; } }
 
 /* ================= Moving between pages ================= */
-/* Going between the portfolio, the résumé, and the 404 page eases one page into the next instead of a hard cut:
-   the top bar holds its place while the page under it cross-fades, the résumé's sheet rises in on arrival (its own
-   opening animation, in resume.css) and sinks away on the way back. Browsers without cross-page view transitions
-   simply change pages. The names only apply during these transitions, so the theme switch and card morph on
-   the portfolio are unaffected. */
+/* Going between the portfolio, the résumé, and the 404 page eases one page into the next instead of a hard cut.
+   The top bar holds its place while the page under it changes: arriving at the résumé, the portfolio steps back
+   as the sheet rises into place (in resume.css); going back, the sheet sinks away as the portfolio comes forward.
+   Browsers without cross-page view transitions simply change pages. The names only apply during these
+   transitions, so the theme switch and card morph on the portfolio are unaffected. */
 @view-transition {
     navigation: auto;
     types: page;
 }
 
+/* Even curves, so the change reads as motion rather than a quick cut */
+:root {
+    --page-fade: cubic-bezier(0.4, 0, 0.2, 1);
+    --page-move: cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
 :root:active-view-transition-type(page) :is(.nav, .r-bar, .nf-bar) { view-transition-name: site-bar; }
 :root:active-view-transition-type(page) .sheet { view-transition-name: r-sheet; }
 
-:root:active-view-transition-type(page)::view-transition-old(root) { animation: vtOut 0.4s var(--ease) both; mix-blend-mode: plus-lighter; }
-:root:active-view-transition-type(page)::view-transition-new(root) { animation: vtIn 0.4s var(--ease) both; mix-blend-mode: plus-lighter; }
-:root:active-view-transition-type(page)::view-transition-group(site-bar) { animation-duration: 0.4s; animation-timing-function: var(--ease); }
-:root:active-view-transition-type(page)::view-transition-new(r-sheet) { animation: none; }
-:root:active-view-transition-type(page)::view-transition-old(r-sheet) { animation: sheetAway 0.4s var(--ease) both; }
+/* Arriving on this page: it fades in over the last one (which stays solid underneath, so there's no dip in
+   brightness) and settles forward from slightly smaller */
+:root:active-view-transition-type(page)::view-transition-old(root) { animation: none; }
+:root:active-view-transition-type(page)::view-transition-new(root) { animation: pageForward 0.55s var(--page-move) 0.08s both; }
+:root:active-view-transition-type(page)::view-transition-group(site-bar) { animation-duration: 0.45s; animation-timing-function: var(--page-fade); }
+:root:active-view-transition-type(page)::view-transition-old(r-sheet) { animation: sheetAway 0.42s cubic-bezier(0.4, 0, 1, 1) both; }
 
-@keyframes sheetAway { to { opacity: 0; transform: translateY(36px); } }
+@keyframes pageForward { from { opacity: 0; transform: scale(0.97); } }
+@keyframes sheetAway { to { opacity: 0; transform: translateY(64px); } }
 
 /* With motion off, the next page simply appears */
 :root:not(.motion):active-view-transition-type(page)::view-transition-group(*),

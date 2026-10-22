@@ -317,6 +317,23 @@
     .motion .r-contact li { animation-name: fadeUpLite; }
 }
 
+/* Arriving from the portfolio with a page transition (see "Moving between pages" in styles.css): the portfolio
+   steps back and fades as the sheet rises into place in one piece. The page's own opening animation stands down so
+   the two don't stack, and what's on the first screen is shown at once (the head script and resume.js mark these
+   arrivals). */
+html.arrived :is(.sheet, .r-head h1, .r-contact li) { animation: none; }
+
+.resume-page .rv.now,
+.resume-page .rv.now::after,
+.resume-page .now .r-points li::before { transition: none; }
+
+:root:active-view-transition-type(page)::view-transition-old(root) { animation: pageBack 0.5s var(--page-fade) both; }
+:root:active-view-transition-type(page)::view-transition-new(root) { animation: vtIn 0.4s var(--page-fade) both; }
+:root:active-view-transition-type(page)::view-transition-new(r-sheet) { animation: sheetRise 0.7s var(--page-move) 0.05s both; }
+
+@keyframes pageBack { to { opacity: 0.4; transform: scale(0.96); } }
+@keyframes sheetRise { from { opacity: 0; transform: translateY(64px); } }
+
 /* ================= Print: one Letter page ================= */
 @media print {
     @page { size: letter; margin: 0.4in 0.5in; }

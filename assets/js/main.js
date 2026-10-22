@@ -670,6 +670,23 @@
         syncContrastBtn();
     };
     contrastBtn.addEventListener('click', () => setContrast(!contrast, true));
+    // Coming back from the résumé, the browser can restore this page just as it was left, so it picks up any switch
+    // flipped over there
+    window.addEventListener('pageshow', (e) => {
+        if (!e.persisted) return;
+        const t = stored('theme');
+        const nextTheme = t === 'light' || t === 'dark' ? t : matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        if (nextTheme !== theme) {
+            theme = nextTheme;
+            root.dataset.theme = theme;
+            syncThemeBtn();
+        }
+        const c = stored('contrast');
+        const more = c ? c === 'more' : matchMedia('(prefers-contrast: more)').matches;
+        if (more !== contrast) setContrast(more, false);
+        const m = stored('motion');
+        setMotion(m ? m === 'on' : !matchMedia('(prefers-reduced-motion: reduce)').matches);
+    });
     matchMedia('(prefers-contrast: more)').addEventListener('change', (e) => {
         if (!stored('contrast')) setContrast(e.matches, false);
     });

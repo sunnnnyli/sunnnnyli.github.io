@@ -37,6 +37,12 @@
         motionBtn.setAttribute('aria-pressed', String(still));
         motionBtn.title = still ? 'Turn animations back on' : 'Reduce motion';
     };
+    // Turning motion on mustn't hide what's already on screen or passed
+    const showOnScreen = (extra = '') => {
+        document.querySelectorAll('.rv:not(.in), .r-sign:not(.in)').forEach((el) => {
+            if (el.getBoundingClientRect().top < window.innerHeight) el.classList.add('in', ...extra.split(' ').filter(Boolean));
+        });
+    };
     contrastBtn.addEventListener('click', () => {
         const more = !root.classList.contains('contrast');
         root.classList.toggle('contrast', more);
@@ -45,12 +51,7 @@
     });
     motionBtn.addEventListener('click', () => {
         const on = !root.classList.contains('motion');
-        // Turning motion on mustn't hide what's already on screen or passed
-        if (on) {
-            document.querySelectorAll('.rv:not(.in), .r-sign:not(.in)').forEach((el) => {
-                if (el.getBoundingClientRect().top < window.innerHeight) el.classList.add('in');
-            });
-        }
+        if (on) showOnScreen();
         root.classList.toggle('motion', on);
         store('motion', on ? 'on' : 'off');
         syncToggles();
@@ -62,6 +63,27 @@
         syncToggles();
     });
     syncToggles();
+
+    // The résumé can be opened ahead of time (the portfolio has Chrome and Edge load it when a visitor hovers a link
+    // to it) or come back from the back/forward cache. Either way it picks up any switch flipped in the meantime.
+    const resync = () => {
+        const t = stored('theme');
+        setTheme(t === 'light' || t === 'dark' ? t : matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark', false);
+        const c = stored('contrast');
+        root.classList.toggle('contrast', c ? c === 'more' : matchMedia('(prefers-contrast: more)').matches);
+        const m = stored('motion');
+        const on = m ? m === 'on' : !matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (on && !root.classList.contains('motion')) showOnScreen();
+        root.classList.toggle('motion', on);
+        syncToggles();
+    };
+    document.addEventListener('prerenderingchange', resync);
+    window.addEventListener('pageshow', (e) => { if (e.persisted) resync(); });
+
+    // Arriving with a page transition, the transition brings the sheet in, so what's on the first screen shows at
+    // once instead of rising in after it
+    if (root.classList.contains('arrived')) showOnScreen('now');
+    window.addEventListener('pagereveal', (e) => { if (e.viewTransition) showOnScreen('now'); });
 
     // Sections and roles rise in as they're reached, and the signature signs itself at the end. This watches even
     // with motion off (nothing is hidden then), so turning motion on later never hides anything.

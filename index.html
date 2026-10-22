@@ -65,6 +65,10 @@
     </script>
     <link rel="stylesheet" href="assets/css/styles.css">
     <script src="assets/js/main.js" defer></script>
+    <!-- Chrome and Edge start loading the résumé when a visitor hovers or presses a link to it, so it opens at once -->
+    <script type="speculationrules">
+        { "prerender": [{ "where": { "selector_matches": "a[href$='resume.html']" }, "eagerness": "moderate" }] }
+    </script>
 </head>
 <body>
     <a class="skip-link" href="#main">Skip to content</a>
