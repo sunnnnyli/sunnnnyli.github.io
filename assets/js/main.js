@@ -80,8 +80,61 @@
             w.style.setProperty('--line', line);
         });
     };
+    // Section labels ("01 | Impact") resolve from scrambled characters, a letter at a time, as they come into view.
+    // Screen readers get the real label throughout; the scrambled copy is hidden from them.
+    const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#%&*+=<>/';
+    const DIGITS = '0123456789';
+    const decode = (label) => {
+        const walker = document.createTreeWalker(label, NodeFilter.SHOW_TEXT, {
+            acceptNode: (n) => (n.textContent.trim() && !n.parentElement.closest('.visually-hidden') ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT),
+        });
+        const parts = [];
+        while (walker.nextNode()) parts.push({ node: walker.currentNode, text: walker.currentNode.textContent });
+        parts.forEach((part) => {
+            const range = document.createRange();
+            range.selectNodeContents(part.node);
+            part.real = document.createElement('span');
+            part.real.className = 'visually-hidden';
+            part.real.textContent = part.text;
+            part.fake = document.createElement('span');
+            part.fake.className = 'decoding';
+            part.fake.setAttribute('aria-hidden', 'true');
+            part.fake.style.width = `${range.getBoundingClientRect().width}px`;
+            part.node.replaceWith(part.real, part.fake);
+        });
+        const count = parts.reduce((n, part) => n + part.text.length, 0);
+        const start = performance.now();
+        let shown = -Infinity;
+        const step = (now) => {
+            const t = now - start;
+            const done = !motion || t > 180 + count * 45;
+            if (now - shown > 50 || done) {
+                shown = now;
+                let k = 0;
+                parts.forEach((part) => {
+                    part.fake.textContent = [...part.text].map((ch) => {
+                        const settled = done || ch === ' ' || t >= 180 + k * 45;
+                        k++;
+                        if (settled) return ch;
+                        const set = /\d/.test(ch) ? DIGITS : GLYPHS;
+                        return set[Math.floor(Math.random() * set.length)];
+                    }).join('');
+                });
+            }
+            if (!done) {
+                requestAnimationFrame(step);
+                return;
+            }
+            parts.forEach((part) => {
+                part.real.replaceWith(part.node);
+                part.fake.remove();
+            });
+        };
+        requestAnimationFrame(step);
+    };
     const reveal = (el) => {
         if (el.classList.contains('split')) numberLines(el);
+        if (el.classList.contains('eyebrow')) decode(el);
         el.classList.add('in');
     };
 
@@ -122,6 +175,13 @@
                 return s;
             });
             el.style.setProperty('--n', n);
+            // Each highlight's underline draws as its words light up, so it needs its first word and how many it has
+            el.querySelectorAll('.hl').forEach((hl) => {
+                const words = hl.querySelectorAll('.w');
+                if (!words.length) return;
+                hl.style.setProperty('--i0', words[0].style.getPropertyValue('--i'));
+                hl.style.setProperty('--c', words.length);
+            });
         });
 
         // Section headlines: each word sits in its own clipped box, so it can rise into view from behind its edge
@@ -273,7 +333,8 @@
         lay = {
             docH: document.documentElement.scrollHeight,
             width: navTrack.offsetWidth,
-            secTops: checkpoints.map(({ sec }) => sec.getBoundingClientRect().top + y - NAV_H),
+            // Less any slide-in offset still to go (Contact's, see .rise in styles.css), so it's where the section settles
+            secTops: checkpoints.map(({ sec }) => sec.getBoundingClientRect().top + y - NAV_H - (parseFloat(getComputedStyle(sec).translate.split(' ')[1]) || 0)),
             tabX: checkpoints.map(({ a }) => a.offsetLeft + a.offsetWidth / 2),
             dots: jobEls.map((job) => job.getBoundingClientRect().top + y + dotOff),
         };
@@ -573,6 +634,22 @@
     });
     document.querySelectorAll('.panel').forEach((panel) => {
         panel.querySelector('.panel-close').addEventListener('click', () => closePanel(panel));
+        // A thin line along the top fills as the write-up is read
+        const progress = document.createElement('div');
+        progress.className = 'panel-progress';
+        progress.setAttribute('aria-hidden', 'true');
+        progress.append(document.createElement('span'));
+        panel.prepend(progress);
+        let readTick = false;
+        panel.addEventListener('scroll', () => {
+            if (readTick) return;
+            readTick = true;
+            requestAnimationFrame(() => {
+                readTick = false;
+                const max = panel.scrollHeight - panel.clientHeight;
+                panel.style.setProperty('--read', max > 0 ? clamp(panel.scrollTop / max).toFixed(4) : '0');
+            });
+        }, { passive: true });
         // A click on the dimmed backdrop (outside the sheet) closes it too.
         panel.addEventListener('click', (e) => { if (e.target === panel) closePanel(panel); });
         // Esc shrinks it back into its card as well
@@ -744,9 +821,11 @@
     const favDark = favicon ? favicon.href : '';
     const favLight = favicon ? new URL(favicon.dataset.light, document.baseURI).href : '';
     // Safari on iPhone and iPad colors its bars from the solid boxes at the screen's edges (see .edge in styles.css),
-    // but only looks at them again when a fixed box comes or goes, so a theme change adds one for a moment
+    // but only looks at them again when a fixed box comes or goes, so a theme change adds one for a moment. Safari can't
+    // read them while an animated switch runs, so then it adds one when the switch ends.
+    let switching = false;
     const retint = () => {
-        if (!CSS.supports('-webkit-touch-callout', 'none')) return;
+        if (switching || !CSS.supports('-webkit-touch-callout', 'none')) return;
         const probe = document.createElement('div');
         probe.className = 'edge-probe';
         document.body.append(probe);
@@ -767,7 +846,12 @@
         const apply = () => { root.dataset.theme = theme; syncThemeBtn(); };
         // The new theme spreads out in a circle from the button; instant otherwise or with motion off.
         if (motion && document.startViewTransition) {
+            switching = true;
             const vt = document.startViewTransition(apply);
+            vt.finished.finally(() => {
+                switching = false;
+                retint();
+            }).catch(() => {});
             if (origin) {
                 vt.ready.then(() => {
                     const { x, y } = origin;

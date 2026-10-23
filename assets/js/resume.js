@@ -10,9 +10,11 @@
     const schemeMeta = document.querySelector('meta[name="color-scheme"]');
 
     // Safari on iPhone and iPad colors its bars from the solid boxes at the screen's edges (see .edge in styles.css),
-    // but only looks at them again when a fixed box comes or goes, so a theme change adds one for a moment
+    // but only looks at them again when a fixed box comes or goes, so a theme change adds one for a moment. Safari can't
+    // read them while an animated switch runs, so then it adds one when the switch ends.
+    let switching = false;
     const retint = () => {
-        if (!CSS.supports('-webkit-touch-callout', 'none')) return;
+        if (switching || !CSS.supports('-webkit-touch-callout', 'none')) return;
         const probe = document.createElement('div');
         probe.className = 'edge-probe';
         document.body.append(probe);
@@ -38,7 +40,12 @@
             applyTheme(t);
             return;
         }
+        switching = true;
         const vt = document.startViewTransition(() => applyTheme(t));
+        vt.finished.finally(() => {
+            switching = false;
+            retint();
+        }).catch(() => {});
         vt.ready.then(() => {
             const { x, y } = origin;
             const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));

@@ -1068,7 +1068,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
 .story { position: relative; background: var(--dark); }
 .story-sticky { padding: clamp(6rem, 14vw, 10rem) 0; }
 
-.motion .story { height: 320vh; }
+.motion .story { height: 420vh; }
 
 .motion .story-sticky {
     position: sticky;
@@ -1093,20 +1093,47 @@ html:not(.motion) .dot-grid canvas { display: none; }
 .story .hl { font-style: italic; color: var(--story-hl); }
 
 /* The faded words start just bright enough to meet the 4.5:1 contrast minimum, so the
-   light-up effect stays readable at every step. Highlights need a little more in light mode. */
+   light-up effect stays readable at every step. Highlights need a little more in light mode.
+   Each highlight also has a pen stroke under it, in the highlight's color. */
 :root,
-:root[data-theme="light"] { --story-dim: 0.68; --story-dim-hl: 0.82; --story-hl: #8a3a27; }
-:root[data-theme="dark"] { --story-dim: 0.55; --story-dim-hl: 0.7; --story-hl: var(--accent); }
+:root[data-theme="light"] { --story-dim: 0.68; --story-dim-hl: 0.82; --story-hl: #8a3a27; --hl-stroke: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2400 12' preserveAspectRatio='xMinYMid slice'%3E%3Cpath d='M4 7.2C120 5.6 260 8.4 420 6.6S720 5.2 900 7s320 1.6 500-.6 320-1 500 .7 300 .9 496-.9' fill='none' stroke='%238a3a27' stroke-opacity='.8' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E"); }
+:root[data-theme="dark"] { --story-dim: 0.55; --story-dim-hl: 0.7; --story-hl: var(--accent); --hl-stroke: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2400 12' preserveAspectRatio='xMinYMid slice'%3E%3Cpath d='M4 7.2C120 5.6 260 8.4 420 6.6S720 5.2 900 7s320 1.6 500-.6 320-1 500 .7 300 .9 496-.9' fill='none' stroke='%23e0b25c' stroke-opacity='.8' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E"); }
 
 @media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) { --story-dim: 0.55; --story-dim-hl: 0.7; --story-hl: var(--accent); }
+    :root:not([data-theme]) { --story-dim: 0.55; --story-dim-hl: 0.7; --story-hl: var(--accent); --hl-stroke: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2400 12' preserveAspectRatio='xMinYMid slice'%3E%3Cpath d='M4 7.2C120 5.6 260 8.4 420 6.6S720 5.2 900 7s320 1.6 500-.6 320-1 500 .7 300 .9 496-.9' fill='none' stroke='%23e0b25c' stroke-opacity='.8' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E"); }
 }
 
 .story .hl .w { --story-dim: var(--story-dim-hl); }
 
+/* The paragraph reads over the first part of the scene, then holds still while Impact rises over it (see "Sections
+   that rise"). The scene is 4.2 screens tall and pinned for 3.2 of them: 2.2 screens of reading (--read), then one
+   screen of Impact rising (--cover), as the paragraph steps back a little. */
+.motion .story {
+    --read: min(1, var(--p, 0) * 16 / 11);
+    --cover: max(0, var(--p, 0) * 3.2 - 2.2);
+}
+
 .motion .story .w {
-    opacity: clamp(var(--story-dim), calc(var(--p, 0) * (var(--n, 1) + 10) - var(--i, 0)), 1);
+    opacity: clamp(var(--story-dim), calc(var(--read, 0) * (var(--n, 1) + 10) - var(--i, 0)), 1);
     transition: opacity 0.25s linear;
+}
+
+.motion .story-sticky > .container {
+    opacity: calc(1 - var(--cover, 0) * 0.5);
+    scale: calc(1 - var(--cover, 0) * 0.05);
+}
+
+/* The stroke sits under the phrase's last line, carried across its lines. With motion on, it draws itself left to
+   right as the phrase lights up: the script gives each phrase its first word (--i0) and its number of words (--c).
+   It's cropped, never stretched, so it keeps its shape at any length. */
+.story .hl {
+    padding-bottom: 0.06em;
+    background: var(--hl-stroke) no-repeat 0 100% / 100% 0.32em;
+}
+
+.motion .story .hl {
+    --u: clamp(0, (var(--read, 0) * (var(--n, 1) + 10) - var(--i0, 0)) / var(--c, 1), 1);
+    background-size: calc(var(--u) * 100%) 0.32em;
 }
 
 /* ================= Looping animations ================= */
@@ -1843,6 +1870,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
     .card-art, .copy-btn, .photo-glow, .spot::before, .card-more, .to-top, .panel { display: none !important; }
 
     .hero, .story, .gallery { height: auto !important; }
+    .rise { margin-top: 0 !important; translate: none !important; border-radius: 0 !important; box-shadow: none !important; }
 
     .hero-sticky, .story-sticky, .gallery-sticky {
         position: static !important;
@@ -1854,7 +1882,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
     }
 
     .hero-copy, .hero-photo-wrap, .hero-photo, .gallery-track, .card, .tile, .skill, .rv, .rv-scale, .load,
-    .hero-title, .hero-title .ch, .story .w, .feats li, .headline .hl-w > span {
+    .hero-title, .hero-title .ch, .story .w, .feats li, .headline .hl-w > span, .story-sticky > .container {
         opacity: 1 !important;
         transform: none !important;
         translate: none !important;
@@ -1921,6 +1949,9 @@ html:not(.motion) .dot-grid canvas { display: none; }
 
 /* ================= Section numbers ================= */
 .eyebrow-num { font-variant-numeric: tabular-nums; }
+
+/* While a label decodes, its scrambled letters sit in a box as wide as the real word, so nothing around it shifts */
+.decoding { display: inline-block; white-space: nowrap; text-align: left; }
 
 /* ================= Experience timeline ================= */
 .job { position: relative; padding-left: 2.25rem; }
@@ -2124,6 +2155,24 @@ html:has(.panel[open]) { overflow: hidden; }
 
 .panel p:not(.panel-meta) { font-size: 1.05rem; line-height: 1.6; color: var(--text-2); }
 .panel .chips { margin-top: 1.75rem; }
+
+/* A thin line along the top of a write-up fills as you read down it (the script sets --read) */
+.panel-progress {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    height: 2px;
+    margin-bottom: -2px;
+    pointer-events: none;
+}
+
+.panel-progress span {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    transform: scaleX(var(--read, 0));
+    transform-origin: 0 50%;
+}
 
 /* Below the first screen, a write-up's parts rise in as you scroll to them (the script marks them .pr) */
 .motion .pr { opacity: 0; transform: translate3d(0, 16px, 0); transition: opacity 0.6s var(--ease), transform 0.7s var(--ease); }
@@ -2422,6 +2471,34 @@ html.vt-morph::view-transition-new(root) { animation: vtIn 0.4s var(--ease) both
 :root:not(.motion):active-view-transition-type(page)::view-transition-group(*),
 :root:not(.motion):active-view-transition-type(page)::view-transition-old(*),
 :root:not(.motion):active-view-transition-type(page)::view-transition-new(*) { animation: none !important; }
+
+/* ================= Sections that rise over the one before ================= */
+/* Impact slides up over the about paragraph like a card dealt onto a pile: the paragraph's scene runs one screen
+   longer and Impact starts one screen early, so the paragraph holds still underneath while Impact covers it. Contact
+   slides a little over the end of Education as it comes up. Both have rounded top corners and a faint shadow. */
+:root,
+:root[data-theme="light"] { --rise-shade: rgba(31, 38, 52, 0.16); }
+:root[data-theme="dark"] { --rise-shade: rgba(0, 0, 0, 0.55); }
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) { --rise-shade: rgba(0, 0, 0, 0.55); }
+}
+
+.motion .rise {
+    position: relative;
+    z-index: 1;
+    border-radius: clamp(20px, 3vw, 32px) clamp(20px, 3vw, 32px) 0 0;
+    box-shadow: 0 -20px 44px -28px var(--rise-shade);
+}
+
+.motion #impact { margin-top: -100vh; margin-top: -100lvh; }
+
+/* The section after Impact sits above the paragraph too, in case Impact is shorter than the screen */
+.motion #impact + .section { position: relative; z-index: 1; }
+
+/* Contact starts 64px over Education and moves up that much faster than the page over its first third of a screen
+   (its --p), so it slides in over Education's last stretch of padding */
+.motion .contact.rise { margin-top: -64px; translate: 0 calc(max(0, 1 - var(--p, 0) * 2.5) * 64px); }
 
 /* ================= Experience: the timeline fills as you scroll ================= */
 .jobs { position: relative; }
@@ -2776,9 +2853,9 @@ html:not(.motion) .gallery-dots,
 /* Safari there ignores theme-color and paints its status bar and bottom toolbar in the background color of the fixed
    box spanning each edge of the screen. At the top that's the site's solid top bar, or the thin strip under it on a
    page without one; at the bottom it's always the strip. Both are in the page color, so both bars are always there
-   and match the theme. Safari only looks again when a fixed box comes or goes, so the scripts add a throwaway one
-   (.edge-probe) after each theme switch; while a theme switch or page change animates, it reads the animation's own
-   layer, which carries the page color too.
+   and match the theme. Safari still reads a strip's full color when it's nearly see-through (it skips anything under
+   10% visible), so the strips are faint and only Safari's own bar shows. Safari only looks again when a fixed box
+   comes or goes, so the scripts add a throwaway one (.edge-probe) after each theme switch, at its end when animated.
    (-webkit-touch-callout is only supported by Safari on iOS and iPadOS.) */
 .edge { display: none; }
 
@@ -2790,6 +2867,7 @@ html:not(.motion) .gallery-dots,
         right: 0;
         height: 12px; /* Safari passes over anything thinner as a border */
         background: var(--dark);
+        opacity: 0.12;
         pointer-events: none;
     }
 
@@ -2807,8 +2885,6 @@ html:not(.motion) .gallery-dots,
     height: 1px;
     pointer-events: none;
 }
-
-::view-transition { background-color: var(--dark); }
 
 /* ================= Paper grain ================= */
 /* A faint grain on the page backgrounds. Its light and dark specks are balanced, so the average color doesn't change.

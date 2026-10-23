@@ -52,7 +52,23 @@
 
 .r-btn:hover { color: var(--text); border-color: rgba(var(--ink-rgb), 0.3); }
 
+/* Projects with a write-up on the portfolio link to it, under their points (on screen only) */
+.r-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.5rem;
+    font-family: var(--font);
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--accent);
+}
+
+.r-more svg { transition: transform 0.3s var(--ease); }
+.r-more:hover svg { transform: translateX(3px); }
+
 .r-back svg,
+.r-more svg,
 .r-btn svg {
     width: 15px;
     height: 15px;
@@ -343,7 +359,7 @@ html.arrived :is(.sheet, .r-head h1, .r-contact li) { animation: none; }
 @media print {
     @page { size: letter; margin: 0.4in 0.5in; }
 
-    .r-bar { display: none !important; }
+    .r-bar, .r-more { display: none !important; }
 
     .sheet {
         width: auto;
