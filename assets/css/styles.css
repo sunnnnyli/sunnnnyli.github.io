@@ -223,6 +223,18 @@
     unicode-range: U+300C-300D, U+585E, U+5931, U+7109, U+77E5, U+798F, U+7FC1, U+975E, U+9A6C, U+FF0C;
 }
 
+/* Zhi Mang Xing, a flowing running-script brush, cut down to the one character on the hidden surprise's seal, 福
+   (about 1 KB). The card is built, hidden, as the page opens, so it's loaded long before the seal is pressed. License:
+   zhi-mang-xing-OFL.txt. */
+@font-face {
+    font-family: "Zhi Mang Xing";
+    font-style: normal;
+    font-weight: 400;
+    font-display: block;
+    src: url("../fonts/zhi-mang-xing-fu.woff2") format("woff2");
+    unicode-range: U+798F;
+}
+
 /* Local fonts tuned to Newsreader and Instrument Sans (measured), so text barely shifts when the web fonts arrive */
 @font-face {
     font-family: "Newsreader Fallback";
@@ -1017,6 +1029,26 @@ html:not(.motion) .dot-grid canvas { display: none; }
 }
 
 .photo-inner .photo-img { position: absolute; inset: 0; }
+
+/* The ring and portrait together are a coin, which spins when tapped (the script turns it, --spin). The portrait is
+   on the front only: from behind, the coin is the ring's gold disc. Quick taps don't zoom the page on phones. */
+.hero-photo {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.photo-coin {
+    position: absolute;
+    inset: 0;
+    transform: perspective(700px) rotateY(var(--spin, 0deg));
+    transform-style: preserve-3d;
+}
+
+.photo-coin .photo-inner {
+    translate: 0 0 1px;
+    backface-visibility: hidden;
+}
+
 
 .photo-inner img {
     display: block;
@@ -1875,7 +1907,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
     @page { margin: 14mm; }
 
     body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky { background-image: none !important; }
-    .gallery-dots, .skill-hits, .toolkit-hint, .toast, .confetti, .anchor-btn { display: none !important; }
+    .gallery-dots, .skill-hits, .toolkit-hint, .toast, .seal-card, .anchor-btn { display: none !important; }
     .sig-pen { stroke-dashoffset: 0 !important; animation: none !important; }
     .sig-ink { opacity: 1 !important; animation: none !important; }
 
@@ -3092,15 +3124,63 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
 }
 
 /* ================= Hidden surprise ================= */
-.confetti {
+/* A card dealt up from the bottom of the screen like the section cards, with the seal pressed onto it beside the
+   message (the script plays it). It's the whole width of a phone. */
+.seal-card {
     position: fixed;
-    inset: 0;
+    left: 50%;
+    bottom: 0;
     z-index: 300;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: min(470px, 100vw);
+    padding: 1.5rem 1.25rem calc(1.5rem + var(--safe-bottom)) 2.25rem;
+    border: 1px solid var(--line);
+    border-bottom: 0;
+    border-radius: 24px 24px 0 0;
+    background: var(--surface);
+    box-shadow: 0 -20px 44px -28px var(--rise-shade);
+    translate: -50% 0;
+    transform: translateY(calc(100% + 40px));
+    visibility: hidden;
+    cursor: pointer;
 }
 
+.seal-card.on { visibility: visible; }
+
+.seal-card-text { flex: 1; min-width: 0; }
+
+.seal-card-eye {
+    margin: 0;
+    font-family: var(--font);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.seal-card-line {
+    margin: 0.75rem 0 0;
+    font-family: var(--serif);
+    font-size: clamp(1.4rem, 5.5vw, 1.7rem);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    color: var(--text);
+}
+
+/* As big as it can be beside the text with a little room to spare: on phones that's what the label leaves (it doesn't
+   shrink with the screen), and on wider screens it tops out at 11.5rem */
+.seal-card .seal {
+    flex: none;
+    width: clamp(7.5rem, 100vw - 16rem, 11.5rem);
+    height: auto;
+    aspect-ratio: 1;
+    opacity: 0;
+}
+
+/* ================= Notices ================= */
 .toast {
     position: fixed;
     left: 50%;
@@ -3241,15 +3321,16 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
     .hero-layout { grid-template-columns: 1fr; gap: 1.6rem; }
     .hero-photo-wrap { order: -1; flex-direction: row; align-items: center; gap: 1rem; }
     .hero-photo { flex: none; width: 5.25rem; }
-    .hero-quote { flex: 1; width: auto; text-align: left; }
-    /* The characters and lead-in shrink a little with the screen so each stays on one line, even at 320px */
+    .hero-quote { flex: 1; min-width: 0; width: auto; text-align: left; }
+    /* The characters shrink a little with the screen so they stay on one line, even at 320px; the lead-in takes a
+       second line, evenly split, where it needs one */
     .quote-zh { margin-right: -0.06em; font-size: min(1.15rem, 5vw); letter-spacing: 0.06em; white-space: nowrap; }
     .zh-ch { margin-right: 0.06em; }
     .py { display: none; }
     .py-line { display: block; }
     .hero-quote { --py-room: 1.15rem; }
     .quote-en { margin-top: 0.3rem; font-size: 0.82rem; line-height: 1.35; }
-    .quote-lead { margin-bottom: 0; font-size: min(0.8rem, 2.95vw); white-space: nowrap; }
+    .quote-lead { margin-bottom: 0.1rem; font-size: min(0.8rem, 2.95vw); line-height: 1.3; }
     .hero-sub { margin-top: 0.9rem; }
     .hero-lede { margin-top: 0.75rem; font-size: 1rem; line-height: 1.5; }
     .hero-actions { gap: 0.9rem 1.25rem; }

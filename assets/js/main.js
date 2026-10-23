@@ -1566,7 +1566,7 @@
     });
     if (toolkitHint) toolkitHint.hidden = false;
 
-    /* ---------- A hidden surprise: ↑ ↑ ↓ ↓ ← → ← → B A ---------- */
+    /* ---------- Notices ---------- */
     const toastEl = document.createElement('div');
     toastEl.className = 'toast';
     toastEl.setAttribute('role', 'status');
@@ -1579,90 +1579,138 @@
         toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3500);
     };
 
-    // Confetti in honey and coral, drawn on a canvas that removes itself once the last piece has fallen
-    const confetti = () => {
-        const cv = document.createElement('canvas');
-        cv.className = 'confetti';
-        cv.setAttribute('aria-hidden', 'true');
-        document.body.append(cv);
-        const W = window.innerWidth;
-        const H = window.innerHeight;
-        const dpr = Math.min(2, window.devicePixelRatio || 1);
-        cv.width = W * dpr;
-        cv.height = H * dpr;
-        const ctx = cv.getContext('2d');
-        ctx.scale(dpr, dpr);
-        const colors = ['#e0b25c', '#f3d08f', '#c99a4e', '#a84a33', '#d98a76', '#f0a08a'];
-        const power = Math.sqrt(H / 800);
-        const bits = [];
-        // Two bursts, one from each bottom corner, aimed up and inward
-        [[0, -60], [W, -120]].forEach(([x0, aim]) => {
-            for (let i = 0; i < 90; i++) {
-                const a = ((aim + (Math.random() - 0.5) * 40) * Math.PI) / 180;
-                const speed = (16 + Math.random() * 12) * power;
-                bits.push({
-                    x: x0,
-                    y: H + 10,
-                    vx: Math.cos(a) * speed,
-                    vy: Math.sin(a) * speed,
-                    w: 6 + Math.random() * 6,
-                    h: 4 + Math.random() * 6,
-                    r: Math.random() * Math.PI,
-                    vr: (Math.random() - 0.5) * 0.3,
-                    flip: Math.random() * Math.PI,
-                    vf: 0.08 + Math.random() * 0.12,
-                    color: colors[Math.floor(Math.random() * colors.length)],
-                    round: Math.random() < 0.3,
-                });
-            }
-        });
-        const t0 = performance.now();
-        let last = t0;
-        const step = (now) => {
-            const dt = Math.min(3, (now - last) / 16.67);
-            last = now;
-            const age = now - t0;
-            ctx.clearRect(0, 0, W, H);
-            ctx.globalAlpha = age > 3800 ? Math.max(0, 1 - (age - 3800) / 700) : 1;
-            let falling = 0;
-            bits.forEach((b) => {
-                // Air slows the pieces more on the way down, so they flutter instead of dropping
-                b.vx *= Math.pow(0.985, dt);
-                b.vy = b.vy * Math.pow(b.vy < 0 ? 0.985 : 0.95, dt) + 0.32 * dt;
-                b.x += (b.vx + Math.sin(b.flip) * 0.6) * dt;
-                b.y += b.vy * dt;
-                b.r += b.vr * dt;
-                b.flip += b.vf * dt;
-                if (b.y < H + 20) falling++;
-                ctx.save();
-                ctx.translate(b.x, b.y);
-                ctx.rotate(b.r);
-                ctx.scale(1, Math.cos(b.flip));
-                ctx.fillStyle = b.color;
-                if (b.round) {
-                    ctx.beginPath();
-                    ctx.arc(0, 0, b.h / 2 + 1, 0, Math.PI * 2);
-                    ctx.fill();
-                } else {
-                    ctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h);
-                }
-                ctx.restore();
-            });
-            if (falling && age < 4500) requestAnimationFrame(step);
-            else cv.remove();
-        };
-        requestAnimationFrame(step);
+    /* ---------- A hidden surprise: tap the portrait 13 times ---------- */
+    // A card is dealt up from the bottom of the screen and a seal reading 福 (good fortune) presses onto it, then it
+    // slips away again (tap it to send it off sooner). The seal is an ink impression: its edges are roughened, the ink
+    // doesn't quite take in places, and the character and an inner frame are carved out of it. The character's ink is
+    // centered on it, placed from the font's own outline of 福 (its pen starts at x, on the baseline y). With motion off, the
+    // card simply shows, already stamped, then fades. It's announced to screen readers as it shows.
+    const sealCard = document.createElement('div');
+    sealCard.className = 'seal-card';
+    sealCard.setAttribute('role', 'status');
+    sealCard.innerHTML = `<div class="seal-card-text"><p class="seal-card-eye"></p><p class="seal-card-line"></p></div>
+        <svg class="seal" viewBox="0 0 120 120" aria-hidden="true">
+            <defs>
+                <filter id="seal-ink" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
+                    <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="4" result="warp"/>
+                    <feDisplacementMap in="SourceGraphic" in2="warp" scale="3.6" xChannelSelector="R" yChannelSelector="G" result="rough"/>
+                    <feTurbulence type="fractalNoise" baseFrequency="0.32" numOctaves="2" seed="9" result="grain"/>
+                    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -10 6.9" result="voids"/>
+                    <feComposite in="rough" in2="voids" operator="in" result="speckled"/>
+                    <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="2" result="blot"/>
+                    <feColorMatrix in="blot" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -0.8 1.42" result="press"/>
+                    <feComposite in="speckled" in2="press" operator="in"/>
+                </filter>
+                <mask id="seal-carve" maskUnits="userSpaceOnUse" x="0" y="0" width="120" height="120">
+                    <rect x="0" y="0" width="120" height="120" fill="#fff"/>
+                    <rect x="10.5" y="10.5" width="99" height="99" rx="3" fill="none" stroke="#000" stroke-width="2.6"/>
+                    <text x="16.79" y="98.14" font-family="Zhi Mang Xing" font-size="96" fill="#000">福</text>
+                </mask>
+            </defs>
+            <g filter="url(#seal-ink)"><rect x="4" y="4" width="112" height="112" rx="7" fill="#b3372a" mask="url(#seal-carve)"/></g>
+        </svg>`;
+    document.body.append(sealCard);
+    const sealEye = sealCard.querySelector('.seal-card-eye');
+    const sealLine = sealCard.querySelector('.seal-card-line');
+    const seal = sealCard.querySelector('.seal');
+    const OFF = 'translateY(calc(100% + 40px))';
+    let sealAnims = [];
+    let sealTimer;
+    const sealReset = () => {
+        sealAnims.forEach((a) => a.cancel());
+        sealAnims = [];
     };
+    const hideSecret = () => {
+        clearTimeout(sealTimer);
+        if (!sealCard.classList.contains('on')) return;
+        const gone = () => {
+            sealReset();
+            sealCard.classList.remove('on');
+            sealEye.textContent = '';
+            sealLine.textContent = '';
+            retint(); // on a phone it covered the bottom of the screen, which Safari colors its bar from
+        };
+        const out = motion
+            ? sealCard.animate([{ transform: 'none' }, { transform: OFF }], { duration: 600, easing: 'cubic-bezier(0.5, 0, 0.75, 0)', fill: 'forwards' })
+            : sealCard.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 400, fill: 'forwards' });
+        sealAnims.push(out);
+        out.finished.then(gone, () => {});
+    };
+    const showSecret = () => {
+        clearTimeout(sealTimer);
+        sealReset();
+        sealEye.textContent = 'You found my secret!';
+        sealLine.textContent = 'May good fortune find you too.';
+        sealCard.classList.add('on');
+        retint();
+        if (motion) {
+            sealAnims.push(
+                sealCard.animate([{ transform: OFF }, { transform: 'none' }], { duration: 700, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' }),
+                // the seal comes down at an angle, presses in, and settles; the card gives a little under it
+                seal.animate([
+                    { opacity: 0, transform: 'scale(1.4) rotate(-11deg)' },
+                    { opacity: 0.95, transform: 'scale(1.04) rotate(-6deg)', offset: 0.62 },
+                    { opacity: 1, transform: 'scale(0.985) rotate(-6deg)', offset: 0.8 },
+                    { opacity: 1, transform: 'scale(1) rotate(-6deg)' },
+                ], { duration: 380, delay: 800, easing: 'cubic-bezier(0.55, 0, 0.35, 1)', fill: 'both' }),
+                sealCard.animate([{ transform: 'none' }, { transform: 'translateY(4px)', offset: 0.35 }, { transform: 'none' }], { duration: 320, delay: 1030, easing: 'ease-out' }),
+            );
+        } else {
+            sealAnims.push(
+                sealCard.animate([{ transform: 'none' }], { duration: 1, fill: 'forwards' }),
+                seal.animate([{ opacity: 1, transform: 'rotate(-6deg)' }], { duration: 1, fill: 'forwards' }),
+            );
+        }
+        sealTimer = setTimeout(hideSecret, motion ? 4400 : 4000);
+    };
+    sealCard.addEventListener('click', hideSecret);
 
-    const secret = 'arrowup arrowup arrowdown arrowdown arrowleft arrowright arrowleft arrowright b a';
-    let typed = [];
-    document.addEventListener('keydown', (e) => {
-        if (e.target.closest && e.target.closest('input, textarea, [contenteditable]')) return;
-        typed = [...typed, e.key.toLowerCase()].slice(-10);
-        if (typed.join(' ') !== secret) return;
-        typed = [];
-        toast('You found my secret. Thanks for poking around!');
-        if (motion) confetti();
+    // The portrait spins like a coin with each tap or click (with motion on), easing to a stop face up. A tap on its
+    // right half pushes that side away, and on its left half the other way. Another tap the same way mid-spin adds a
+    // whole turn; one the other way turns it back round, through a whole turn that way (see .photo-coin).
+    const photo = document.querySelector('.hero-photo');
+    const coin = photo.querySelector('.photo-coin');
+    let angle = 0;
+    let from = 0;
+    let target = 0;
+    let spinStart = 0;
+    let spinning = false;
+    let spinDir = 0;
+    const spinFrame = (now) => {
+        const t = Math.min(1, (now - spinStart) / 600);
+        angle = from + (target - from) * (1 - Math.pow(1 - t, 3));
+        coin.style.setProperty('--spin', `${angle.toFixed(2)}deg`);
+        if (t < 1) {
+            requestAnimationFrame(spinFrame);
+            return;
+        }
+        spinning = false;
+        angle = 0; // a whole number of turns: face up, as it started
+        coin.style.removeProperty('--spin');
+    };
+    const spinCoin = (dir) => {
+        if (spinning && dir === spinDir) target += 360 * dir;
+        else target = (dir > 0 ? Math.ceil(angle / 360) : Math.floor(angle / 360)) * 360 + 360 * dir;
+        spinDir = dir;
+        from = angle;
+        spinStart = performance.now();
+        if (spinning) return;
+        spinning = true;
+        requestAnimationFrame(spinFrame);
+    };
+    // 13 taps in a row (none more than three seconds apart) show the surprise. The first also asks for the seal's
+    // lettering (one character, about 1 KB), in case the browser hasn't fetched it for the hidden card yet.
+    let taps = 0;
+    let tapTimer;
+    photo.addEventListener('click', (e) => {
+        const r = photo.getBoundingClientRect();
+        if (motion) spinCoin(e.clientX < r.left + r.width / 2 ? -1 : 1);
+        if (!taps && document.fonts) document.fonts.load('96px "Zhi Mang Xing"', '福').catch(() => {});
+        clearTimeout(tapTimer);
+        tapTimer = setTimeout(() => { taps = 0; }, 3000);
+        if (++taps < 13) return;
+        taps = 0;
+        showSecret();
     });
 
     /* ---------- Links to sections ---------- */
@@ -1871,6 +1919,5 @@
     console.log('%cHi there, fellow developer!', `font: 600 15px/1.6 system-ui, sans-serif; color: ${accent}`);
     console.log(`This site is plain HTML, CSS, and JavaScript, with no framework and no build step.
 Have a look at the source: https://github.com/sunnnnyli/sunnnnyli.github.io
-Tip: press ${isMac ? '⌘K' : 'Ctrl+K'} on the page to jump anywhere.
-And if you know the old cheat code (↑ ↑ ↓ ↓ ← → ← → B A), give it a try.`);
+Tip: press ${isMac ? '⌘K' : 'Ctrl+K'} on the page to jump anywhere.`);
 })();
