@@ -215,6 +215,15 @@
             // With the <base> above, a bare "#main" would point at the home page, so the skip link points here
             document.querySelector('.skip-link').href = `${location.href.split('#')[0]}#main`;
 
+            // No page transition from here on iPhone and iPad, where Safari draws solid bars while one runs
+            if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+                addEventListener('pageswap', (e) => {
+                    if (!e.viewTransition) return;
+                    e.viewTransition.ready.catch(() => {});
+                    e.viewTransition.skipTransition();
+                });
+            }
+
             const root = document.documentElement;
             const themeBtn = document.querySelector('.theme-btn');
             const contrastBtn = document.querySelector('.contrast-btn');

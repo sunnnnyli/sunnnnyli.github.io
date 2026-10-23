@@ -337,6 +337,10 @@ html.arrived :is(.sheet, .r-head h1, .r-contact li) { animation: none; }
 :root:active-view-transition-type(page)::view-transition-new(r-sheet) { animation: sheetRise 0.7s var(--page-move) 0.05s both; }
 
 @keyframes pageBack { to { opacity: 0.4; transform: scale(0.96); } }
+
+/* iPhone and iPad (no view transitions there): going back, the sheet sinks away before the portfolio returns */
+.motion.leaving .sheet { animation: sheetLeave 0.26s var(--page-fade) forwards; }
+@keyframes sheetLeave { to { opacity: 0; transform: translateY(36px); } }
 @keyframes sheetRise { from { opacity: 0; transform: translateY(64px); } }
 
 /* ================= Print: one Letter page ================= */

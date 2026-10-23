@@ -2778,6 +2778,24 @@ html:not(.motion) .gallery-dots,
     }
 }
 
+/* ================= iPhone and iPad: animations without view transitions ================= */
+/* Safari there draws solid bars behind its toolbar while a view transition runs, so the script uses these instead.
+   The theme change is a circle of the new theme's color spreading from the button; it stops 8px short of the bottom
+   edge, so Safari never paints a bottom bar from it (and at the top, the status bar takes its color right away). */
+.theme-veil {
+    position: fixed;
+    inset: 0 0 8px;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+/* Changing pages: the page fades out before the next one loads (the top bar stays), and back in on returning */
+.motion.leaving :is(main, .footer) { animation: pageLeave 0.26s var(--page-fade) forwards; }
+.motion.returning :is(main, .footer) { animation: pageReturn 0.4s var(--page-fade) both; }
+
+@keyframes pageLeave { to { opacity: 0; } }
+@keyframes pageReturn { from { opacity: 0; } }
+
 /* ================= Paper grain ================= */
 /* A faint grain on the page backgrounds. Its light and dark specks are balanced, so the average color doesn't change.
    The pinned scenes (intro, story, projects) carry their own copy, so the grain holds still with them while they're

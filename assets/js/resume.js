@@ -2,6 +2,16 @@
 // progress, the Back and Print buttons, and the offline cache.
 (() => {
     const root = document.documentElement;
+    // Safari on iPhone and iPad draws solid bars behind its toolbar while a view transition runs, so there the theme
+    // change and the page changes animate with ordinary elements instead (like the portfolio)
+    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (isIOS) {
+        window.addEventListener('pageswap', (e) => {
+            if (!e.viewTransition) return;
+            e.viewTransition.ready.catch(() => {});
+            e.viewTransition.skipTransition();
+        });
+    }
     // Saved choices, shared with the portfolio. Storage can be blocked, e.g. in some private windows.
     const stored = (key) => { try { return localStorage.getItem(key); } catch (e) { return null; } };
     const store = (key, value) => { try { localStorage.setItem(key, value); } catch (e) {} };
@@ -20,10 +30,30 @@
         root.dataset.theme = t;
         syncThemeBtn();
     };
+    // iPhone and iPad: the new theme's color spreads from the button in a circle (an ordinary element, see .theme-veil
+    // in styles.css), the page switches underneath it, and the circle fades away
+    const wipeTheme = (t, { x, y }, apply) => {
+        const veil = document.createElement('div');
+        veil.className = 'theme-veil';
+        veil.style.background = t === 'dark' ? '#1c1c1d' : '#f2f4f6'; // each theme's page color
+        document.body.append(veil);
+        const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+        veil.animate({ clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] }, { duration: 520, easing: 'cubic-bezier(0.5, 0, 0.2, 1)' })
+            .finished.then(() => {
+                apply();
+                return veil.animate({ opacity: [1, 0] }, { duration: 280, easing: 'ease-out', fill: 'forwards' }).finished;
+            })
+            .catch(apply)
+            .finally(() => veil.remove());
+    };
     // Like the portfolio: with motion on, the new theme spreads out in a circle from the button. Without a button
     // to start from (a system change, or catching up after a back/forward), it switches at once.
     const setTheme = (t, remember, origin) => {
         if (remember) store('theme', t);
+        if (origin && isIOS && root.classList.contains('motion')) {
+            wipeTheme(t, origin, () => applyTheme(t));
+            return;
+        }
         if (!origin || !root.classList.contains('motion') || !document.startViewTransition) {
             applyTheme(t);
             return;
@@ -145,17 +175,32 @@
     }
 
     // Back to the site: coming from the portfolio in this tab, step back in history, so it returns to where you were
-    document.querySelector('.r-back').addEventListener('click', (e) => {
-        let from = null;
-        try { from = document.referrer ? new URL(document.referrer) : null; } catch (err) {}
-        if (from && from.origin === location.origin && /\/(index\.html)?$/.test(from.pathname) && history.length > 1) {
-            e.preventDefault();
-            history.back();
+    // On iPhone and iPad the sheet sinks away first (there's no view transition there, see isIOS)
+    const leave = (go) => {
+        if (!isIOS || !root.classList.contains('motion')) {
+            go();
             return;
         }
-        // Otherwise (opened from disk, where browsers don't say where you came from), leave a note for the
-        // portfolio to put the visitor back where they were
-        try { sessionStorage.setItem('fromResume', '1'); } catch (err) {}
+        root.classList.add('leaving');
+        setTimeout(go, 260);
+        setTimeout(() => root.classList.remove('leaving'), 3000); // in case the page never changes
+    };
+    window.addEventListener('pageshow', () => {
+        if (!root.classList.contains('leaving')) return;
+        root.classList.replace('leaving', 'returning');
+        setTimeout(() => root.classList.remove('returning'), 400);
+    });
+    document.querySelector('.r-back').addEventListener('click', (e) => {
+        const href = e.currentTarget.href;
+        let from = null;
+        try { from = document.referrer ? new URL(document.referrer) : null; } catch (err) {}
+        const viaHistory = from && from.origin === location.origin && /\/(index\.html)?$/.test(from.pathname) && history.length > 1;
+        // Opened from disk (browsers don't say where you came from there): leave a note for the portfolio to put the
+        // visitor back where they were
+        if (!viaHistory) { try { sessionStorage.setItem('fromResume', '1'); } catch (err) {} }
+        if (!viaHistory && !isIOS) return; // an ordinary link
+        e.preventDefault();
+        leave(() => (viaHistory ? history.back() : location.assign(href)));
     });
 
     // Print sends the PDF itself (the same file as the PDF button) to the printer, by loading it into a hidden frame

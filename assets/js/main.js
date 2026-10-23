@@ -9,6 +9,10 @@
     // so the script only measures scenes and cards itself where that isn't supported.
     const sda = !!(window.CSS && CSS.supports && CSS.supports('animation-timeline', 'view()'));
     const isMac = /Mac|iPhone|iPad/i.test((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '');
+    // Safari on iPhone and iPad draws solid bars behind its toolbar while a view transition runs, so there the theme
+    // change, card opening, and page changes animate with ordinary elements instead (see "iPhone and iPad" below)
+    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const canMorph = !!document.startViewTransition && !isIOS;
     // Tilt only follows a mouse or trackpad
     const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
 
@@ -461,7 +465,7 @@
     };
     let morphing = false;
     const morph = (from, to, update) => {
-        if (morphing || !motion || !document.startViewTransition) {
+        if (morphing || !motion || !canMorph) {
             update();
             return;
         }
@@ -523,7 +527,7 @@
     const openPanel = (panel) => {
         if (panel.open) return;
         const card = panelCard.get(panel);
-        const grow = motion && !!document.startViewTransition && !morphing && !!card && onScreen(card);
+        const grow = motion && canMorph && !morphing && !!card && onScreen(card);
         panel.classList.toggle('grown', grow);
         panel._shrink = grow; // closing shrinks it back into its card
         const show = () => {
@@ -751,12 +755,32 @@
         schemeMeta.content = theme; // Safari on iPhone tints its bars to match
         if (favicon) favicon.href = theme === 'dark' ? favDark : favLight;
     };
+    // iPhone and iPad: the new theme's color spreads from the button in a circle (an ordinary element, see .theme-veil
+    // in styles.css), the page switches underneath it, and the circle fades away
+    const wipeTheme = (t, { x, y }, apply) => {
+        const veil = document.createElement('div');
+        veil.className = 'theme-veil';
+        veil.style.background = t === 'dark' ? '#1c1c1d' : '#f2f4f6'; // each theme's page color
+        document.body.append(veil);
+        const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+        veil.animate({ clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] }, { duration: 520, easing: 'cubic-bezier(0.5, 0, 0.2, 1)' })
+            .finished.then(() => {
+                apply();
+                return veil.animate({ opacity: [1, 0] }, { duration: 280, easing: 'ease-out', fill: 'forwards' }).finished;
+            })
+            .catch(apply)
+            .finally(() => veil.remove());
+    };
     const setTheme = (t, remember, origin) => {
         theme = t;
         if (remember) store('theme', t);
         const apply = () => { root.dataset.theme = theme; syncThemeBtn(); };
+        if (motion && isIOS && origin) {
+            wipeTheme(t, origin, apply);
+            return;
+        }
         // The new theme spreads out in a circle from the button; instant otherwise or with motion off.
-        if (motion && document.startViewTransition) {
+        if (motion && canMorph) {
             const vt = document.startViewTransition(apply);
             if (origin) {
                 vt.ready.then(() => {
@@ -1606,6 +1630,32 @@
             proverb.classList.toggle('show');
         });
         document.addEventListener('pointerdown', (e) => { if (!proverb.contains(e.target)) proverb.classList.remove('show'); });
+    }
+
+    /* ---------- iPhone and iPad: changing pages ---------- */
+    // Without view transitions there, the page fades out on its own before the next one loads (which then plays its
+    // own opening), and fades back in when the visitor returns to it through the back/forward cache
+    if (isIOS) {
+        window.addEventListener('pageswap', (e) => {
+            if (!e.viewTransition) return;
+            e.viewTransition.ready.catch(() => {}); // skipping it rejects this, and there's nothing to report
+            e.viewTransition.skipTransition();
+        });
+        document.addEventListener('click', (e) => {
+            const a = e.target.closest('a[href]');
+            if (!a || !motion || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || a.target || a.hasAttribute('download')) return;
+            const url = new URL(a.href, location.href);
+            if (url.origin !== location.origin || url.pathname === location.pathname) return; // other sites, or this page
+            e.preventDefault();
+            root.classList.add('leaving');
+            setTimeout(() => { location.href = url.href; }, 260);
+            setTimeout(() => root.classList.remove('leaving'), 3000); // in case the page never changes
+        });
+        window.addEventListener('pageshow', () => {
+            if (!root.classList.contains('leaving')) return;
+            root.classList.replace('leaving', 'returning');
+            setTimeout(() => root.classList.remove('returning'), 400);
+        });
     }
 
     /* ---------- Coming back from the résumé ---------- */
