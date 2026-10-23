@@ -649,6 +649,13 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
 }
 
 /* ================= Hero ================= */
+/* Phone browsers shrink their toolbars away as you scroll, which grows the screen from the small viewport (svh) to the
+   large one (lvh). The pinned scenes (intro, story, projects) are as tall as the large one, so the page behind them
+   never shows below them, and keep the difference as room at their bottom, so their content still fits the small one.
+   It's 0 on desktops. */
+:root { --toolbar-room: 0px; }
+@supports (height: 100lvh) { :root { --toolbar-room: calc(100lvh - 100svh); } }
+
 .hero { position: relative; background: var(--dark); }
 
 .hero-sticky {
@@ -667,8 +674,9 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
     position: sticky;
     top: 0;
     height: 100vh;
-    height: 100svh;
+    height: 100lvh;
     min-height: 0;
+    padding-bottom: calc(4.5rem + var(--toolbar-room));
 }
 
 .aurora {
@@ -1033,6 +1041,8 @@ html:not(.motion) .dot-grid canvas { display: none; }
     opacity: calc(1 - var(--p, 0) * 5);
 }
 
+.motion .scroll-cue { bottom: calc(1.5rem + var(--toolbar-room)); } /* clear of the toolbars, like the rest of the intro */
+
 .scroll-cue i {
     position: relative;
     width: 1px;
@@ -1066,8 +1076,8 @@ html:not(.motion) .dot-grid canvas { display: none; }
     display: flex;
     align-items: center;
     height: 100vh;
-    height: 100svh;
-    padding: calc(var(--nav-h) + var(--safe-top)) 0 0;
+    height: 100lvh;
+    padding: calc(var(--nav-h) + var(--safe-top)) 0 var(--toolbar-room);
 }
 
 .story-text {
@@ -1342,8 +1352,8 @@ html:not(.motion) .dot-grid canvas { display: none; }
     flex-direction: column;
     justify-content: flex-start;
     height: 100vh;
-    height: 100svh;
-    padding: calc(var(--nav-h) + var(--safe-top) + 1.75rem) 0 0;
+    height: 100lvh;
+    padding: calc(var(--nav-h) + var(--safe-top) + 1.75rem) 0 var(--toolbar-room);
     overflow: hidden;
     scroll-snap-type: none;
 }
