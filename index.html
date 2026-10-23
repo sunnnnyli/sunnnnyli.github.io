@@ -61,7 +61,13 @@
             let pref = null;
             try { pref = localStorage.getItem('motion'); } catch (e) {}
             const on = pref ? pref === 'on' : !matchMedia('(prefers-reduced-motion: reduce)').matches;
-            if (on && 'IntersectionObserver' in window) document.documentElement.classList.add('motion');
+            if (on && 'IntersectionObserver' in window) {
+                document.documentElement.classList.add('motion');
+                // The first screen's text stays hidden until the script scrambles it to decode (see .intro in
+                // styles.css), or for three seconds at most, in case the script never runs
+                document.documentElement.classList.add('intro');
+                setTimeout(() => document.documentElement.classList.remove('intro'), 3000);
+            }
         })();
     </script>
     <link rel="stylesheet" href="assets/css/styles.css">
@@ -138,10 +144,10 @@
                 <div class="container hero-layout">
                     <div class="hero-copy">
                         <h1 class="hero-title" data-split>Sunny Li</h1>
-                        <p class="hero-role load" style="--d:.55s"><span class="live-dot" aria-hidden="true"></span><span>Salesforce Developer at Justworks</span></p>
-                        <p class="hero-sub load" style="--d:.7s">I build Salesforce <span class="grad-text">automations</span> and <span class="grad-text">integrations</span> for the Revenue team.</p>
-                        <p class="hero-lede load" style="--d:.85s">Before that, I spent two years building for teams across NYC's Office of Technology and Innovation, and designed an AI agent pipeline at Olympix.</p>
-                        <div class="hero-actions load" style="--d:1s">
+                        <p class="hero-role load" style="--d:.38s"><span class="live-dot" aria-hidden="true"></span><span>Salesforce Developer at Justworks</span></p>
+                        <p class="hero-sub load" style="--d:.48s">I build Salesforce <span class="grad-text">automations</span> and <span class="grad-text">integrations</span> for the Revenue team.</p>
+                        <p class="hero-lede load" style="--d:.58s">Before that, I spent two years building for teams across NYC's Office of Technology and Innovation, and designed an AI agent pipeline at Olympix.</p>
+                        <div class="hero-actions load" style="--d:.68s">
                             <span class="email-group">
                                 <a class="email-link" href="mailto:sunnyli2003@gmail.com">sunnyli2003@gmail.com</a>
                                 <button class="copy-btn" type="button" data-copy="sunnyli2003@gmail.com" aria-label="Copy email address" title="Copy email address">
@@ -176,8 +182,8 @@
                         </figure>
                         <!-- A Chinese proverb I like, credited as one: a loss can turn out to be a blessing in disguise.
                              Hovering over the characters (or tapping them on a phone) shows the pinyin above each one. -->
-                        <figure class="hero-quote load" style="--d:1.25s">
-                            <figcaption class="quote-lead">A Chinese proverb I keep coming back to</figcaption>
+                        <figure class="hero-quote load" style="--d:.85s">
+                            <figcaption class="quote-lead">A Chinese proverb I’ve been reflecting on recently...</figcaption>
                             <blockquote>
                                 <p class="quote-zh" lang="zh-Hans" tabindex="0"><span class="py-line" aria-hidden="true">sài wēng shī m<span class="caron">a</span>, yān zhī fēi fú</span>「<span class="zh-ch">塞<span class="py" aria-hidden="true">sài</span></span><span class="zh-ch">翁<span class="py" aria-hidden="true">wēng</span></span><span class="zh-ch">失<span class="py" aria-hidden="true">shī</span></span><span class="zh-ch">马<span class="py" aria-hidden="true">m<span class="caron">a</span></span></span>，<span class="zh-ch">焉<span class="py" aria-hidden="true">yān</span></span><span class="zh-ch">知<span class="py" aria-hidden="true">zhī</span></span><span class="zh-ch">非<span class="py" aria-hidden="true">fēi</span></span><span class="zh-ch">福<span class="py" aria-hidden="true">fú</span></span>」</p>
                                 <p class="quote-en">“The old man lost his horse, but who's to say it wasn't a blessing?”</p>
@@ -191,122 +197,127 @@
         </section>
 
         <!-- ============ Story ============ -->
-        <section class="story" id="story" data-scene aria-label="Introduction">
+        <section class="story rise" id="story" data-scene aria-label="Introduction">
             <div class="story-sticky">
                 <div class="container">
                     <div class="story-text" data-words>
                         <p>I love building things that <span class="hl">quietly make other people's jobs easier</span>.
                         Usually that means sitting down with the teams who use Salesforce, learning how they actually work,
                         and <span class="hl">taking the tedious parts off their plates</span>.</p>
-                        <p>I've learned the most when I was <span class="hl">pushed outside what I already knew</span>, whether that
-                        meant picking up a new language on the job or keeping up with requirements that changed every week.
-                        I've grown to enjoy that kind of challenge.</p>
+                        <p>I’ve learned the most when I was <span class="hl">pushed outside what I already knew</span>. Whether that
+                        meant picking up a new language on the job or keeping up with requirements that changed every week,
+                        I’ve grown to enjoy that kind of challenge.</p>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- ============ Impact ============ -->
-        <section class="light section rise" id="impact" aria-labelledby="impact-title">
-            <div class="container">
-                <p class="eyebrow grad-text rv"><span class="eyebrow-num">01</span><span class="sep"><span class="visually-hidden">, </span></span>Impact</p>
-                <h2 class="headline rv" id="impact-title" style="--d:.08s">My work, <br>by the numbers.</h2>
+        <section class="light section rise holds" id="impact" aria-labelledby="impact-title">
+            <div class="hold">
+                <div class="container">
+                    <p class="eyebrow grad-text rv"><span class="eyebrow-num">01</span><span class="sep"><span class="visually-hidden">, </span></span>Impact</p>
+                    <h2 class="headline rv" id="impact-title" style="--d:.08s">My work, <br>by the numbers.</h2>
 
-                <div class="bento">
-                    <article class="tile tile-span2 spot rv-scale">
-                        <p class="tile-label">Justworks</p>
-                        <p class="num num-phrase grad-text">Close → billing</p>
-                        <p class="unit">the Revenue process I automate with Apex, LWC, and Flow.</p>
-                        <p class="tile-copy">Connected over REST APIs to the billing and finance systems behind it, and built to stay in sync.</p>
-                    </article>
-                    <article class="tile tile-xl spot rv-scale" style="--d:.08s">
-                        <p class="tile-label">NYC OTI<span class="sep"><span class="visually-hidden">, </span></span>Vulnerability Management</p>
-                        <div>
-                            <p class="num grad-text" data-count="150" data-prefix="~">~150</p>
-                            <p class="unit">hours a week, given back.</p>
-                            <p class="tile-copy">I automated the PDFs and agency notices a 10-analyst team was making by hand, work they'd named as a reason people left.</p>
-                        </div>
-                    </article>
-                    <article class="tile tile-span2 spot rv-scale" style="--d:.08s">
-                        <p class="tile-label">BigQuery client library</p>
-                        <p class="num grad-text" data-count="1" data-suffix="M+">1M+</p>
-                        <p class="unit">records synced from BigQuery into Salesforce, with none lost or duplicated.</p>
-                    </article>
-                    <article class="tile tile-span2 tile-dark spot rv-scale" style="--d:.16s">
-                        <p class="tile-label">Olympix<span class="sep"><span class="visually-hidden">, </span></span>Multi-agent AI pipeline</p>
-                        <p class="num grad-text" data-count="10" data-prefix="$" data-suffix="K">$10K</p>
-                        <p class="unit">exploit reproduced by the four-agent AI pipeline I designed. Ideation, exploitation, parsing, and feedback agents looped on every failure until it matched the published PoC.</p>
-                    </article>
+                    <div class="bento">
+                        <article class="tile tile-span2 spot rv-scale">
+                            <p class="tile-label">Justworks</p>
+                            <p class="num num-phrase grad-text">Close → billing</p>
+                            <p class="unit">the Revenue process I automate with Apex, LWC, and Flow.</p>
+                            <p class="tile-copy">Connected over REST APIs to the billing and finance systems behind it, and built to stay in sync.</p>
+                        </article>
+                        <article class="tile tile-xl spot rv-scale" style="--d:.08s">
+                            <p class="tile-label">NYC OTI<span class="sep"><span class="visually-hidden">, </span></span>Vulnerability Management</p>
+                            <div>
+                                <p class="num grad-text" data-count="150" data-prefix="~">~150</p>
+                                <p class="unit">hours a week, given back.</p>
+                                <p class="tile-copy">I automated the PDFs and agency notices a 10-analyst team was making by hand, work they'd named as a reason people left.</p>
+                            </div>
+                        </article>
+                        <article class="tile tile-span2 spot rv-scale" style="--d:.08s">
+                            <p class="tile-label">BigQuery client library</p>
+                            <p class="num grad-text" data-count="1" data-suffix="M+">1M+</p>
+                            <p class="unit">records synced from BigQuery into Salesforce, with none lost or duplicated.</p>
+                        </article>
+                        <article class="tile tile-span2 tile-dark spot rv-scale" style="--d:.16s">
+                            <p class="tile-label">Olympix<span class="sep"><span class="visually-hidden">, </span></span>Multi-agent AI pipeline</p>
+                            <p class="num grad-text" data-count="10" data-prefix="$" data-suffix="K">$10K</p>
+                            <p class="unit">exploit reproduced by the four-agent AI pipeline I designed. Ideation, exploitation, parsing, and feedback agents looped on every failure until it matched the published PoC.</p>
+                        </article>
+                    </div>
                 </div>
             </div>
         </section>
 
         <!-- ============ Experience ============ -->
-        <section class="light section" id="experience" aria-labelledby="experience-title" style="padding-top:0">
-            <div class="container">
-                <p class="eyebrow grad-text rv"><span class="eyebrow-num">02</span><span class="sep"><span class="visually-hidden">, </span></span>Experience</p>
-                <h2 class="headline rv" id="experience-title" style="--d:.08s">Where I've shipped.</h2>
+        <section class="light section rise holds" id="experience" aria-labelledby="experience-title">
+            <div class="hold">
+                <div class="container">
+                    <p class="eyebrow grad-text rv"><span class="eyebrow-num">02</span><span class="sep"><span class="visually-hidden">, </span></span>Experience</p>
+                    <h2 class="headline rv" id="experience-title" style="--d:.08s">Where I've shipped.</h2>
 
-                <div class="jobs">
-                    <article class="job" id="job-justworks" data-name="Justworks" data-skills="Salesforce, Apex, Lightning Web Components, Flow, REST APIs, Git/GitHub">
-                        <div class="job-side rv">
-                            <div class="job-logo" aria-hidden="true"><img class="logo-light" src="assets/img/logos/justworks.svg" alt="" width="635" height="118" loading="lazy" decoding="async"><img class="logo-dark" src="assets/img/logos/justworks-dark.svg" alt="" width="635" height="118" loading="lazy" decoding="async"></div>
-                            <p class="job-dates">Nov 2026 – Present</p>
-                            <h3>Salesforce Developer</h3>
-                            <p class="job-org">Justworks</p>
-                            <p class="job-loc">New York, NY (Hybrid)</p>
-                            <ul class="chips" aria-label="Technologies">
-                                <li>Apex</li><li>Lightning Web Components</li><li>Flow</li><li>REST APIs</li><li>Git</li>
-                            </ul>
-                        </div>
-                        <ol class="feats">
-                            <li><strong>Revenue automation.</strong> I'm learning how the Revenue team works from deal close to billing, and I build and maintain the Apex, LWC, and Flow automation behind it.</li>
-                            <li><strong>Billing integrations.</strong> I connect Salesforce to our billing and finance systems over REST APIs, so the data stays accurate and in sync.</li>
-                            <li><strong>Requirements to releases.</strong> I work with Revenue and Business Operations to turn their requests into Salesforce solutions that scale, shipped through Git and peer review.</li>
-                        </ol>
-                    </article>
+                    <div class="jobs">
+                        <article class="job" id="job-justworks" data-name="Justworks" data-skills="Salesforce, Apex, Lightning Web Components, Flow, REST APIs, Git/GitHub">
+                            <div class="job-side rv">
+                                <div class="job-logo" aria-hidden="true"><img class="logo-light" src="assets/img/logos/justworks.svg" alt="" width="635" height="118" loading="lazy" decoding="async"><img class="logo-dark" src="assets/img/logos/justworks-dark.svg" alt="" width="635" height="118" loading="lazy" decoding="async"></div>
+                                <p class="job-dates">Nov 2026 – Present</p>
+                                <h3>Salesforce Developer</h3>
+                                <p class="job-org">Justworks</p>
+                                <p class="job-loc">New York, NY (Hybrid)</p>
+                                <ul class="chips" aria-label="Technologies">
+                                    <li>Apex</li><li>Lightning Web Components</li><li>Flow</li><li>REST APIs</li><li>Git</li>
+                                </ul>
+                            </div>
+                            <ol class="feats">
+                                <li><strong>Revenue automation.</strong> I'm learning how the Revenue team works from deal close to billing, and I build and maintain the Apex, LWC, and Flow automation behind it.</li>
+                                <li><strong>Billing integrations.</strong> I connect Salesforce to our billing and finance systems over REST APIs, so the data stays accurate and in sync.</li>
+                                <li><strong>Requirements to releases.</strong> I work with Revenue and Business Operations to turn their requests into Salesforce solutions that scale, shipped through Git and peer review.</li>
+                            </ol>
+                        </article>
 
-                    <article class="job" id="job-oti" data-name="NYC OTI" data-skills="Salesforce, Apex, SOQL, Batch &amp; Queueable Apex, Apex REST, Flow, Platform Events, Visualforce, Named Credentials, OAuth 2.0, REST APIs, Git/GitHub">
-                        <div class="job-side rv">
-                            <div class="job-logo" aria-hidden="true"><img class="logo-light" src="assets/img/logos/nyc-oti.svg" alt="" width="1000" height="205" loading="lazy" decoding="async"><img class="logo-dark" src="assets/img/logos/nyc-oti-dark.svg" alt="" width="1000" height="205" loading="lazy" decoding="async"></div>
-                            <p class="job-dates">Jun 2024 – Sep 2026</p>
-                            <h3>Salesforce Developer &amp; Administrator</h3>
-                            <p class="job-org">NYC Office of Technology and Innovation</p>
-                            <p class="job-loc">Brooklyn, NY (Hybrid)</p>
-                            <ul class="chips" aria-label="Technologies">
-                                <li>Apex</li><li>SOQL</li><li>Flow</li><li>Platform Events</li><li>OAuth 2.0</li><li>BigQuery</li>
-                            </ul>
-                        </div>
-                        <ol class="feats">
-                            <li><strong>A shared BigQuery client.</strong> I built a reusable Apex library that synced 1M+ records into Salesforce with nothing lost or duplicated, using paginated pulls, Batch and Queueable Apex, external-ID upserts, retries, and count checks.</li>
-                            <li><strong>CVE feeds become cases.</strong> I connected an outside vulnerability system through Platform Events and an OAuth 2.0 Connected App, so new CVEs opened cases on their own.</li>
-                            <li><strong>Pull requests, tracked.</strong> My Apex REST webhook linked GitHub pull requests to project tasks, so nobody had to copy them over by hand again.</li>
-                        </ol>
-                    </article>
+                        <article class="job" id="job-oti" data-name="NYC OTI" data-skills="Salesforce, Apex, SOQL, Batch &amp; Queueable Apex, Apex REST, Flow, Platform Events, Visualforce, Named Credentials, OAuth 2.0, REST APIs, Git/GitHub">
+                            <div class="job-side rv">
+                                <div class="job-logo" aria-hidden="true"><img class="logo-light" src="assets/img/logos/nyc-oti.svg" alt="" width="1000" height="205" loading="lazy" decoding="async"><img class="logo-dark" src="assets/img/logos/nyc-oti-dark.svg" alt="" width="1000" height="205" loading="lazy" decoding="async"></div>
+                                <p class="job-dates">Jun 2024 – Sep 2026</p>
+                                <h3>Salesforce Developer &amp; Administrator</h3>
+                                <p class="job-org">NYC Office of Technology and Innovation</p>
+                                <p class="job-loc">Brooklyn, NY (Hybrid)</p>
+                                <ul class="chips" aria-label="Technologies">
+                                    <li>Apex</li><li>SOQL</li><li>Flow</li><li>Platform Events</li><li>OAuth 2.0</li><li>BigQuery</li>
+                                </ul>
+                            </div>
+                            <ol class="feats">
+                                <li><strong>A shared BigQuery client.</strong> I built a reusable Apex library that synced 1M+ records into Salesforce with nothing lost or duplicated, using paginated pulls, Batch and Queueable Apex, external-ID upserts, retries, and count checks.</li>
+                                <li><strong>CVE feeds become cases.</strong> I connected an outside vulnerability system through Platform Events and an OAuth 2.0 Connected App, so new CVEs opened cases on their own.</li>
+                                <li><strong>Pull requests, tracked.</strong> My Apex REST webhook linked GitHub pull requests to project tasks, so nobody had to copy them over by hand again.</li>
+                            </ol>
+                        </article>
 
-                    <article class="job" id="job-olympix" data-name="Olympix" data-skills="Python, C#, Solidity, Forge (Foundry), OpenAI API">
-                        <div class="job-side rv">
-                            <div class="job-logo mark" aria-hidden="true"><img src="assets/img/logos/olympix.svg" alt="" width="60" height="60" loading="lazy" decoding="async"></div>
-                            <p class="job-dates">Sep 2024 – May 2025</p>
-                            <h3>Software Engineering Intern</h3>
-                            <p class="job-org">Olympix</p>
-                            <p class="job-loc">New York, NY (On-site)</p>
-                            <ul class="chips" aria-label="Technologies">
-                                <li>Solidity</li><li>Forge</li><li>Python</li><li>C#</li><li>OpenAI API</li>
-                            </ul>
-                        </div>
-                        <ol class="feats">
-                            <li><strong>A team of agents.</strong> I designed a multi-agent AI pipeline (ideation, exploitation, output-parsing, and failure-feedback agents) that generated exploits, verified them by execution, and looped until one worked.</li>
-                            <li><strong>Learned C# to ship it.</strong> I picked up C# on the job to port the system from Python into the company's codebase, and built a template so a new agent only needed a role.</li>
-                            <li><strong>Proven at runtime.</strong> My Forge harness tested every generated exploit against 20–30 Solidity contracts, and independently reproduced a documented $10K exploit.</li>
-                        </ol>
-                    </article>
+                        <article class="job" id="job-olympix" data-name="Olympix" data-skills="Python, C#, Solidity, Forge (Foundry), OpenAI API">
+                            <div class="job-side rv">
+                                <div class="job-logo mark" aria-hidden="true"><img src="assets/img/logos/olympix.svg" alt="" width="60" height="60" loading="lazy" decoding="async"></div>
+                                <p class="job-dates">Sep 2024 – May 2025</p>
+                                <h3>Software Engineering Intern</h3>
+                                <p class="job-org">Olympix</p>
+                                <p class="job-loc">New York, NY (On-site)</p>
+                                <ul class="chips" aria-label="Technologies">
+                                    <li>Solidity</li><li>Forge</li><li>Python</li><li>C#</li><li>OpenAI API</li>
+                                </ul>
+                            </div>
+                            <ol class="feats">
+                                <li><strong>A team of agents.</strong> I designed a multi-agent AI pipeline (ideation, exploitation, output-parsing, and failure-feedback agents) that generated exploits, verified them by execution, and looped until one worked.</li>
+                                <li><strong>Learned C# to ship it.</strong> I picked up C# on the job to port the system from Python into the company's codebase, and built a template so a new agent only needed a role.</li>
+                                <li><strong>Proven at runtime.</strong> My Forge harness tested every generated exploit against 20–30 Solidity contracts, and independently reproduced a documented $10K exploit.</li>
+                            </ol>
+                        </article>
+                        <p class="jobs-end">Where it started</p>
+                    </div>
                 </div>
             </div>
         </section>
 
         <!-- ============ Projects ============ -->
-        <section class="dark" id="projects" aria-labelledby="projects-title">
+        <section class="dark rise fades" id="projects" aria-labelledby="projects-title">
             <div class="container projects-head">
                 <p class="eyebrow grad-text rv"><span class="eyebrow-num">03</span><span class="sep"><span class="visually-hidden">, </span></span>Projects</p>
                 <h2 class="headline rv" id="projects-title" style="--d:.08s">Selected work.</h2>
@@ -427,50 +438,52 @@
         </section>
 
         <!-- ============ Education ============ -->
-        <section class="light section" id="education" aria-labelledby="education-title">
-            <div class="container">
-                <p class="eyebrow grad-text rv"><span class="eyebrow-num">04</span><span class="sep"><span class="visually-hidden">, </span></span>Education</p>
-                <h2 class="headline rv" id="education-title" style="--d:.08s">The foundation.</h2>
+        <section class="light section rise holds" id="education" aria-labelledby="education-title">
+            <div class="hold">
+                <div class="container">
+                    <p class="eyebrow grad-text rv"><span class="eyebrow-num">04</span><span class="sep"><span class="visually-hidden">, </span></span>Education</p>
+                    <h2 class="headline rv" id="education-title" style="--d:.08s">The foundation.</h2>
 
-                <div class="found">
-                    <article class="tile spot rv-scale">
-                        <p class="tile-label">Degree<span class="sep"><span class="visually-hidden">, </span></span>Sep 2021 – May 2025</p>
-                        <p class="edu-school">New York University</p>
-                        <p class="edu-degree">B.S. in Computer Science</p>
-                        <dl class="edu-facts">
-                            <div><dt>Before NYU</dt><dd>Stuyvesant High School, 2017 – 2021</dd></div>
-                        </dl>
-                    </article>
-                    <article class="tile minor-tile spot rv-scale" style="--d:.1s">
-                        <p class="tile-label">Minors</p>
-                        <p class="minors"><span class="grad-text">Cybersecurity</span><br>&amp; Mathematics</p>
-                    </article>
-                    <article class="tile course-tile spot rv-scale">
-                        <p class="tile-label">Coursework</p>
-                        <ul class="chips course-chips" aria-label="Coursework">
-                            <li>Data Structures &amp; Algorithms</li><li>Object-Oriented Programming</li><li>Operating Systems</li><li>Computer Architecture</li><li>Databases</li><li>Java &amp; Web Design</li><li>Computer, Application &amp; Network Security</li><li>Networking</li><li>Software Engineering</li><li>Artificial Intelligence</li>
-                        </ul>
-                    </article>
-                </div>
-            </div>
-
-            <div class="toolkit">
-                <p class="container toolkit-head rv">Toolkit<span class="toolkit-hint" hidden><span class="sep"><span class="visually-hidden">, </span></span>Pick a skill to see where I've used it</span></p>
-                <div class="marquee" style="--dur:40s">
-                    <div class="marquee-track">
-                        <ul aria-label="Languages">
-                            <li>Apex</li><li>Python</li><li>Java</li><li>JavaScript</li><li>C#</li><li>C/C++</li><li>SQL</li><li>SOQL</li><li>Solidity</li><li>HTML/CSS</li>
-                        </ul>
+                    <div class="found">
+                        <article class="tile spot rv-scale">
+                            <p class="tile-label">Degree<span class="sep"><span class="visually-hidden">, </span></span>Sep 2021 – May 2025</p>
+                            <p class="edu-school">New York University</p>
+                            <p class="edu-degree">B.S. in Computer Science</p>
+                            <dl class="edu-facts">
+                                <div><dt>Before NYU</dt><dd>Stuyvesant High School, 2017 – 2021</dd></div>
+                            </dl>
+                        </article>
+                        <article class="tile minor-tile spot rv-scale" style="--d:.1s">
+                            <p class="tile-label">Minors</p>
+                            <p class="minors"><span class="grad-text">Cybersecurity</span><br>&amp; Mathematics</p>
+                        </article>
+                        <article class="tile course-tile spot rv-scale">
+                            <p class="tile-label">Coursework</p>
+                            <ul class="chips course-chips" aria-label="Coursework">
+                                <li>Data Structures &amp; Algorithms</li><li>Object-Oriented Programming</li><li>Operating Systems</li><li>Computer Architecture</li><li>Databases</li><li>Java &amp; Web Design</li><li>Computer, Application &amp; Network Security</li><li>Networking</li><li>Software Engineering</li><li>Artificial Intelligence</li>
+                            </ul>
+                        </article>
                     </div>
                 </div>
-                <div class="marquee rev" style="--dur:55s">
-                    <div class="marquee-track">
-                        <ul aria-label="Frameworks and tools">
-                            <li>Salesforce</li><li>Batch &amp; Queueable Apex</li><li>Apex REST</li><li>Lightning Web Components</li><li>Flow</li><li>Platform Events</li><li>Visualforce</li><li>Named Credentials</li><li>OAuth 2.0</li><li>REST APIs</li><li>React</li><li>Jest</li><li>Flask</li><li>Heroku</li><li>Git/GitHub</li><li>Forge (Foundry)</li><li>OpenAI API</li><li>Excel</li>
-                        </ul>
+
+                <div class="toolkit">
+                    <p class="container toolkit-head rv">Toolkit<span class="toolkit-hint" hidden><span class="sep"><span class="visually-hidden">, </span></span>Pick a skill to see where I've used it</span></p>
+                    <div class="marquee" style="--dur:40s">
+                        <div class="marquee-track">
+                            <ul aria-label="Languages">
+                                <li>Apex</li><li>Python</li><li>Java</li><li>JavaScript</li><li>C#</li><li>C/C++</li><li>SQL</li><li>SOQL</li><li>Solidity</li><li>HTML/CSS</li>
+                            </ul>
+                        </div>
                     </div>
+                    <div class="marquee rev" style="--dur:55s">
+                        <div class="marquee-track">
+                            <ul aria-label="Frameworks and tools">
+                                <li>Salesforce</li><li>Batch &amp; Queueable Apex</li><li>Apex REST</li><li>Lightning Web Components</li><li>Flow</li><li>Platform Events</li><li>Visualforce</li><li>Named Credentials</li><li>OAuth 2.0</li><li>REST APIs</li><li>React</li><li>Jest</li><li>Flask</li><li>Heroku</li><li>Git/GitHub</li><li>Forge (Foundry)</li><li>OpenAI API</li><li>Excel</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="container skill-hits" aria-live="polite"></div>
                 </div>
-                <div class="container skill-hits" aria-live="polite"></div>
             </div>
         </section>
 
@@ -479,7 +492,7 @@
             <div class="contact-glow" aria-hidden="true"></div>
             <div class="container">
                 <h2 class="eyebrow grad-text rv" id="contact-title"><span class="eyebrow-num">05</span><span class="sep"><span class="visually-hidden">, </span></span>Contact</h2>
-                <p class="contact-sub rv">Always happy to connect with people who enjoy making technology work better for those using it!</p>
+                <p class="contact-sub rv">I’m always happy to connect!</p>
                 <p class="reply-note rv" style="--d:.08s">I usually reply within a day.</p>
                 <div class="contact-actions rv" style="--d:.16s">
                     <span class="email-group">

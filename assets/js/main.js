@@ -32,9 +32,19 @@
     const NAV_H = nav.offsetHeight;
     const jobsEl = document.querySelector('.jobs');
     const jobEls = [...jobsEl.querySelectorAll('.job')];
+    const jobsEnd = jobsEl.querySelector('.jobs-end'); // the note at the timeline's end
     const scenes = [...document.querySelectorAll('[data-scene]')];
+    const faders = [...document.querySelectorAll('.fades')]; // sections that dim under the next as they leave
+    const holders = [...document.querySelectorAll('.holds')]; // sections whose last screen holds under the next
     const gallery = document.querySelector('.gallery');
     const cards = [...document.querySelectorAll('.card')];
+
+    // An element's top on the page, from layout alone, so nothing an animation moves counts
+    const pageTop = (el) => {
+        let top = 0;
+        for (let e = el; e; e = e.offsetParent) top += e.offsetTop + (e.offsetParent ? e.offsetParent.clientTop : 0); // offsets start inside borders
+        return top;
+    };
 
     const fmt = (el, v) => `${el.dataset.prefix || ''}${Math.round(v).toLocaleString('en-US')}${el.dataset.suffix || ''}`;
 
@@ -80,61 +90,125 @@
             w.style.setProperty('--line', line);
         });
     };
-    // Section labels ("01 | Impact") resolve from scrambled characters, a letter at a time, as they come into view.
-    // Screen readers get the real label throughout; the scrambled copy is hidden from them.
-    const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#%&*+=<>/';
-    const DIGITS = '0123456789';
-    const decode = (label) => {
-        const walker = document.createTreeWalker(label, NodeFilter.SHOW_TEXT, {
-            acceptNode: (n) => (n.textContent.trim() && !n.parentElement.closest('.visually-hidden') ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT),
+    // Text resolves from scrambled characters, left to right: the section labels ("01 | Impact") as they come into
+    // view, and everything on the first screen as the page opens. It's scrambled from its very first frame,
+    // so the real words never show before they decode. Each word keeps its real width while it scrambles (and is cut
+    // off at it, see .decoding), so lines never reflow and nothing spills out of a button, and screen readers get the
+    // real text throughout (the scrambled copy is hidden from them). Letters scramble into letters of the same case,
+    // leaving out the widest (m, w), and narrow letters into narrow ones; digits into digits; Chinese characters into
+    // the others around them (the proverb's font only has those); punctuation stays put.
+    const GLYPHS = { lower: 'abcdefghijklnopqrstuvxyz', upper: 'ABCDEFGHIJKLNOPQRSTUVXYZ', narrow: 'fijlrt', narrowUpper: 'IJ', digit: '0123456789', sign: '#*+=<>/' };
+    const pickFrom = (set) => set[Math.floor(Math.random() * set.length)];
+    const CJK = /[\u3400-\u9fff]/;
+    // lead: how long it stays fully scrambled before the first character settles; span: from the first to the last,
+    // or pace per character up to most
+    const decode = (el, { delay = 0, signs = false, lead = 120, span: spanFor, pace = 45, most = 900 } = {}) => {
+        if (!el.getClientRects().length) return; // not shown on this screen size
+        const quiet = !!el.closest('[aria-hidden="true"]'); // already hidden from screen readers, so no real copy needed
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
+            acceptNode: (n) => {
+                if (!n.textContent.trim()) return NodeFilter.FILTER_REJECT;
+                const skip = n.parentElement.closest('.visually-hidden, .copy-label, [aria-hidden="true"]');
+                return skip && skip !== el && el.contains(skip) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+            },
         });
+        const nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+        if (!nodes.length) return;
+        const pool = [...new Set(nodes.map((n) => n.textContent).join('').match(new RegExp(CJK.source, 'g')) || [])].join('');
         const parts = [];
-        while (walker.nextNode()) parts.push({ node: walker.currentNode, text: walker.currentNode.textContent });
-        parts.forEach((part) => {
-            const range = document.createRange();
-            range.selectNodeContents(part.node);
-            part.real = document.createElement('span');
-            part.real.className = 'visually-hidden';
-            part.real.textContent = part.text;
-            part.fake = document.createElement('span');
-            part.fake.className = 'decoding';
-            part.fake.setAttribute('aria-hidden', 'true');
-            part.fake.style.width = `${range.getBoundingClientRect().width}px`;
-            part.node.replaceWith(part.real, part.fake);
-        });
-        const count = parts.reduce((n, part) => n + part.text.length, 0);
-        const start = performance.now();
-        let shown = -Infinity;
-        const step = (now) => {
-            const t = now - start;
-            const done = !motion || t > 180 + count * 45;
-            if (now - shown > 50 || done) {
-                shown = now;
-                let k = 0;
-                parts.forEach((part) => {
-                    part.fake.textContent = [...part.text].map((ch) => {
-                        const settled = done || ch === ' ' || t >= 180 + k * 45;
-                        k++;
-                        if (settled) return ch;
-                        const set = /\d/.test(ch) ? DIGITS : GLYPHS;
-                        return set[Math.floor(Math.random() * set.length)];
-                    }).join('');
-                });
+        const words = [];
+        nodes.forEach((node) => {
+            const added = [];
+            if (!quiet) {
+                const real = document.createElement('span');
+                real.className = 'visually-hidden';
+                real.textContent = node.textContent;
+                added.push(real);
             }
-            if (!done) {
-                requestAnimationFrame(step);
+            node.textContent.split(/(\s+)/).forEach((piece) => {
+                if (!piece) return;
+                if (/^\s+$/.test(piece)) {
+                    added.push(document.createTextNode(piece));
+                    return;
+                }
+                const fake = document.createElement('span');
+                fake.className = 'decoding';
+                fake.setAttribute('aria-hidden', 'true');
+                fake.textContent = piece;
+                added.push(fake);
+                words.push({ fake, text: piece });
+            });
+            node.replaceWith(...added);
+            parts.push({ node, added });
+        });
+        // Measure every word at once, then fix the widths
+        const fit = () => {
+            words.forEach((w) => { w.fake.textContent = w.text; w.fake.style.width = ''; });
+            const widths = words.map((w) => w.fake.getBoundingClientRect().width);
+            words.forEach((w, i) => { w.fake.style.width = `${widths[i]}px`; });
+        };
+        const count = words.reduce((n, w) => n + w.text.length, 0);
+        const span = spanFor || Math.min(count * pace, most); // short labels go a letter at a time, long lines take under a second
+        const start = performance.now() + delay;
+        const scramble = (ch) => {
+            if (CJK.test(ch)) return pickFrom(pool);
+            if (/\d/.test(ch)) return pickFrom(GLYPHS.digit);
+            if (/[fijlrt]/.test(ch)) return pickFrom(GLYPHS.narrow);
+            if (/[IJ]/.test(ch)) return pickFrom(GLYPHS.narrowUpper);
+            if (/[A-Z]/.test(ch)) return pickFrom(signs ? GLYPHS.upper + GLYPHS.sign : GLYPHS.upper);
+            if (/[a-z]/.test(ch)) return pickFrom(signs ? GLYPHS.lower + GLYPHS.sign : GLYPHS.lower);
+            return ch;
+        };
+        // Every word as it reads t ms in: the letters whose turn has come are real, the rest scrambled
+        const paint = (t) => {
+            let k = 0;
+            words.forEach((w) => {
+                w.fake.textContent = [...w.text].map((ch) => (t >= lead + (k++ / Math.max(1, count - 1)) * span ? ch : scramble(ch))).join('');
+            });
+        };
+        fit();
+        paint(performance.now() - start);
+        let done = false;
+        // Late fonts change the widths, so measure again (with the real words in) and scramble before anything is drawn
+        if (document.fonts) document.fonts.ready.then(() => {
+            if (done) return;
+            fit();
+            paint(performance.now() - start);
+        });
+        let shown = performance.now();
+        const step = (now) => {
+            done = !motion || now - start > lead + span;
+            if (done) {
+                parts.forEach(({ node, added }) => {
+                    added[0].before(node);
+                    added.forEach((n) => n.remove());
+                });
                 return;
             }
-            parts.forEach((part) => {
-                part.real.replaceWith(part.node);
-                part.fake.remove();
-            });
+            if (now - shown > 50) {
+                shown = now;
+                paint(now - start);
+            }
+            requestAnimationFrame(step);
         };
         requestAnimationFrame(step);
     };
+    // The first screen, as the page opens: each part starts as it begins to fade in, a little quicker than further down
+    const decodeIntro = () => {
+        const title = document.querySelector('.hero-title > [aria-hidden="true"]');
+        // The name's letters rise in out of a blur over about a second, so it stays scrambled until they're clear, then
+        // settles a letter at a time
+        if (title) decode(title, { lead: 620, span: 420 });
+        document.querySelectorAll('.hero .load, .scroll-cue').forEach((el) => {
+            decode(el, { delay: (parseFloat(getComputedStyle(el).getPropertyValue('--d')) || 0) * 1000, pace: 32, most: 650 });
+        });
+        document.querySelectorAll('.nav-steps a, .nav-resume, .nav-resume-sm').forEach((el, i) => decode(el, { delay: 80 + i * 45, signs: true, pace: 32 }));
+        root.classList.remove('intro'); // it's all scrambled now, so the text can show (see .intro in styles.css)
+    };
     const reveal = (el) => {
         if (el.classList.contains('split')) numberLines(el);
-        if (el.classList.contains('eyebrow')) decode(el);
+        if (el.classList.contains('eyebrow')) decode(el, { signs: true });
         el.classList.add('in');
     };
 
@@ -279,12 +353,16 @@
         }
     };
 
-    if (motion) initMotion(true);
+    if (motion) {
+        initMotion(true);
+        decodeIntro();
+    }
 
     /* ---------- Scroll engine ---------- */
     // Each [data-scene] gets --p (0 → 1). Pinned scenes measure progress through their own height;
     // "enter" scenes measure how far they have risen into the viewport.
     let pinnedDist = null; // how far the pinned gallery scrolls sideways; null when it isn't pinned
+    let pinnedHold = 0; // and how long it then holds still while Education rises over it (a screen)
     const layoutGallery = () => {
         pinnedDist = null;
         gallery.classList.remove('gallery--free');
@@ -305,8 +383,10 @@
         }
         const dist = Math.max(0, track.offsetWidth - sticky.clientWidth);
         pinnedDist = dist;
+        pinnedHold = sticky.offsetHeight;
         gallery.style.setProperty('--dist', dist);
-        gallery.style.height = `${dist + window.innerHeight}px`;
+        gallery.style.setProperty('--hold', pinnedHold);
+        gallery.style.height = `${dist + window.innerHeight + pinnedHold}px`;
         // Each card's offset from the middle of the screen before the track slides, for the CSS card scaling.
         gallery.style.setProperty('--vw', window.innerWidth);
         cards.forEach((card) => {
@@ -326,19 +406,29 @@
     let lay = null;
     let lastTlLen = null;
     const measureLayout = () => {
-        const y = window.scrollY;
-        // Experience timeline: each dot's center on the page, read from the CSS so the two always agree
+        root.classList.add('measuring'); // held content back where it sits on the page (see .holds in styles.css)
+        // Experience timeline: each dot's center on the page, read from the CSS so the two always agree, and where the
+        // line ends: with the last role, so it runs alongside all of it
         const dot = getComputedStyle(jobEls[0], '::before');
         const dotOff = parseFloat(dot.top) + parseFloat(dot.height) / 2;
+        const lastJob = jobEls[jobEls.length - 1];
+        // With motion, Experience holds still once its content's bottom reaches the bottom of the screen (see .holds in
+        // styles.css), with the line's end still a little above it, so the line paces itself to be done by then:
+        // tlDone is where the middle of the screen is at that moment
+        const hold = jobsEl.closest('.hold');
+        const tlEnd = pageTop(lastJob) + lastJob.offsetHeight;
+        const holdAt = hold ? pageTop(hold) + hold.offsetHeight - window.innerHeight * 0.5 : tlEnd;
         lay = {
             docH: document.documentElement.scrollHeight,
             width: navTrack.offsetWidth,
-            // Less any slide-in offset still to go (Contact's, see .rise in styles.css), so it's where the section settles
-            secTops: checkpoints.map(({ sec }) => sec.getBoundingClientRect().top + y - NAV_H - (parseFloat(getComputedStyle(sec).translate.split(' ')[1]) || 0)),
+            secTops: checkpoints.map(({ sec }) => pageTop(sec) - NAV_H),
             tabX: checkpoints.map(({ a }) => a.offsetLeft + a.offsetWidth / 2),
-            dots: jobEls.map((job) => job.getBoundingClientRect().top + y + dotOff),
+            dots: jobEls.map((job) => pageTop(job) + dotOff),
+            tlEnd,
+            tlDone: Math.min(tlEnd, holdAt),
         };
-        const len = `${(lay.dots[lay.dots.length - 1] - lay.dots[0]).toFixed(1)}px`;
+        root.classList.remove('measuring');
+        const len = `${(lay.tlEnd - lay.dots[0]).toFixed(1)}px`;
         if (len !== lastTlLen) {
             lastTlLen = len;
             jobsEl.style.setProperty('--tl-len', len);
@@ -388,6 +478,7 @@
     let lastScroll = null;
     let lastSlim = null;
     let lastTl = null;
+    let lastEnded = null;
     const frame = () => {
         ticking = false;
         const vh = window.innerHeight;
@@ -398,6 +489,11 @@
         // Read every position first, then write. Mixing the two makes the browser
         // redo the page layout after each change, which is what makes phones stutter.
         const track = measureTrack(y, max);
+        const holdCover = motion ? holders.map((sec) => clamp(1 - sec.nextElementSibling.getBoundingClientRect().top / vh)) : [];
+        const fadeE = motion && !sda ? faders.map((sec) => {
+            const r = sec.getBoundingClientRect();
+            return r.bottom < -vh || r.bottom > vh * 2 ? null : clamp((vh - r.bottom) / vh);
+        }) : [];
         const sceneP = motion && !sda ? scenes.map((sc) => {
             const r = sc.getBoundingClientRect();
             if (r.bottom < -vh || r.top > vh * 2) return null;
@@ -410,7 +506,8 @@
         let cardF = null;
         const galleryP = sceneP[scenes.indexOf(gallery)];
         if (motion && !sda && pinnedDist !== null && galleryP != null) {
-            cardF = cards.map((card) => clamp(1 - Math.abs(card._c - galleryP * pinnedDist) / (window.innerWidth * 0.9)).toFixed(3));
+            const slid = clamp(galleryP * (pinnedDist + pinnedHold) / Math.max(1, pinnedDist)) * pinnedDist; // see --slide
+            cardF = cards.map((card) => clamp(1 - Math.abs(card._c - slid) / (window.innerWidth * 0.9)).toFixed(3));
         }
 
         toTop.classList.toggle('show', y > vh * 1.2);
@@ -420,17 +517,29 @@
             lastSlim = slim;
             nav.classList.toggle('slim', slim);
         }
-        // Experience timeline: the line fills down to the middle of the screen, and each dot it reaches lights up
+        // Experience timeline: the line fills as the middle of the screen moves down it, done by the time Experience
+        // holds still (tlDone), and each dot lights up as the line reaches it
         if (motion) {
-            const { dots } = lay;
-            const line = y + vh * 0.5;
-            const tl = clamp((line - dots[0]) / Math.max(1, dots[dots.length - 1] - dots[0])).toFixed(4);
+            const { dots, tlEnd, tlDone } = lay;
+            const tlP = clamp((y + vh * 0.5 - dots[0]) / Math.max(1, tlDone - dots[0]));
+            const front = dots[0] + tlP * (tlEnd - dots[0]); // where the line has reached, on the page
+            const tl = tlP.toFixed(4);
             if (tl !== lastTl) {
                 lastTl = tl;
                 jobsEl.style.setProperty('--tl', tl);
             }
+            const ended = tlP >= 1; // the line's end
+            if (ended !== lastEnded) {
+                lastEnded = ended;
+                jobsEl.classList.toggle('ended', ended);
+                // The note there decodes the first time it shows, like the section labels
+                if (ended && jobsEnd && !jobsEnd._decoded) {
+                    jobsEnd._decoded = true;
+                    decode(jobsEnd, { signs: true });
+                }
+            }
             jobEls.forEach((job, i) => {
-                const lit = line >= dots[i];
+                const lit = front >= dots[i];
                 if (job._lit === lit) return;
                 job._lit = lit;
                 job.classList.toggle('lit', lit);
@@ -443,6 +552,18 @@
             toTop.style.setProperty('--scroll', scroll); // fills the ring around the phone's back-to-top button
         }
         applyTrack(y, track);
+        holdCover.forEach((c, i) => {
+            const sec = holders[i];
+            if (sec._cover === c) return;
+            sec._cover = c;
+            sec.style.setProperty('--cover', c.toFixed(4));
+        });
+        fadeE.forEach((e, i) => {
+            const sec = faders[i];
+            if (e === null || sec._e === e) return;
+            sec._e = e;
+            sec.style.setProperty('--e', e.toFixed(4));
+        });
         sceneP.forEach((p, i) => {
             const sc = scenes[i];
             if (p === null || sc._p === p) return;
@@ -490,6 +611,8 @@
         } else {
             document.querySelectorAll('[data-count]').forEach((el) => { el.textContent = fmt(el, Number(el.dataset.count)); });
             scenes.forEach((sc) => { sc.style.removeProperty('--p'); sc._p = undefined; });
+            faders.forEach((sec) => { sec.style.removeProperty('--e'); sec._e = undefined; });
+            holders.forEach((sec) => { sec.style.removeProperty('--cover'); sec._cover = undefined; });
         }
 
         layoutGallery();
@@ -920,6 +1043,11 @@
     measureLayout();
     frame();
     window.addEventListener('scroll', request, { passive: true });
+    // Each holding section's content needs its height, to know when to stick (see .holds in styles.css)
+    const holdSize = new ResizeObserver((entries) => entries.forEach((entry) => {
+        entry.target.style.setProperty('--hold-h', `${entry.target.offsetHeight}px`);
+    }));
+    holders.forEach((sec) => holdSize.observe(sec.querySelector('.hold')));
     // Anything that changes the page's size (new widths, pinned heights, late fonts) re-measures the layout.
     new ResizeObserver(() => { measureLayout(); request(); }).observe(document.body);
     // Phone browsers resize the window when the address bar slides away on the first scroll.
@@ -930,7 +1058,7 @@
         const w = window.innerWidth;
         const h = window.innerHeight;
         if (w === lastW && Math.abs(h - lastH) < 160) {
-            if (pinnedDist !== null) gallery.style.height = `${pinnedDist + h}px`;
+            if (pinnedDist !== null) gallery.style.height = `${pinnedDist + h + pinnedHold}px`;
         } else {
             lastW = w;
             lastH = h;
@@ -1020,7 +1148,11 @@
         const target = document.querySelector(hash);
         if (!target) return;
         history.pushState(null, '', hash);
-        target.scrollIntoView({ behavior: motion ? 'smooth' : 'auto', block: 'start' });
+        // Worked out with any holding content back in place (see .holds in styles.css), and clear of the top bar
+        root.classList.add('measuring');
+        const top = target.getBoundingClientRect().top + window.scrollY - (parseFloat(getComputedStyle(root).scrollPaddingTop) || 0);
+        root.classList.remove('measuring');
+        window.scrollTo({ top, behavior: motion ? 'smooth' : 'auto' });
         // Keyboard focus moves there too, so Tab carries on from the new spot.
         if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
         target.focus({ preventScroll: true });
@@ -1250,7 +1382,7 @@
     // where the card reaches the middle; otherwise scroll down to the row and then along it.
     const scrollToCard = (card, behavior = motion ? 'smooth' : 'auto') => {
         if (pinnedDist !== null) {
-            const top = gallery.getBoundingClientRect().top + window.scrollY;
+            const top = pageTop(gallery);
             window.scrollTo({ top: top + clamp(card._c, 0, pinnedDist), behavior });
         } else {
             row.scrollIntoView({ behavior, block: 'start' });
@@ -1728,7 +1860,9 @@
         const card = panelCard.get(linkedPanel);
         if (card) scrollToCard(card, 'instant');
         linkedPanel.classList.remove('grown');
+        linkedPanel._shrink = motion && !!card; // closing shrinks it back into its card, like one opened from the card
         linkedPanel.showModal();
+        settleParts(linkedPanel);
         showPanelUrl(linkedPanel);
     }
 

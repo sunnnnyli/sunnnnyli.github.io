@@ -668,7 +668,7 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
     overflow: hidden;
 }
 
-.motion .hero { height: 160vh; }
+.motion .hero { height: 200vh; } /* pinned for a screen, while the about paragraph rises over it */
 
 .motion .hero-sticky {
     position: sticky;
@@ -868,6 +868,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
     font-family: var(--serif);
     font-size: 0.92rem;
     color: var(--text-3);
+    text-wrap: balance; /* where it takes two lines, they come out even */
 }
 
 .motion .hero-photo-wrap {
@@ -927,8 +928,8 @@ html:not(.motion) .dot-grid canvas { display: none; }
     display: inline-block;
     padding-bottom: 0.14em;
     margin-bottom: -0.14em;
-    animation: charIn 1.5s var(--ease) both;
-    animation-delay: calc(var(--i) * 55ms + 0.2s);
+    animation: charIn 1.15s var(--ease) both;
+    animation-delay: calc(var(--i) * 45ms + 0.12s);
 }
 
 @keyframes charIn {
@@ -963,7 +964,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
 }
 
 .motion .load {
-    animation: fadeUp 1.4s var(--ease) both;
+    animation: fadeUp 1.05s var(--ease) both;
     animation-delay: var(--d, 0s);
 }
 
@@ -979,7 +980,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
 }
 
 .motion .hero-photo {
-    animation: photoIn 1.9s var(--ease) backwards 0.55s;
+    animation: photoIn 1.4s var(--ease) backwards 0.35s;
     transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
     transition: transform 0.5s var(--ease);
 }
@@ -1571,6 +1572,20 @@ html:not(.motion) .dot-grid canvas { display: none; }
 .motion .gallery--free .card { transform: none; opacity: 1; }
 .motion .gallery--free .gallery-progress { display: none; }
 
+/* Pinned, the row holds one more screen once its cards have slid by, while Education rises over it: the slide runs
+   over the first part (--slide, which its cards and progress bar follow) and the hold is the rest (--cover), as the
+   row steps back a little. The script sets the slide's length (--dist) and the hold's (--hold), in pixels. */
+.motion .gallery:not(.gallery--free) {
+    --slide: min(1, var(--p, 0) * (var(--dist, 0) + var(--hold, 0)) / max(1, var(--dist, 0)));
+    --cover: max(0, (var(--p, 0) * (var(--dist, 0) + var(--hold, 0)) - var(--dist, 0)) / max(1, var(--hold, 0)));
+}
+
+.motion .gallery:not(.gallery--free) > .gallery-sticky {
+    --p: var(--slide);
+    opacity: calc(1 - var(--cover, 0) * 0.5);
+    scale: calc(1 - var(--cover, 0) * 0.05);
+}
+
 .gallery-progress span {
     display: block;
     height: 100%;
@@ -1866,11 +1881,13 @@ html:not(.motion) .dot-grid canvas { display: none; }
 
     body { font-size: 11pt; }
 
-    .nav, .edge, .skip-link, .aurora, .dot-grid, .scroll-cue, .contact-glow, .gallery-progress,
+    .nav, .edge, .jobs-end, .jobs::after, .skip-link, .aurora, .dot-grid, .scroll-cue, .contact-glow, .gallery-progress,
     .card-art, .copy-btn, .photo-glow, .spot::before, .card-more, .to-top, .panel { display: none !important; }
 
     .hero, .story, .gallery { height: auto !important; }
-    .rise { margin-top: 0 !important; translate: none !important; border-radius: 0 !important; box-shadow: none !important; }
+    .rise { margin-top: 0 !important; border-top: 0 !important; translate: none !important; border-radius: 0 !important; box-shadow: none !important; overflow: visible !important; }
+    .holds::after { display: none !important; }
+    .holds > .hold { position: static !important; padding-bottom: 0 !important; }
 
     .hero-sticky, .story-sticky, .gallery-sticky {
         position: static !important;
@@ -1882,7 +1899,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
     }
 
     .hero-copy, .hero-photo-wrap, .hero-photo, .gallery-track, .card, .tile, .skill, .rv, .rv-scale, .load,
-    .hero-title, .hero-title .ch, .story .w, .feats li, .headline .hl-w > span, .story-sticky > .container {
+    .hero-title, .hero-title .ch, .story .w, .feats li, .headline .hl-w > span, .story-sticky > .container, .fades > *, .holds > .hold {
         opacity: 1 !important;
         transform: none !important;
         translate: none !important;
@@ -1950,8 +1967,14 @@ html:not(.motion) .dot-grid canvas { display: none; }
 /* ================= Section numbers ================= */
 .eyebrow-num { font-variant-numeric: tabular-nums; }
 
-/* While a label decodes, its scrambled letters sit in a box as wide as the real word, so nothing around it shifts */
-.decoding { display: inline-block; white-space: nowrap; text-align: left; }
+/* While text decodes, each scrambled word sits in a box as wide as the real word, cut off at its sides, so nothing
+   around it shifts and nothing spills out of a button */
+.decoding { display: inline-block; white-space: nowrap; text-align: left; clip-path: inset(-0.5em 0); }
+
+/* Until the script has scrambled the first screen, its text stays hidden, so the real words never show before they
+   decode. The page sets .intro as it opens and the script takes it off; it also lifts on its own after three
+   seconds, in case the script never runs. */
+.intro :is(.hero-title, .hero .load, .scroll-cue, .nav-steps a, .nav-resume, .nav-resume-sm) { -webkit-text-fill-color: transparent; }
 
 /* ================= Experience timeline ================= */
 .job { position: relative; padding-left: 2.25rem; }
@@ -1970,7 +1993,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
 }
 
 /* The current role gets a filled dot */
-.job:first-child::before {
+.job:first-of-type::before {
     background: var(--accent);
     box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.18);
 }
@@ -1985,7 +2008,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
     background: var(--line);
 }
 
-.job:last-child::after { display: none; }
+.job:last-of-type::after { bottom: 0; } /* the last runs on to the timeline's end */
 
 /* ================= Read more + project panels ================= */
 .card-more {
@@ -2473,9 +2496,11 @@ html.vt-morph::view-transition-new(root) { animation: vtIn 0.4s var(--ease) both
 :root:not(.motion):active-view-transition-type(page)::view-transition-new(*) { animation: none !important; }
 
 /* ================= Sections that rise over the one before ================= */
-/* Impact slides up over the about paragraph like a card dealt onto a pile: the paragraph's scene runs one screen
-   longer and Impact starts one screen early, so the paragraph holds still underneath while Impact covers it. Contact
-   slides a little over the end of Education as it comes up. Both have rounded top corners and a faint shadow. */
+/* Every section after the intro is a card dealt onto the one before it, with rounded top corners and a faint shadow.
+   After a pinned scene (the intro, the about paragraph, the project row), the scene runs one screen longer and the
+   next section starts one screen early, so the scene holds still underneath while the card covers it. The sections
+   that aren't pinned (Impact, Experience, Education) hold their last screen still the same way (see .holds). The
+   holding is all done by the browser's own sticky positioning, so nothing can lag behind a phone's scrolling. */
 :root,
 :root[data-theme="light"] { --rise-shade: rgba(31, 38, 52, 0.16); }
 :root[data-theme="dark"] { --rise-shade: rgba(0, 0, 0, 0.55); }
@@ -2491,19 +2516,101 @@ html.vt-morph::view-transition-new(root) { animation: vtIn 0.4s var(--ease) both
     box-shadow: 0 -20px 44px -28px var(--rise-shade);
 }
 
-.motion #impact { margin-top: -100vh; margin-top: -100lvh; }
+/* Over a pinned or holding section. The paragraph's corners clip its pinned layer, which has a background of its
+   own. */
+.motion :is(.hero, .story, .holds) + .rise,
+.motion #projects:has(> .gallery:not(.gallery--free)) + .rise {
+    margin-top: -100vh;
+    margin-top: -100lvh;
+    border-top: 0;
+}
 
-/* The section after Impact sits above the paragraph too, in case Impact is shorter than the screen */
-.motion #impact + .section { position: relative; z-index: 1; }
+.motion .story.rise { overflow: clip; }
 
-/* Contact starts 64px over Education and moves up that much faster than the page over its first third of a screen
-   (its --p), so it slides in over Education's last stretch of padding */
-.motion .contact.rise { margin-top: -64px; translate: 0 calc(max(0, 1 - var(--p, 0) * 2.5) * 64px); }
+/* Elsewhere the card starts a little over the section before, so its rounded corners sit on that section and not on
+   the page behind (its top border makes up the room, so its content stays put). That stays within the bottom
+   padding of the section before; the project row gets some when it scrolls sideways (phones). */
+:root { --overlap: clamp(48px, 6vw, 80px); }
+
+.motion .rise {
+    margin-top: calc(-1 * var(--overlap));
+    border-top: var(--overlap) solid transparent;
+}
+
+.motion #projects:has(> .gallery--free) { padding-bottom: var(--overlap); }
+
+/* A section that isn't pinned holds its last screen still while the next card slides up over it: its content sticks
+   once its bottom reaches the bottom of the screen (the script gives it its height, --hold-h) and stays for the screen
+   of room under it (::after), which the next card overlaps. It carries the section's background, so the grain holds
+   still with it, and the section's bottom padding, and dims as the card covers it (--cover, from the script). Until
+   the script has measured it, it never sticks. */
+.motion .holds {
+    padding-bottom: 0;
+    overflow: clip;
+}
+
+.motion .holds::after {
+    content: '';
+    display: block;
+    height: 100vh;
+    height: 100lvh;
+}
+
+.motion .holds > .hold {
+    position: sticky;
+    top: calc(100vh - var(--hold-h, 100000px));
+    top: calc(100lvh - var(--hold-h, 100000px));
+    padding-bottom: clamp(5rem, 12vw, 9.5rem);
+    background: inherit;
+    opacity: calc(1 - var(--cover, 0) * 0.5);
+}
+
+/* Taken out while the script measures where things sit on the page, and works out where a link should scroll to */
+.measuring .holds > .hold { position: static; }
+
+/* The card that comes up over it is at least a screen tall, so the held content never shows below it. That makes
+   Contact, the last, a closing screen of its own, with its content in the middle. */
+.motion .holds + .rise {
+    min-height: 100vh;
+    min-height: 100lvh;
+}
+
+.motion .holds + .contact {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* The project row, when it scrolls sideways on its own (phones), dims the same way as it leaves the top of the screen,
+   under Education coming up (--e goes 0 → 1 while its bottom edge crosses the screen) */
+.motion .fades:not(:has(> .gallery:not(.gallery--free))) > * { opacity: calc(1 - var(--e, 0) * 0.5); }
+
+@property --ex {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 0;
+}
+
+@keyframes fade-progress { to { --ex: 1; } }
+
+@supports (animation-timeline: view()) {
+    .motion .fades {
+        --e: var(--ex);
+        animation: fade-progress linear both;
+        animation-timeline: view(block);
+        animation-range: exit 0% exit 100%;
+    }
+}
 
 /* ================= Experience: the timeline fills as you scroll ================= */
+/* It carries straight on from Impact, so it has no top padding of its own, except as a card rising over Impact */
+#experience { padding-top: 0; }
+.motion #experience { padding-top: clamp(5rem, 12vw, 9.5rem); }
+
 .jobs { position: relative; }
 
-/* The script measures the line from the first dot to the last (--tl-len) and how much of it is filled (--tl) */
+/* The script measures the line from the first dot to the end of the last role (--tl-len) and how much of it is
+   filled (--tl) */
 .motion .jobs::before {
     content: '';
     position: absolute;
@@ -2532,7 +2639,57 @@ html.vt-morph::view-transition-new(root) { animation: vtIn 0.4s var(--ease) both
     animation: dotPop 0.6s var(--ease);
 }
 
-.motion .job.lit:first-child::before { box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.18); }
+.motion .job.lit:first-of-type::before { box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.18); }
+
+/* The timeline ends in a small dot and a note beside it, "Where it started", level with the end of the line (where
+   the script puts it, --tl-len; out of sight until it has) and lined up with the roles' text. With motion, the dot
+   starts as a faint ring and fills once the line reaches it, and the note fades in then, decoding the first time. */
+.jobs::after {
+    content: '';
+    position: absolute;
+    left: 2.5px;
+    top: calc(20px + var(--tl-len, -100000px) - 3px);
+    z-index: 2;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+}
+
+.motion .jobs::after {
+    background: var(--bg-alt);
+    box-shadow: inset 0 0 0 1.5px rgba(var(--ink-rgb), 0.3);
+    transition: background 0.4s var(--ease), box-shadow 0.4s var(--ease);
+}
+
+.motion .jobs.ended::after {
+    background: var(--accent);
+    box-shadow: none;
+    animation: dotPop 0.6s var(--ease);
+}
+
+.jobs-end {
+    position: absolute;
+    left: 2.25rem;
+    top: calc(20px + var(--tl-len, -100000px));
+    translate: 0 -50%;
+    margin: 0;
+    font-family: var(--font);
+    font-size: 0.7rem;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--text-3);
+}
+
+.motion .jobs-end {
+    opacity: 0;
+    transition: opacity 0.5s var(--ease);
+}
+
+.motion .jobs.ended .jobs-end { opacity: 1; }
 
 @keyframes dotPop {
     45% { transform: scale(1.45); }
@@ -3106,9 +3263,20 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
 
     .edu-facts { grid-template-columns: 1fr; }
     .headline br { display: none; }
-    .footer-inner { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+    /* At the end of the page the footer's line sits level with the round back-to-top button (both 44px tall, 16px off
+       the bottom), with room on the right so the text never runs under it */
+    .footer-inner {
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 0.5rem;
+        min-height: 44px;
+        padding-right: calc(44px + 0.5rem);
+    }
+
+    .footer-name .sig { width: 64px; } /* a little smaller, so the line fits beside the button from 375px wide */
     .footer-actions { display: none; }
-    .footer { padding-bottom: calc(5.5rem + var(--safe-bottom)); } /* room for the round back-to-top button under the text */
+    .footer { padding-bottom: calc(16px + var(--safe-bottom)); }
 
     .to-top {
         position: fixed;
@@ -3184,6 +3352,7 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
     }
 
     .job { padding-left: 1.75rem; }
+    .jobs-end { left: 1.75rem; }
     .num { font-size: 3rem; }
 }
 
