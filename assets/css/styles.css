@@ -404,7 +404,6 @@ img, svg { -webkit-user-drag: none; }
 .spot { --spot: rgba(var(--accent-rgb), 0.07); }
 
 /* ================= Nav ================= */
-/* Safari on iPhone colors its status bar from this bar's own background, so the bar keeps its color on itself */
 .nav {
     position: fixed;
     inset: 0 0 auto;
@@ -1830,7 +1829,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
 
     body { font-size: 11pt; }
 
-    .nav, .skip-link, .aurora, .dot-grid, .scroll-cue, .contact-glow, .gallery-progress,
+    .nav, .edge, .skip-link, .aurora, .dot-grid, .scroll-cue, .contact-glow, .gallery-progress,
     .card-art, .copy-btn, .photo-glow, .spot::before, .card-more, .to-top, .panel { display: none !important; }
 
     .hero, .story, .gallery { height: auto !important; }
@@ -2763,38 +2762,43 @@ html:not(.motion) .gallery-dots,
     97.5%, 100% { opacity: 0; }
 }
 
-/* ================= iPhone and iPad: Safari's bottom bar ================= */
-/* Safari paints a solid bar behind its bottom toolbar in the color of any sticky element touching the bottom of the
-   screen, and doesn't recolor it when the theme changes. The pinned scenes stop 8px short of that edge there, which
-   sits under the toolbar anyway, so the page shows through the toolbar like it does everywhere else.
+/* ================= iPhone and iPad: Safari's top and bottom bars ================= */
+/* Safari there ignores theme-color and paints its status bar and bottom toolbar in the background color of the fixed
+   box spanning each edge of the screen. At the top that's the site's solid top bar, or the thin strip under it on a
+   page without one; at the bottom it's always the strip. Both are in the page color, so both bars are always there
+   and match the theme. Safari only looks again when a fixed box comes or goes, so the scripts add a throwaway one
+   (.edge-probe) after each theme switch; while a theme switch or page change animates, it reads the animation's own
+   layer, which carries the page color too.
    (-webkit-touch-callout is only supported by Safari on iOS and iPadOS.) */
-@supports (-webkit-touch-callout: none) {
-    .motion :is(.hero-sticky, .story-sticky, .gallery-sticky) { height: calc(100svh - 8px); }
+.edge { display: none; }
 
-    /* The intro's glow fades out just above that edge, so the 8px of plain page below doesn't show as a line */
-    .motion .aurora {
-        -webkit-mask-image: linear-gradient(#000 calc(100% - 56px), transparent);
-        mask-image: linear-gradient(#000 calc(100% - 56px), transparent);
+@supports (-webkit-touch-callout: none) {
+    .edge {
+        display: block;
+        position: fixed;
+        left: 0;
+        right: 0;
+        height: 12px; /* Safari passes over anything thinner as a border */
+        background: var(--dark);
+        pointer-events: none;
     }
+
+    /* Under the site's own top bars, which are solid in the same color, so it never covers their buttons where the
+       screen has no notch (landscape, iPad). It matters on pages without one, like the 404. */
+    .edge-top { top: 0; z-index: 5; }
+    .edge-bottom { bottom: 0; z-index: 150; }
 }
 
-/* ================= iPhone and iPad: animations without view transitions ================= */
-/* Safari there draws solid bars behind its toolbar while a view transition runs, so the script uses these instead.
-   The theme change is a circle of the new theme's color spreading from the button; it stops 8px short of the bottom
-   edge, so Safari never paints a bottom bar from it (and at the top, the status bar takes its color right away). */
-.theme-veil {
+.edge-probe {
     position: fixed;
-    inset: 0 0 8px;
-    z-index: 1000;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
     pointer-events: none;
 }
 
-/* Changing pages: the page fades out before the next one loads (the top bar stays), and back in on returning */
-.motion.leaving :is(main, .footer) { animation: pageLeave 0.26s var(--page-fade) forwards; }
-.motion.returning :is(main, .footer) { animation: pageReturn 0.4s var(--page-fade) both; }
-
-@keyframes pageLeave { to { opacity: 0; } }
-@keyframes pageReturn { from { opacity: 0; } }
+::view-transition { background-color: var(--dark); }
 
 /* ================= Paper grain ================= */
 /* A faint grain on the page backgrounds. Its light and dark specks are balanced, so the average color doesn't change.

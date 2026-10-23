@@ -159,6 +159,9 @@
 </head>
 <body>
     <a class="skip-link" href="#main">Skip to content</a>
+    <!-- What Safari on iPhone colors its top and bottom bars from (see .edge in styles.css) -->
+    <div class="edge edge-top"></div>
+    <div class="edge edge-bottom"></div>
 
     <header class="nf-bar">
         <a class="nav-mark" href="index.html"><span class="visually-hidden">Sunny Li, back to the portfolio</span>
@@ -215,19 +218,19 @@
             // With the <base> above, a bare "#main" would point at the home page, so the skip link points here
             document.querySelector('.skip-link').href = `${location.href.split('#')[0]}#main`;
 
-            // No page transition from here on iPhone and iPad, where Safari draws solid bars while one runs
-            if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
-                addEventListener('pageswap', (e) => {
-                    if (!e.viewTransition) return;
-                    e.viewTransition.ready.catch(() => {});
-                    e.viewTransition.skipTransition();
-                });
-            }
-
             const root = document.documentElement;
             const themeBtn = document.querySelector('.theme-btn');
             const contrastBtn = document.querySelector('.contrast-btn');
             const themeMeta = document.querySelector('meta[name="theme-color"]');
+            // Safari on iPhone and iPad colors its bars from the solid boxes at the screen's edges (see .edge in
+            // styles.css), but only looks at them again when a fixed box comes or goes, so a theme change adds one
+            const retint = () => {
+                if (!CSS.supports('-webkit-touch-callout', 'none')) return;
+                const probe = document.createElement('div');
+                probe.className = 'edge-probe';
+                document.body.append(probe);
+                requestAnimationFrame(() => requestAnimationFrame(() => probe.remove()));
+            };
             const sync = () => {
                 const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
                 themeBtn.setAttribute('aria-label', `Switch to ${next} theme`);
@@ -237,6 +240,7 @@
                 const more = root.classList.contains('contrast');
                 contrastBtn.setAttribute('aria-pressed', String(more));
                 contrastBtn.title = more ? 'Turn high contrast off' : 'More contrast';
+                retint();
             };
             const save = (key, value) => { try { localStorage.setItem(key, value); } catch (e) {} };
             themeBtn.addEventListener('click', () => {
