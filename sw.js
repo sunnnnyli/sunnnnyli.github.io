@@ -10,6 +10,7 @@ const CORE = [
     './404.html',
     './assets/css/styles.css',
     './assets/css/resume.css',
+    './assets/js/ink.js',
     './assets/js/main.js',
     './assets/js/resume.js',
     './assets/fonts/newsreader-latin.woff2',

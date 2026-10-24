@@ -212,6 +212,7 @@
         </div>
     </main>
 
+    <script src="assets/js/ink.js"></script>
     <script>
         // The theme and contrast toggles, remembered the same way as on the rest of the site
         (() => {
@@ -223,9 +224,11 @@
             const contrastBtn = document.querySelector('.contrast-btn');
             const themeMeta = document.querySelector('meta[name="theme-color"]');
             // Safari on iPhone and iPad colors its bars from the solid boxes at the screen's edges (see .edge in
-            // styles.css), but only looks at them again when a fixed box comes or goes, so a theme change adds one
+            // styles.css), but only looks at them again when a fixed box comes or goes, so a theme change adds one. Safari
+            // can't read them while an animated switch runs, so then it adds one when the switch ends.
+            let switching = false;
             const retint = () => {
-                if (!CSS.supports('-webkit-touch-callout', 'none')) return;
+                if (switching || !CSS.supports('-webkit-touch-callout', 'none')) return;
                 const probe = document.createElement('div');
                 probe.className = 'edge-probe';
                 document.body.append(probe);
@@ -243,10 +246,30 @@
                 retint();
             };
             const save = (key, value) => { try { localStorage.setItem(key, value); } catch (e) {} };
+            // Like the rest of the site: with motion on, the new theme spreads out from the button like ink soaking into
+            // paper (see ink.js)
+            let themeSwitch = null;
+            let theme = root.dataset.theme; // the one chosen last, even while a switch to it is still under way
             themeBtn.addEventListener('click', () => {
-                root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
-                save('theme', root.dataset.theme);
-                sync();
+                const next = theme === 'dark' ? 'light' : 'dark';
+                theme = next;
+                save('theme', next);
+                const apply = () => { root.dataset.theme = next; sync(); };
+                if (!root.classList.contains('motion') || !document.startViewTransition || !window.spreadTheme) {
+                    apply();
+                    return;
+                }
+                const r = themeBtn.getBoundingClientRect();
+                switching = true;
+                const vt = window.spreadTheme(apply, { x: r.left + r.width / 2, y: r.top + r.height / 2 });
+                themeSwitch = vt;
+                vt.finished.finally(() => {
+                    if (themeSwitch !== vt) return; // pressed again mid-switch: the newer one carries on
+                    switching = false;
+                    retint();
+                }).catch(() => {});
+                // If the browser never paints the transition (background tab, busy renderer), switch anyway
+                setTimeout(() => { if (themeSwitch === vt && root.dataset.theme !== next) apply(); }, 300);
             });
             contrastBtn.addEventListener('click', () => {
                 const more = !root.classList.contains('contrast');

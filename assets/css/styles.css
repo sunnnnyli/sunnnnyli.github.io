@@ -611,9 +611,11 @@ html:not(.motion) .motion-btn .i-pause { display: none; }
 
 html:not(.motion) { scroll-behavior: auto; }
 
-/* Theme switch: no default cross-fade; the script grows the new theme in a circle instead */
+/* Theme switch: no default cross-fade; ink.js spreads the new theme out like ink instead (or a circle, without
+   @property), through a mask on the new view that grows with --ink-spread */
 ::view-transition-old(root),
 ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+@property --ink-spread { syntax: '<length>'; inherits: false; initial-value: 0px; }
 html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
 
 .menu-btn {
@@ -1230,6 +1232,76 @@ html:not(.motion) .dot-grid canvas { display: none; }
 }
 
 .tile-span2 { grid-column: span 2; }
+
+/* Each tile turns over to the story behind its number (the script turns it, on a tap anywhere on it or on its
+   button). It isn't a flip: like the rest of the page, the number and its captions slip up out of sight as the story
+   rises into their place, and the tile's label stays put. Both sides share one spot, so the tile fits the longer. */
+.tile[data-turn] { cursor: pointer; }
+.tile-faces { display: grid; }
+.tile-face { grid-area: 1 / 1; }
+.tile-story { visibility: hidden; opacity: 0; translate: 0 14px; }
+.tile.turned .tile-face:not(.tile-story) { visibility: hidden; opacity: 0; translate: 0 -10px; }
+.tile.turned .tile-story { visibility: visible; opacity: 1; translate: none; }
+
+.motion .tile-face { transition: opacity 0.35s var(--ease), translate 0.5s var(--ease), visibility 0s linear 0.5s; }
+
+.motion .tile:not(.turned) .tile-face:not(.tile-story),
+.motion .tile.turned .tile-story { transition: opacity 0.55s var(--ease) 0.12s, translate 0.7s var(--ease) 0.12s, visibility 0s; }
+
+.tile-story-kicker {
+    padding-top: 1rem;
+    font-family: var(--font);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-strong);
+}
+
+.light .tile-dark .tile-story-kicker { color: var(--emph-accent); }
+
+.tile-story-text {
+    max-width: 32rem;
+    margin-top: 0.6rem;
+    font-size: clamp(1.05rem, 1.5vw, 1.2rem);
+    line-height: 1.5;
+}
+
+/* The button in the corner says the tile turns, and which side is showing; its arrows come round as it turns */
+.tile-turn {
+    position: absolute;
+    top: clamp(1rem, 2.4vw, 1.6rem);
+    right: clamp(1rem, 2.4vw, 1.6rem);
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--light-line);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--on-light-2);
+    cursor: pointer;
+    transition: color 0.3s, border-color 0.3s;
+}
+
+.tile:hover .tile-turn,
+.tile-turn:focus-visible { color: var(--on-light); border-color: rgba(var(--ink-rgb), 0.3); }
+.tile-dark .tile-turn { border-color: rgba(var(--emph-ink-rgb), 0.18); color: var(--emph-text-2); }
+.tile-dark:hover .tile-turn { color: var(--emph-text); }
+
+.tile-turn svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.motion .tile-turn svg { transition: rotate 0.6s var(--ease); }
+.tile.turned .tile-turn svg { rotate: 180deg; }
 
 .tile-dark {
     border-color: transparent;
@@ -1914,7 +1986,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
     body { font-size: 11pt; }
 
     .nav, .edge, .jobs-end, .jobs::after, .skip-link, .aurora, .dot-grid, .scroll-cue, .contact-glow, .gallery-progress,
-    .card-art, .copy-btn, .photo-glow, .spot::before, .card-more, .to-top, .panel { display: none !important; }
+    .card-art, .copy-btn, .photo-glow, .spot::before, .card-more, .to-top, .panel, .tile-turn, .tile-story { display: none !important; }
 
     .hero, .story, .gallery { height: auto !important; }
     .rise { margin-top: 0 !important; border-top: 0 !important; translate: none !important; border-radius: 0 !important; box-shadow: none !important; overflow: visible !important; }
@@ -2158,11 +2230,14 @@ html:has(.panel[open]) { overflow: hidden; }
     stroke-linejoin: round;
 }
 
+.panel-link .i-share,
+.panel-link.shares .i-link,
 .panel-link .i-check,
 .panel-link.copied .i-link,
 .anchor-btn .i-check,
 .anchor-btn.copied .i-link { display: none; }
 .panel-link.copied .i-check,
+.panel-link.shares .i-share,
 .anchor-btn.copied .i-check { display: block; }
 
 .panel-close svg {

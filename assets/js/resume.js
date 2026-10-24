@@ -32,34 +32,31 @@
         root.dataset.theme = t;
         syncThemeBtn();
     };
-    // Like the portfolio: with motion on, the new theme spreads out in a circle from the button. Without a button
-    // to start from (a system change, or catching up after a back/forward), it switches at once.
+    // Like the portfolio: with motion on, the new theme spreads out from the button like ink soaking into paper (see
+    // ink.js). Without a button to start from (a system change, or catching up after a back/forward), it switches at once.
+    let themeSwitch = null;
+    let theme = root.dataset.theme; // the one chosen last, even while a switch to it is still under way
     const setTheme = (t, remember, origin) => {
+        theme = t;
         if (remember) store('theme', t);
-        if (!origin || !root.classList.contains('motion') || !document.startViewTransition) {
+        if (!origin || !root.classList.contains('motion') || !document.startViewTransition || !window.spreadTheme) {
             applyTheme(t);
             return;
         }
         switching = true;
-        const vt = document.startViewTransition(() => applyTheme(t));
+        const vt = window.spreadTheme(() => applyTheme(t), origin);
+        themeSwitch = vt;
         vt.finished.finally(() => {
+            if (themeSwitch !== vt) return; // pressed again mid-switch: the newer one carries on
             switching = false;
             retint();
         }).catch(() => {});
-        vt.ready.then(() => {
-            const { x, y } = origin;
-            const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
-            root.animate(
-                { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] },
-                { duration: 650, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', pseudoElement: '::view-transition-new(root)' }
-            );
-        }).catch(() => {});
         // If the browser never paints the transition (background tab, busy renderer), switch anyway
-        setTimeout(() => { if (root.dataset.theme !== t) applyTheme(t); }, 300);
+        setTimeout(() => { if (themeSwitch === vt && root.dataset.theme !== t) applyTheme(t); }, 300);
     };
     themeBtn.addEventListener('click', () => {
         const r = themeBtn.getBoundingClientRect();
-        setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark', true, { x: r.left + r.width / 2, y: r.top + r.height / 2 });
+        setTheme(theme === 'dark' ? 'light' : 'dark', true, { x: r.left + r.width / 2, y: r.top + r.height / 2 });
     });
     // Follow system changes until the visitor picks a theme themselves
     matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {

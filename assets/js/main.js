@@ -2,6 +2,8 @@
     const root = document.documentElement;
     let motion = root.classList.contains('motion');
     const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
+    // Runs once the next frame is drawn, when the page's layout is already worked out and reading it costs nothing
+    const afterPaint = (fn) => requestAnimationFrame(() => setTimeout(fn));
     // Saved choices (theme, contrast, motion). Storage can be blocked, e.g. in some private windows.
     const stored = (key) => { try { return localStorage.getItem(key); } catch (e) { return null; } };
     const store = (key, value) => { try { localStorage.setItem(key, value); } catch (e) {} };
@@ -46,7 +48,8 @@
         return top;
     };
 
-    const fmt = (el, v) => `${el.dataset.prefix || ''}${Math.round(v).toLocaleString('en-US')}${el.dataset.suffix || ''}`;
+    // Thousands get commas. Done by hand: the browser's number formatting is slow to start up on phones.
+    const fmt = (el, v) => `${el.dataset.prefix || ''}${String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}${el.dataset.suffix || ''}`;
 
     // Toolkit skills become buttons before the marquees copy them (see "Toolkit: where each skill was used")
     document.querySelectorAll('.marquee-track li').forEach((li) => {
@@ -100,10 +103,32 @@
     const GLYPHS = { lower: 'abcdefghijklnopqrstuvxyz', upper: 'ABCDEFGHIJKLNOPQRSTUVXYZ', narrow: 'fijlrt', narrowUpper: 'IJ', digit: '0123456789', sign: '#*+=<>/' };
     const pickFrom = (set) => set[Math.floor(Math.random() * set.length)];
     const CJK = /[\u3400-\u9fff]/;
-    // lead: how long it stays fully scrambled before the first character settles; span: from the first to the last,
+    // Takes [element, options] pairs and measures them all together, so the page is laid out twice however many there
+    // are. lead: how long it stays fully scrambled before the first character settles; span: from the first to the last,
     // or pace per character up to most
-    const decode = (el, { delay = 0, signs = false, lead = 120, span: spanFor, pace = 45, most = 900 } = {}) => {
-        if (!el.getClientRects().length) return; // not shown on this screen size
+    const decodeAll = (list) => {
+        const jobs = list.filter(([el]) => el.getClientRects().length) // not shown on this screen size
+            .map(([el, opts]) => prepareDecode(el, opts)).filter(Boolean);
+        if (!jobs.length) return;
+        // Measure every word at once, then fix the widths
+        const fit = (words) => {
+            words.forEach((w) => { w.fake.textContent = w.text; w.fake.style.width = ''; });
+            const widths = words.map((w) => w.fake.getBoundingClientRect().width);
+            words.forEach((w, i) => { w.fake.style.width = `${widths[i]}px`; });
+        };
+        fit(jobs.flatMap((j) => j.words));
+        jobs.forEach((j) => j.paint(performance.now() - j.start));
+        // Late fonts change the widths, so measure again (with the real words in) and scramble before anything is drawn
+        if (document.fonts && document.fonts.status !== 'loaded') document.fonts.ready.then(() => {
+            const left = jobs.filter((j) => !j.done);
+            fit(left.flatMap((j) => j.words));
+            left.forEach((j) => j.paint(performance.now() - j.start));
+        });
+        jobs.forEach((j) => requestAnimationFrame(j.step));
+    };
+    const decode = (el, opts) => decodeAll([[el, opts]]);
+    // Swaps an element's words for scrambled copies, and returns how to run them
+    const prepareDecode = (el, { delay = 0, signs = false, lead = 120, span: spanFor, pace = 45, most = 900 } = {}) => {
         const quiet = !!el.closest('[aria-hidden="true"]'); // already hidden from screen readers, so no real copy needed
         const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
             acceptNode: (n) => {
@@ -142,12 +167,6 @@
             node.replaceWith(...added);
             parts.push({ node, added });
         });
-        // Measure every word at once, then fix the widths
-        const fit = () => {
-            words.forEach((w) => { w.fake.textContent = w.text; w.fake.style.width = ''; });
-            const widths = words.map((w) => w.fake.getBoundingClientRect().width);
-            words.forEach((w, i) => { w.fake.style.width = `${widths[i]}px`; });
-        };
         const count = words.reduce((n, w) => n + w.text.length, 0);
         const span = spanFor || Math.min(count * pace, most); // short labels go a letter at a time, long lines take under a second
         const start = performance.now() + delay;
@@ -167,19 +186,11 @@
                 w.fake.textContent = [...w.text].map((ch) => (t >= lead + (k++ / Math.max(1, count - 1)) * span ? ch : scramble(ch))).join('');
             });
         };
-        fit();
-        paint(performance.now() - start);
-        let done = false;
-        // Late fonts change the widths, so measure again (with the real words in) and scramble before anything is drawn
-        if (document.fonts) document.fonts.ready.then(() => {
-            if (done) return;
-            fit();
-            paint(performance.now() - start);
-        });
+        const job = { words, start, paint, done: false };
         let shown = performance.now();
-        const step = (now) => {
-            done = !motion || now - start > lead + span;
-            if (done) {
+        job.step = (now) => {
+            job.done = !motion || now - start > lead + span;
+            if (job.done) {
                 parts.forEach(({ node, added }) => {
                     added[0].before(node);
                     added.forEach((n) => n.remove());
@@ -190,20 +201,22 @@
                 shown = now;
                 paint(now - start);
             }
-            requestAnimationFrame(step);
+            requestAnimationFrame(job.step);
         };
-        requestAnimationFrame(step);
+        return job;
     };
     // The first screen, as the page opens: each part starts as it begins to fade in, a little quicker than further down
     const decodeIntro = () => {
+        const list = [];
         const title = document.querySelector('.hero-title > [aria-hidden="true"]');
         // The name's letters rise in out of a blur over about a second, so it stays scrambled until they're clear, then
         // settles a letter at a time
-        if (title) decode(title, { lead: 620, span: 420 });
+        if (title) list.push([title, { lead: 620, span: 420 }]);
         document.querySelectorAll('.hero .load, .scroll-cue').forEach((el) => {
-            decode(el, { delay: (parseFloat(getComputedStyle(el).getPropertyValue('--d')) || 0) * 1000, pace: 32, most: 650 });
+            list.push([el, { delay: (parseFloat(getComputedStyle(el).getPropertyValue('--d')) || 0) * 1000, pace: 32, most: 650 }]);
         });
-        document.querySelectorAll('.nav-steps a, .nav-resume, .nav-resume-sm').forEach((el, i) => decode(el, { delay: 80 + i * 45, signs: true, pace: 32 }));
+        document.querySelectorAll('.nav-steps a, .nav-resume, .nav-resume-sm').forEach((el, i) => list.push([el, { delay: 80 + i * 45, signs: true, pace: 32 }]));
+        decodeAll(list);
         root.classList.remove('intro'); // it's all scrambled now, so the text can show (see .intro in styles.css)
     };
     const reveal = (el) => {
@@ -216,6 +229,11 @@
     const initMotion = (initial) => {
         if (motionReady) return;
         motionReady = true;
+        // The marquee rows are measured before anything here changes the page, while its layout is still worked out
+        const marquees = [...document.querySelectorAll('.marquee-track')].map((track) => {
+            const list = track.querySelector('ul');
+            return { track, list, setWidth: Math.max(1, list.scrollWidth) };
+        });
         // Hero title: split into per-letter spans, grouped by word so lines still wrap between words.
         const title = document.querySelector('[data-split]');
         const text = title.textContent.trim();
@@ -272,11 +290,9 @@
         });
 
         // Marquees: repeat items until a row is wider than the screen, then double it for a seamless loop.
-        document.querySelectorAll('.marquee-track').forEach((track) => {
-            const list = track.querySelector('ul');
+        marquees.forEach(({ track, list, setWidth }) => {
             const originals = [...list.children];
-            // Measure once, then add every copy in one go (re-measuring each round forced extra layout work).
-            const setWidth = Math.max(1, list.scrollWidth);
+            // Every copy goes in at once (re-measuring each round forced extra layout work)
             const repeats = Math.min(8, Math.max(0, Math.ceil((window.innerWidth * 1.1) / setWidth) - 1));
             const extra = document.createDocumentFragment();
             for (let r = 0; r < repeats; r++) {
@@ -384,15 +400,14 @@
         const dist = Math.max(0, track.offsetWidth - sticky.clientWidth);
         pinnedDist = dist;
         pinnedHold = sticky.offsetHeight;
+        // Each card's offset from the middle of the screen before the track slides, for the CSS card scaling (read
+        // along with the rest, before anything changes, so the page is only laid out once)
+        cards.forEach((card) => { card._c = card.offsetLeft + card.offsetWidth / 2 - window.innerWidth / 2; });
         gallery.style.setProperty('--dist', dist);
         gallery.style.setProperty('--hold', pinnedHold);
         gallery.style.height = `${dist + window.innerHeight + pinnedHold}px`;
-        // Each card's offset from the middle of the screen before the track slides, for the CSS card scaling.
         gallery.style.setProperty('--vw', window.innerWidth);
-        cards.forEach((card) => {
-            card._c = card.offsetLeft + card.offsetWidth / 2 - window.innerWidth / 2;
-            card.style.setProperty('--c', card._c.toFixed(1));
-        });
+        cards.forEach((card) => card.style.setProperty('--c', card._c.toFixed(1)));
     };
 
     const navTrack = document.querySelector('.nav-track');
@@ -405,8 +420,17 @@
     // so they're measured then (see the ResizeObserver below), never while scrolling.
     let lay = null;
     let lastTlLen = null;
+    // Whether any held content could be stuck in place right now (see .holds in styles.css). It's only ever kept down at
+    // its sticking line, so anything still below that line sits where it belongs on the page, as when the page opens.
+    const mayHold = () => motion && holders.some((sec) => {
+        const hold = sec.querySelector('.hold');
+        return hold.getBoundingClientRect().top <= parseFloat(getComputedStyle(hold).top) + 1;
+    });
     const measureLayout = () => {
-        root.classList.add('measuring'); // held content back where it sits on the page (see .holds in styles.css)
+        // Held content goes back where it sits on the page while it's measured. Only when it needs to, since that
+        // makes the browser lay the whole page out twice more.
+        const release = mayHold();
+        if (release) root.classList.add('measuring');
         // Experience timeline: each dot's center on the page, read from the CSS so the two always agree, and where the
         // line ends: with the last role, so it runs alongside all of it
         const dot = getComputedStyle(jobEls[0], '::before');
@@ -426,8 +450,9 @@
             dots: jobEls.map((job) => pageTop(job) + dotOff),
             tlEnd,
             tlDone: Math.min(tlEnd, holdAt),
+            body: document.body.getBoundingClientRect(),
         };
-        root.classList.remove('measuring');
+        if (release) root.classList.remove('measuring');
         const len = `${(lay.tlEnd - lay.dots[0]).toFixed(1)}px`;
         if (len !== lastTlLen) {
             lastTlLen = len;
@@ -785,13 +810,29 @@
             if (location.hash === `#${slugOf(panel)}`) history.replaceState(history.state, '', panel._returnUrl || location.pathname + location.search);
         });
 
-        // Copy link: a link that opens this write-up directly
+        // Copy link: a link that opens this write-up directly. On phones with a share sheet it's Share instead, so the
+        // write-up can go straight into a message, an email, or LinkedIn; if sharing fails, it copies after all.
         const linkBtn = panel.querySelector('.panel-link');
         const linkLabel = linkBtn.querySelector('.panel-link-label');
         const linkStatus = panel.querySelector('.panel-status');
+        const shares = !!navigator.share && matchMedia('(pointer: coarse)').matches;
+        if (shares) {
+            linkBtn.classList.add('shares');
+            linkLabel.textContent = 'Share';
+            linkBtn.insertAdjacentHTML('afterbegin', '<svg class="i-share" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M7 10H6a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>');
+        }
         let linkTimer;
         linkBtn.addEventListener('click', async () => {
-            const ok = await copyText(`${location.origin}${location.pathname}#${slugOf(panel)}`);
+            const url = `${location.origin}${location.pathname}#${slugOf(panel)}`;
+            if (shares) {
+                try {
+                    await navigator.share({ title: `${panel.querySelector('h2').textContent}, by Sunny Li`, url });
+                    return;
+                } catch (err) {
+                    if (err && err.name === 'AbortError') return; // closed without sharing
+                }
+            }
+            const ok = await copyText(url);
             linkBtn.classList.toggle('copied', ok);
             if (ok) tap();
             linkLabel.textContent = ok ? 'Copied' : 'Copy failed';
@@ -799,7 +840,7 @@
             clearTimeout(linkTimer);
             linkTimer = setTimeout(() => {
                 linkBtn.classList.remove('copied');
-                linkLabel.textContent = 'Copy link';
+                linkLabel.textContent = shares ? 'Share' : 'Copy link';
                 linkStatus.textContent = '';
             }, 2000);
         });
@@ -963,28 +1004,22 @@
         if (favicon) favicon.href = theme === 'dark' ? favDark : favLight;
         retint();
     };
+    let themeSwitch = null;
     const setTheme = (t, remember, origin) => {
         theme = t;
         if (remember) store('theme', t);
         const apply = () => { root.dataset.theme = theme; syncThemeBtn(); };
-        // The new theme spreads out in a circle from the button; instant otherwise or with motion off.
+        // The new theme spreads out from the button like ink soaking into paper (see ink.js); instant otherwise or with
+        // motion off.
         if (motion && document.startViewTransition) {
             switching = true;
-            const vt = document.startViewTransition(apply);
+            const vt = origin && window.spreadTheme ? window.spreadTheme(apply, origin) : document.startViewTransition(apply);
+            themeSwitch = vt;
             vt.finished.finally(() => {
+                if (themeSwitch !== vt) return; // pressed again mid-switch: the newer one carries on
                 switching = false;
                 retint();
             }).catch(() => {});
-            if (origin) {
-                vt.ready.then(() => {
-                    const { x, y } = origin;
-                    const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
-                    root.animate(
-                        { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] },
-                        { duration: 650, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', pseudoElement: '::view-transition-new(root)' }
-                    );
-                }).catch(() => {});
-            }
             // If the browser never paints the transition (background tab, busy renderer), apply anyway.
             setTimeout(() => { if (root.dataset.theme !== theme) apply(); }, 300);
         } else {
@@ -1044,12 +1079,19 @@
     frame();
     window.addEventListener('scroll', request, { passive: true });
     // Each holding section's content needs its height, to know when to stick (see .holds in styles.css)
-    const holdSize = new ResizeObserver((entries) => entries.forEach((entry) => {
-        entry.target.style.setProperty('--hold-h', `${entry.target.offsetHeight}px`);
-    }));
+    const holdSize = new ResizeObserver((entries) => {
+        const heights = entries.map((entry) => entry.target.offsetHeight); // all read before any is set
+        entries.forEach((entry, i) => entry.target.style.setProperty('--hold-h', `${heights[i]}px`));
+    });
     holders.forEach((sec) => holdSize.observe(sec.querySelector('.hold')));
-    // Anything that changes the page's size (new widths, pinned heights, late fonts) re-measures the layout.
-    new ResizeObserver(() => { measureLayout(); request(); }).observe(document.body);
+    // Anything that changes the page's size (new widths, pinned heights, late fonts) re-measures the layout. Not its
+    // first report, when the page is still the size it was just measured at.
+    new ResizeObserver(([entry]) => {
+        const box = entry.borderBoxSize && entry.borderBoxSize[0];
+        if (box && lay && Math.abs(box.inlineSize - lay.body.width) < 0.01 && Math.abs(box.blockSize - lay.body.height) < 0.01) return;
+        measureLayout();
+        request();
+    }).observe(document.body);
     // Phone browsers resize the window when the address bar slides away on the first scroll.
     // That only changes the height a little, so skip the full re-measure then.
     let lastW = window.innerWidth;
@@ -1066,8 +1108,8 @@
         }
         request();
     });
-    // Late fonts change line lengths, so measure again once they're in
-    if (document.fonts) document.fonts.ready.then(() => { layoutGallery(); measureLayout(); request(); });
+    // Late fonts change line lengths, so measure again once they're in (if any are still on the way)
+    if (document.fonts && document.fonts.status !== 'loaded') document.fonts.ready.then(() => { layoutGallery(); measureLayout(); request(); });
 
     /* ---------- Looping animations rest while off screen ---------- */
     // The intro's glow and ring, the project diagrams, and the toolkit marquees pause whenever they're out of view
@@ -1080,15 +1122,21 @@
     });
     // Each part of a diagram gets its place across it (--x, 0 to 1) so the drawing builds left to right, and each
     // connecting line a length of 1 so it can draw along itself
-    document.querySelectorAll('.art-dg svg').forEach((svg) => {
+    // (every part is measured before any is changed, so the page is laid out once for all of them)
+    const dgParts = [...document.querySelectorAll('.art-dg svg')].flatMap((svg) => {
         const width = svg.viewBox.baseVal.width || 300;
-        [...svg.children].forEach((el) => {
-            if (el.matches('.dg-line')) el.setAttribute('pathLength', '1');
+        return [...svg.children].map((el) => {
             try {
                 const b = el.getBBox();
-                el.style.setProperty('--x', clamp((b.x + b.width / 2) / width).toFixed(2));
-            } catch (err) {}
+                return { el, x: clamp((b.x + b.width / 2) / width).toFixed(2) };
+            } catch (err) {
+                return { el, x: null };
+            }
         });
+    });
+    dgParts.forEach(({ el, x }) => {
+        if (el.matches('.dg-line')) el.setAttribute('pathLength', '1');
+        if (x !== null) el.style.setProperty('--x', x);
     });
     document.querySelectorAll('.hero-sticky, .art-dg, .marquee').forEach((el) => idleObserver.observe(el));
 
@@ -1451,7 +1499,7 @@
     };
     row.addEventListener('scroll', queueDots, { passive: true });
     window.addEventListener('resize', queueDots);
-    syncDots();
+    afterPaint(syncDots);
 
     /* ---------- Toolkit: where each skill was used ---------- */
     // Picking a skill marks the roles and projects that used it (each lists its skills in data-skills)
@@ -1566,6 +1614,22 @@
     });
     if (toolkitHint) toolkitHint.hidden = false;
 
+    /* ---------- Impact tiles turn over ---------- */
+    // Each tile turns over to the story behind its number on a tap or click anywhere on it (its button does the same
+    // from the keyboard, and says which side is showing). The side out of view is inert, so keyboards and screen
+    // readers skip it.
+    document.querySelectorAll('.tile[data-turn]').forEach((tile) => {
+        const btn = tile.querySelector('.tile-turn');
+        const [front, story] = tile.querySelectorAll('.tile-face');
+        story.inert = true;
+        tile.addEventListener('click', () => {
+            const turned = tile.classList.toggle('turned');
+            btn.setAttribute('aria-pressed', String(turned));
+            front.inert = turned;
+            story.inert = !turned;
+        });
+    });
+
     /* ---------- Notices ---------- */
     const toastEl = document.createElement('div');
     toastEl.className = 'toast';
@@ -1614,6 +1678,17 @@
     const sealLine = sealCard.querySelector('.seal-card-line');
     const seal = sealCard.querySelector('.seal');
     const OFF = 'translateY(calc(100% + 40px))';
+    // From Lunar New Year's day through the Lantern Festival (the 15th day), the seal is stamped upside down, the way
+    // 福 is hung for the new year. The pun is explained in the developer console (see the hello at the end).
+    const NEW_YEARS = ['2027-02-06', '2028-01-26', '2029-02-13', '2030-02-03', '2031-01-23', '2032-02-11', '2033-01-31', '2034-02-19', '2035-02-08', '2036-01-28'];
+    const festive = NEW_YEARS.some((d) => {
+        const [y, m, day] = d.split('-').map(Number);
+        const start = new Date(y, m - 1, day);
+        const end = new Date(y, m - 1, day + 15); // the start of the day after the Lantern Festival
+        const now = new Date();
+        return now >= start && now < end;
+    });
+    const tilt = festive ? 174 : -6; // a little off square, as a hand would press it
     let sealAnims = [];
     let sealTimer;
     const sealReset = () => {
@@ -1648,17 +1723,17 @@
                 sealCard.animate([{ transform: OFF }, { transform: 'none' }], { duration: 700, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' }),
                 // the seal comes down at an angle, presses in, and settles; the card gives a little under it
                 seal.animate([
-                    { opacity: 0, transform: 'scale(1.4) rotate(-11deg)' },
-                    { opacity: 0.95, transform: 'scale(1.04) rotate(-6deg)', offset: 0.62 },
-                    { opacity: 1, transform: 'scale(0.985) rotate(-6deg)', offset: 0.8 },
-                    { opacity: 1, transform: 'scale(1) rotate(-6deg)' },
+                    { opacity: 0, transform: `scale(1.4) rotate(${tilt - 5}deg)` },
+                    { opacity: 0.95, transform: `scale(1.04) rotate(${tilt}deg)`, offset: 0.62 },
+                    { opacity: 1, transform: `scale(0.985) rotate(${tilt}deg)`, offset: 0.8 },
+                    { opacity: 1, transform: `scale(1) rotate(${tilt}deg)` },
                 ], { duration: 380, delay: 800, easing: 'cubic-bezier(0.55, 0, 0.35, 1)', fill: 'both' }),
                 sealCard.animate([{ transform: 'none' }, { transform: 'translateY(4px)', offset: 0.35 }, { transform: 'none' }], { duration: 320, delay: 1030, easing: 'ease-out' }),
             );
         } else {
             sealAnims.push(
                 sealCard.animate([{ transform: 'none' }], { duration: 1, fill: 'forwards' }),
-                seal.animate([{ opacity: 1, transform: 'rotate(-6deg)' }], { duration: 1, fill: 'forwards' }),
+                seal.animate([{ opacity: 1, transform: `rotate(${tilt}deg)` }], { duration: 1, fill: 'forwards' }),
             );
         }
         sealTimer = setTimeout(hideSecret, motion ? 4400 : 4000);
@@ -1915,9 +1990,18 @@
     }
 
     /* ---------- A hello for anyone who opens the developer console ---------- */
-    const accent = getComputedStyle(root).getPropertyValue('--accent').trim() || '#e0b25c';
-    console.log('%cHi there, fellow developer!', `font: 600 15px/1.6 system-ui, sans-serif; color: ${accent}`);
-    console.log(`This site is plain HTML, CSS, and JavaScript, with no framework and no build step.
+    // (once the page is drawn, so reading the accent color doesn't hold up the first frame)
+    afterPaint(() => {
+        const accent = getComputedStyle(root).getPropertyValue('--accent').trim() || '#e0b25c';
+        console.log('%cHi there, fellow developer!', `font: 600 15px/1.6 system-ui, sans-serif; color: ${accent}`);
+        console.log(`This site is plain HTML, CSS, and JavaScript, with no framework and no build step.
 Have a look at the source: https://github.com/sunnnnyli/sunnnnyli.github.io
 Tip: press ${isMac ? '⌘K' : 'Ctrl+K'} on the page to jump anywhere.`);
+        if (festive) {
+            console.log(`%c新年快乐! Happy Lunar New Year!`, `font: 600 13px/1.6 system-ui, sans-serif; color: ${accent}`);
+            console.log(`If you find the seal on this page, it's upside down on purpose. Over the new year, 福 (fú, good fortune)
+is hung upside down, because "upside down" (倒, dào) sounds just like "has arrived" (到, dào): 福倒了, fortune is upside
+down, sounds like 福到了, fortune has arrived.`);
+        }
+    });
 })();

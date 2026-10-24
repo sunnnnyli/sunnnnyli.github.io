@@ -71,6 +71,7 @@
         })();
     </script>
     <link rel="stylesheet" href="assets/css/styles.css">
+    <script src="assets/js/ink.js" defer></script>
     <script src="assets/js/main.js" defer></script>
     <!-- Chrome and Edge start loading the résumé when a visitor hovers or presses a link to it, so it opens at once -->
     <script type="speculationrules">
@@ -222,29 +223,63 @@
                     <h2 class="headline rv" id="impact-title" style="--d:.08s">My work, <br>by the numbers.</h2>
 
                     <div class="bento">
-                        <article class="tile tile-span2 spot rv-scale">
+                        <article class="tile tile-span2 spot rv-scale" data-turn>
                             <p class="tile-label">Justworks</p>
-                            <p class="num num-phrase grad-text">Close → billing</p>
-                            <p class="unit">the Revenue process I automate with Apex, LWC, and Flow.</p>
-                            <p class="tile-copy">Connected over REST APIs to the billing and finance systems behind it, and built to stay in sync.</p>
-                        </article>
-                        <article class="tile tile-xl spot rv-scale" style="--d:.08s">
-                            <p class="tile-label">NYC OTI<span class="sep"><span class="visually-hidden">, </span></span>Vulnerability Management</p>
-                            <div>
-                                <p class="num grad-text" data-count="150" data-prefix="~">~150</p>
-                                <p class="unit">hours a week, given back.</p>
-                                <p class="tile-copy">I automated the PDFs and agency notices a 10-analyst team was making by hand, work they'd named as a reason people left.</p>
+                            <div class="tile-faces">
+                                <div class="tile-face">
+                                    <p class="num num-phrase grad-text">Close → billing</p>
+                                    <p class="unit">the Revenue process I automate with Apex, LWC, and Flow.</p>
+                                    <p class="tile-copy">Connected over REST APIs to the billing and finance systems behind it, and built to stay in sync.</p>
+                                </div>
+                                <div class="tile-face tile-story">
+                                    <p class="tile-story-kicker">How it adds up</p>
+                                    <p class="tile-story-text">I work with the Revenue and Business Operations teams to turn how they really work into Salesforce automation, shipped through Git with every change peer-reviewed.</p>
+                                </div>
                             </div>
+                            <button class="tile-turn" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 21v-5h-5"/></svg><span class="visually-hidden">How it adds up</span></button>
                         </article>
-                        <article class="tile tile-span2 spot rv-scale" style="--d:.08s">
+                        <article class="tile tile-xl spot rv-scale" style="--d:.08s" data-turn>
+                            <p class="tile-label">NYC OTI<span class="sep"><span class="visually-hidden">, </span></span>Vulnerability Management</p>
+                            <div class="tile-faces">
+                                <div class="tile-face">
+                                    <p class="num grad-text" data-count="150" data-prefix="~">~150</p>
+                                    <p class="unit">hours a week, given back.</p>
+                                    <p class="tile-copy">I automated the PDFs and agency notices a 10-analyst team was making by hand, work they'd named as a reason people left.</p>
+                                </div>
+                                <div class="tile-face tile-story">
+                                    <p class="tile-story-kicker">How it adds up</p>
+                                    <p class="tile-story-text">Each of the 10 analysts spent about 15 hours a week making PDF notices and emailing agencies by hand. Now each case does it on its own.</p>
+                                </div>
+                            </div>
+                            <button class="tile-turn" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 21v-5h-5"/></svg><span class="visually-hidden">How it adds up</span></button>
+                        </article>
+                        <article class="tile tile-span2 spot rv-scale" style="--d:.08s" data-turn>
                             <p class="tile-label">BigQuery client library</p>
-                            <p class="num grad-text" data-count="1" data-suffix="M+">1M+</p>
-                            <p class="unit">records synced from BigQuery into Salesforce, with none lost or duplicated.</p>
+                            <div class="tile-faces">
+                                <div class="tile-face">
+                                    <p class="num grad-text" data-count="1" data-suffix="M+">1M+</p>
+                                    <p class="unit">records synced from BigQuery into Salesforce, with none lost or duplicated.</p>
+                                </div>
+                                <div class="tile-face tile-story">
+                                    <p class="tile-story-kicker">How it adds up</p>
+                                    <p class="tile-story-text">Paginated pulls, Batch and Queueable Apex, external-ID upserts, and error logging with retry, checked by a count at the end, so every record lands exactly once.</p>
+                                </div>
+                            </div>
+                            <button class="tile-turn" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 21v-5h-5"/></svg><span class="visually-hidden">How it adds up</span></button>
                         </article>
-                        <article class="tile tile-span2 tile-dark spot rv-scale" style="--d:.16s">
+                        <article class="tile tile-span2 tile-dark spot rv-scale" style="--d:.16s" data-turn>
                             <p class="tile-label">Olympix<span class="sep"><span class="visually-hidden">, </span></span>Multi-agent AI pipeline</p>
-                            <p class="num grad-text" data-count="10" data-prefix="$" data-suffix="K">$10K</p>
-                            <p class="unit">exploit reproduced by the four-agent AI pipeline I designed. Ideation, exploitation, parsing, and feedback agents looped on every failure until it matched the published PoC.</p>
+                            <div class="tile-faces">
+                                <div class="tile-face">
+                                    <p class="num grad-text" data-count="10" data-prefix="$" data-suffix="K">$10K</p>
+                                    <p class="unit">exploit reproduced by the four-agent AI pipeline I designed. Ideation, exploitation, parsing, and feedback agents looped on every failure until it matched the published PoC.</p>
+                                </div>
+                                <div class="tile-face tile-story">
+                                    <p class="tile-story-kicker">How it adds up</p>
+                                    <p class="tile-story-text">My harness ran each generated exploit against 20 to 30 Solidity contracts, and the pipeline independently reproduced a documented $10K exploit, matching its published PoC.</p>
+                                </div>
+                            </div>
+                            <button class="tile-turn" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 21v-5h-5"/></svg><span class="visually-hidden">How it adds up</span></button>
                         </article>
                     </div>
                 </div>
