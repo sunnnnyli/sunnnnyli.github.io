@@ -1425,6 +1425,9 @@ html:not(.motion) .dot-grid canvas { display: none; }
     color: var(--on-light-2);
 }
 
+/* How long the role lasted, after its dates (from the script); kept on one line */
+.job-len { white-space: nowrap; }
+
 .job h3 {
     margin-top: 0.35rem;
     font-size: clamp(1.55rem, 2.6vw, 2.05rem);
@@ -2285,6 +2288,33 @@ html:has(.panel[open]) { overflow: hidden; }
 
 .panel p:not(.panel-meta) { font-size: 1.05rem; line-height: 1.6; color: var(--text-2); }
 .panel .chips { margin-top: 1.75rem; }
+
+/* A write-up's diagram: its card's, held near the top while the text scrolls under it (the edge in the panel's color
+   keeps the text from showing around its corners). With motion on, the script plays its stages one at a time: the
+   stage playing stays lit (the script marks its parts .on, and the diagram .focus) while the rest steps back. */
+.panel-art {
+    position: sticky;
+    top: 0.75rem;
+    z-index: 1;
+    height: clamp(130px, 36vw, 180px);
+    margin: 1.4rem 0 0.4rem;
+    border-radius: 16px;
+    box-shadow: 0 0 0 0.75rem var(--surface);
+}
+
+.motion .panel-art.art-dg svg > * { transition-delay: 0s; }
+/* (parts inside a group, like each PDF's shapes, fade the same way) */
+.motion .panel-art svg g > [data-step] { transition: opacity 0.45s var(--ease); }
+.panel-art.focus svg [data-step]:not(.on) { opacity: 0.3; }
+
+/* The stages light by turns here, so they don't also pulse on their own as on the card. A stage that's a single node
+   (one of Bug PoCer's agents, or of Journal's roles) holds the accent while it plays (the script marks the diagram
+   .solo); a stage of several boxes (Vulnerability Management's agencies) just lights; faded ones carry none. */
+.motion .panel-art .dg-node :is(rect, text) { animation: none; }
+.panel-art.focus.solo .dg-node.on rect { stroke: var(--accent); fill: rgba(var(--accent-rgb), 0.16); }
+.panel-art.focus.solo .dg-node.on text { fill: var(--text); }
+.panel-art.focus .dg-node:not(.on) rect { stroke: var(--line); }
+.panel-art.focus .dg-node:not(.on) text { fill: var(--text-2); }
 
 /* A thin line along the top of a write-up fills as you read down it (the script sets --read) */
 .panel-progress {

@@ -910,10 +910,74 @@
         panel.addEventListener('touchcancel', release);
     });
 
+    // Each write-up shows its project's diagram under the title, held near the top while the text scrolls under it.
+    // With motion on, it plays through its stages on its own while the write-up is open, one at a time (each part's
+    // data-step lists the stages it's lit in), then shows the whole diagram for a moment and starts again. With motion
+    // off it simply shows the whole diagram.
+    panels.forEach((panel) => {
+        const card = panelCard.get(panel);
+        const svg = card && card.querySelector('.art-dg svg');
+        if (!svg) return;
+        const art = document.createElement('div');
+        art.className = 'panel-art art-dg drawn';
+        art.setAttribute('aria-hidden', 'true');
+        art.append(svg.cloneNode(true));
+        panel.querySelector('h2').after(art);
+        const parts = [...art.querySelectorAll('[data-step]')];
+        const stages = Math.max(...parts.flatMap((el) => el.dataset.step.split(' ').map(Number)));
+        let stage = 0; // 0 is the whole diagram
+        let timer = 0;
+        const light = () => {
+            art.classList.toggle('focus', stage > 0);
+            parts.forEach((el) => el.classList.toggle('on', el.dataset.step.split(' ').includes(String(stage))));
+            art.classList.toggle('solo', art.querySelectorAll('.dg-node.on').length === 1);
+        };
+        const play = () => {
+            if (!panel.open || !motion) {
+                stage = 0;
+                light();
+                return;
+            }
+            stage = stage < stages ? stage + 1 : 0;
+            light();
+            timer = setTimeout(play, stage === 0 ? 1600 : stage === stages ? 1800 : 1300);
+        };
+        // Starts from the whole diagram each time the write-up opens, and stops when it closes
+        new MutationObserver(() => {
+            clearTimeout(timer);
+            stage = 0;
+            light();
+            if (panel.open && motion) timer = setTimeout(play, 700);
+        }).observe(panel, { attributes: true, attributeFilter: ['open'] });
+    });
+
     // A write-up link followed while the page is already open
     window.addEventListener('hashchange', () => {
         const panel = panelFromHash();
         if (panel && !panel.open) openPanel(panel);
+    });
+
+    /* ---------- Experience: how long each role lasted ---------- */
+    // Worked out from each role's dates ("Jun 2024 – Sep 2026", or "… – Present"), counting both end months the way
+    // LinkedIn does, so the current role's keeps itself up to date. A role that hasn't started yet gets none.
+    const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthNumber = (text) => {
+        const m = text.trim().match(/^([A-Z][a-z]{2}) (\d{4})$/);
+        return m && MONTHS.includes(m[1]) ? Number(m[2]) * 12 + MONTHS.indexOf(m[1]) : null;
+    };
+    const today = new Date();
+    document.querySelectorAll('.job-dates').forEach((el) => {
+        const [from = '', to = ''] = el.textContent.split('–');
+        const start = monthNumber(from);
+        const end = /present/i.test(to) ? today.getFullYear() * 12 + today.getMonth() : monthNumber(to);
+        if (start === null || end === null || end < start) return;
+        const months = end - start + 1;
+        const years = Math.floor(months / 12);
+        const rest = months % 12;
+        const len = document.createElement('span');
+        len.className = 'job-len';
+        len.textContent = ` (${[years && `${years} yr${years > 1 ? 's' : ''}`, rest && `${rest} mo${rest > 1 ? 's' : ''}`].filter(Boolean).join(' ')})`;
+        el.append(len);
     });
 
     /* ---------- Footer: last updated ---------- */
