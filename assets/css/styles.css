@@ -2003,7 +2003,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
     }
 
     .hero-copy, .hero-photo-wrap, .hero-photo, .gallery-track, .card, .tile, .skill, .rv, .rv-scale, .load,
-    .hero-title, .hero-title .ch, .story .w, .feats li, .headline .hl-w > span, .story-sticky > .container, .fades > *, .holds > .hold {
+    .hero-title, .hero-title .ch, .story .w, .feats li, .headline .hl-w > span, .story-sticky > .container, .holds > .hold {
         opacity: 1 !important;
         transform: none !important;
         translate: none !important;
@@ -2606,7 +2606,8 @@ html.vt-morph::view-transition-new(root) { animation: vtIn 0.4s var(--ease) both
 /* Every section after the intro is a card dealt onto the one before it, with rounded top corners and a faint shadow.
    After a pinned scene (the intro, the about paragraph, the project row), the scene runs one screen longer and the
    next section starts one screen early, so the scene holds still underneath while the card covers it. The sections
-   that aren't pinned (Impact, Experience, Education) hold their last screen still the same way (see .holds). The
+   that aren't pinned (Impact, Experience, Education, and Projects when its row isn't pinned) hold their last screen
+   still the same way (see .holds). The
    holding is all done by the browser's own sticky positioning, so nothing can lag behind a phone's scrolling. */
 :root,
 :root[data-theme="light"] { --rise-shade: rgba(31, 38, 52, 0.16); }
@@ -2626,7 +2627,7 @@ html.vt-morph::view-transition-new(root) { animation: vtIn 0.4s var(--ease) both
 /* Over a pinned or holding section. The paragraph's corners clip its pinned layer, which has a background of its
    own. */
 .motion :is(.hero, .story, .holds) + .rise,
-.motion #projects:has(> .gallery:not(.gallery--free)) + .rise {
+.motion #projects:has(.gallery:not(.gallery--free)) + .rise {
     margin-top: -100vh;
     margin-top: -100lvh;
     border-top: 0;
@@ -2636,15 +2637,13 @@ html.vt-morph::view-transition-new(root) { animation: vtIn 0.4s var(--ease) both
 
 /* Elsewhere the card starts a little over the section before, so its rounded corners sit on that section and not on
    the page behind (its top border makes up the room, so its content stays put). That stays within the bottom
-   padding of the section before; the project row gets some when it scrolls sideways (phones). */
+   padding of the section before. */
 :root { --overlap: clamp(48px, 6vw, 80px); }
 
 .motion .rise {
     margin-top: calc(-1 * var(--overlap));
     border-top: var(--overlap) solid transparent;
 }
-
-.motion #projects:has(> .gallery--free) { padding-bottom: var(--overlap); }
 
 /* A section that isn't pinned holds its last screen still while the next card slides up over it: its content sticks
    once its bottom reaches the bottom of the screen (the script gives it its height, --hold-h) and stays for the screen
@@ -2688,27 +2687,6 @@ html.vt-morph::view-transition-new(root) { animation: vtIn 0.4s var(--ease) both
     justify-content: center;
 }
 
-/* The project row, when it scrolls sideways on its own (phones), dims the same way as it leaves the top of the screen,
-   under Education coming up (--e goes 0 → 1 while its bottom edge crosses the screen) */
-.motion .fades:not(:has(> .gallery:not(.gallery--free))) > * { opacity: calc(1 - var(--e, 0) * 0.5); }
-
-@property --ex {
-    syntax: "<number>";
-    inherits: false;
-    initial-value: 0;
-}
-
-@keyframes fade-progress { to { --ex: 1; } }
-
-@supports (animation-timeline: view()) {
-    .motion .fades {
-        --e: var(--ex);
-        animation: fade-progress linear both;
-        animation-timeline: view(block);
-        animation-range: exit 0% exit 100%;
-    }
-}
-
 /* ================= Experience: the timeline fills as you scroll ================= */
 /* It carries straight on from Impact, so it has no top padding of its own, except as a card rising over Impact */
 #experience { padding-top: 0; }
@@ -2717,19 +2695,23 @@ html.vt-morph::view-transition-new(root) { animation: vtIn 0.4s var(--ease) both
 .jobs { position: relative; }
 
 /* The script measures the line from the first dot to the end of the last role (--tl-len) and how much of it is
-   filled (--tl) */
+   filled (--tl). It's drawn as a stroke of a wet brush over the thin guide: one stretch of stroke (soft-edged, a little
+   uneven in width and in how much ink it holds) repeats down its length, and the filled part ends in a soft wet tip. */
 .motion .jobs::before {
     content: '';
     position: absolute;
-    left: 4.5px;
+    left: -0.5px;
     top: 20px;
     z-index: 1;
-    width: 2px;
+    width: 12px;
     height: var(--tl-len, 0px);
-    border-radius: 2px;
     background: var(--accent);
-    transform: scaleY(var(--tl, 0));
-    transform-origin: 50% 0;
+    --brush: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='300' viewBox='0 0 12 300'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-opacity='0.84'/%3E%3Cstop offset='0.2' stop-opacity='0.96'/%3E%3Cstop offset='0.45' stop-opacity='0.86'/%3E%3Cstop offset='0.7' stop-opacity='1'/%3E%3Cstop offset='0.85' stop-opacity='0.9'/%3E%3Cstop offset='1' stop-opacity='0.84'/%3E%3C/linearGradient%3E%3Cfilter id='s' filterUnits='userSpaceOnUse' x='0' y='0' width='12' height='300'%3E%3CfeGaussianBlur stdDeviation='0.5 0'/%3E%3C/filter%3E%3C/defs%3E%3Cpath d='M3.76 0 L3.69 5 L3.69 10 L3.76 15 L3.87 20 L3.96 25 L3.99 30 L3.95 35 L3.85 40 L3.73 45 L3.62 50 L3.56 55 L3.53 60 L3.50 65 L3.43 70 L3.30 75 L3.12 80 L2.93 85 L2.79 90 L2.73 95 L2.77 100 L2.90 105 L3.06 110 L3.21 115 L3.32 120 L3.41 125 L3.51 130 L3.64 135 L3.83 140 L4.06 145 L4.29 150 L4.46 155 L4.54 160 L4.52 165 L4.43 170 L4.33 175 L4.25 180 L4.23 185 L4.23 190 L4.24 195 L4.22 200 L4.14 205 L4.02 210 L3.91 215 L3.84 220 L3.85 225 L3.93 230 L4.04 235 L4.14 240 L4.17 245 L4.14 250 L4.05 255 L3.96 260 L3.91 265 L3.91 270 L3.95 275 L4.00 280 L4.01 285 L3.96 290 L3.87 295 L3.76 300 L8.69 300 L8.46 295 L8.23 290 L8.04 285 L7.91 280 L7.81 275 L7.72 270 L7.61 265 L7.46 260 L7.30 255 L7.17 250 L7.13 245 L7.19 240 L7.33 235 L7.52 230 L7.70 225 L7.83 220 L7.90 215 L7.93 210 L7.96 205 L8.02 200 L8.13 195 L8.25 190 L8.35 185 L8.39 180 L8.36 175 L8.27 170 L8.16 165 L8.09 160 L8.09 155 L8.16 150 L8.27 145 L8.36 140 L8.41 135 L8.40 130 L8.35 125 L8.31 120 L8.31 115 L8.36 110 L8.45 105 L8.54 100 L8.57 95 L8.54 90 L8.44 85 L8.33 80 L8.25 75 L8.24 70 L8.31 65 L8.42 60 L8.54 55 L8.62 50 L8.64 45 L8.63 40 L8.63 35 L8.65 30 L8.73 25 L8.83 20 L8.92 15 L8.94 10 L8.86 5 L8.69 0 Z' fill='url(%23g)' filter='url(%23s)'/%3E%3C/svg%3E");
+    --brush-fill: linear-gradient(#000 calc(var(--tl, 0) * 100% - 14px), transparent calc(var(--tl, 0) * 100%));
+    -webkit-mask: var(--brush) 0 0 / 12px 300px repeat-y, var(--brush-fill);
+    mask: var(--brush) 0 0 / 12px 300px repeat-y, var(--brush-fill);
+    -webkit-mask-composite: source-in, source-over;
+    mask-composite: intersect, add;
 }
 
 /* Each role's dot starts hollow and lights up when the line reaches it */

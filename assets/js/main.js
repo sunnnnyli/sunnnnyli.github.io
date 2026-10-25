@@ -36,15 +36,26 @@
     const jobEls = [...jobsEl.querySelectorAll('.job')];
     const jobsEnd = jobsEl.querySelector('.jobs-end'); // the note at the timeline's end
     const scenes = [...document.querySelectorAll('[data-scene]')];
-    const faders = [...document.querySelectorAll('.fades')]; // sections that dim under the next as they leave
-    const holders = [...document.querySelectorAll('.holds')]; // sections whose last screen holds under the next
+    // Sections whose last screen holds still under the next. Projects does only when its row isn't pinned (phones,
+    // see layoutGallery); pinned, the row holds itself.
+    const holders = [...document.querySelectorAll('.holds, #projects')];
     const gallery = document.querySelector('.gallery');
+    const projects = gallery.closest('section');
     const cards = [...document.querySelectorAll('.card')];
 
     // An element's top on the page, from layout alone, so nothing an animation moves counts
     const pageTop = (el) => {
         let top = 0;
         for (let e = el; e; e = e.offsetParent) top += e.offsetTop + (e.offsetParent ? e.offsetParent.clientTop : 0); // offsets start inside borders
+        return top;
+    };
+
+    // Where to scroll so an element sits just clear of the top bar. Worked out with any held content back where it sits
+    // on the page (see .holds in styles.css), since held content may be stuck somewhere else right now.
+    const scrollTopFor = (el) => {
+        root.classList.add('measuring');
+        const top = el.getBoundingClientRect().top + window.scrollY - (parseFloat(getComputedStyle(root).scrollPaddingTop) || 0);
+        root.classList.remove('measuring');
         return top;
     };
 
@@ -382,6 +393,7 @@
     const layoutGallery = () => {
         pinnedDist = null;
         gallery.classList.remove('gallery--free');
+        projects.classList.remove('holds');
         if (!motion) {
             gallery.style.height = '';
             return;
@@ -394,6 +406,7 @@
             - progress.offsetHeight - parseFloat(getComputedStyle(progress).marginTop) - 16;
         if (track.offsetHeight > room) {
             gallery.classList.add('gallery--free');
+            projects.classList.add('holds'); // so it holds under Education like the other sections
             gallery.style.height = '';
             return;
         }
@@ -515,10 +528,6 @@
         // redo the page layout after each change, which is what makes phones stutter.
         const track = measureTrack(y, max);
         const holdCover = motion ? holders.map((sec) => clamp(1 - sec.nextElementSibling.getBoundingClientRect().top / vh)) : [];
-        const fadeE = motion && !sda ? faders.map((sec) => {
-            const r = sec.getBoundingClientRect();
-            return r.bottom < -vh || r.bottom > vh * 2 ? null : clamp((vh - r.bottom) / vh);
-        }) : [];
         const sceneP = motion && !sda ? scenes.map((sc) => {
             const r = sc.getBoundingClientRect();
             if (r.bottom < -vh || r.top > vh * 2) return null;
@@ -583,12 +592,6 @@
             sec._cover = c;
             sec.style.setProperty('--cover', c.toFixed(4));
         });
-        fadeE.forEach((e, i) => {
-            const sec = faders[i];
-            if (e === null || sec._e === e) return;
-            sec._e = e;
-            sec.style.setProperty('--e', e.toFixed(4));
-        });
         sceneP.forEach((p, i) => {
             const sc = scenes[i];
             if (p === null || sc._p === p) return;
@@ -636,7 +639,6 @@
         } else {
             document.querySelectorAll('[data-count]').forEach((el) => { el.textContent = fmt(el, Number(el.dataset.count)); });
             scenes.forEach((sc) => { sc.style.removeProperty('--p'); sc._p = undefined; });
-            faders.forEach((sec) => { sec.style.removeProperty('--e'); sec._e = undefined; });
             holders.forEach((sec) => { sec.style.removeProperty('--cover'); sec._cover = undefined; });
         }
 
@@ -1196,11 +1198,7 @@
         const target = document.querySelector(hash);
         if (!target) return;
         history.pushState(null, '', hash);
-        // Worked out with any holding content back in place (see .holds in styles.css), and clear of the top bar
-        root.classList.add('measuring');
-        const top = target.getBoundingClientRect().top + window.scrollY - (parseFloat(getComputedStyle(root).scrollPaddingTop) || 0);
-        root.classList.remove('measuring');
-        window.scrollTo({ top, behavior: motion ? 'smooth' : 'auto' });
+        window.scrollTo({ top: scrollTopFor(target), behavior: motion ? 'smooth' : 'auto' });
         // Keyboard focus moves there too, so Tab carries on from the new spot.
         if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
         target.focus({ preventScroll: true });
@@ -1433,7 +1431,7 @@
             const top = pageTop(gallery);
             window.scrollTo({ top: top + clamp(card._c, 0, pinnedDist), behavior });
         } else {
-            row.scrollIntoView({ behavior, block: 'start' });
+            window.scrollTo({ top: scrollTopFor(row), behavior });
             row.scrollBy({ left: offCenter(card), behavior });
         }
     };
