@@ -382,8 +382,10 @@
 
     if (motion) {
         initMotion(true);
-        decodeIntro();
+        if (!root.classList.contains('again')) decodeIntro(); // back again in the same visit: no opening (see the head)
     }
+    // This visit has seen the page open now, so coming back to it skips the opening
+    try { sessionStorage.setItem('opened', '1'); } catch (e) {}
 
     /* ---------- Scroll engine ---------- */
     // Each [data-scene] gets --p (0 → 1). Pinned scenes measure progress through their own height;
@@ -754,6 +756,8 @@
     // "Next project" at the end of each write-up steps through them in card order without closing. The page behind
     // moves to that project's card, so closing still shrinks back into the right one.
     const panels = [...document.querySelectorAll('.panel')];
+    // The write-ups (each opened from its project card); the others, like How this site is built, stand apart
+    const projectPanels = [...document.querySelectorAll('.card [data-panel]')].map((btn) => document.getElementById(btn.dataset.panel));
     const switchPanel = (from, to) => {
         const returnUrl = from._returnUrl; // closing the next one puts the address back to where the first began
         from.close();
@@ -766,14 +770,15 @@
         showPanelUrl(to);
         to._returnUrl = returnUrl;
     };
-    panels.forEach((panel, i) => {
-        const next = panels[(i + 1) % panels.length];
+    projectPanels.forEach((panel, i) => {
+        const next = projectPanels[(i + 1) % projectPanels.length];
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'panel-next';
         btn.innerHTML = '<span class="panel-next-label">Next project</span> <span class="panel-next-name"></span>';
         btn.querySelector('.panel-next-name').textContent = next.querySelector('h2').textContent;
         btn.insertAdjacentHTML('beforeend', '<span class="chev" aria-hidden="true">→</span>');
+        btn.setAttribute('aria-keyshortcuts', 'ArrowRight');
         btn.addEventListener('click', () => switchPanel(panel, next));
         panel.querySelector('.panel-inner').append(btn);
     });
@@ -910,19 +915,10 @@
         panel.addEventListener('touchcancel', release);
     });
 
-    // Each write-up shows its project's diagram under the title, held near the top while the text scrolls under it.
-    // With motion on, it plays through its stages on its own while the write-up is open, one at a time (each part's
-    // data-step lists the stages it's lit in), then shows the whole diagram for a moment and starts again. With motion
-    // off it simply shows the whole diagram.
-    panels.forEach((panel) => {
-        const card = panelCard.get(panel);
-        const svg = card && card.querySelector('.art-dg svg');
-        if (!svg) return;
-        const art = document.createElement('div');
-        art.className = 'panel-art art-dg drawn';
-        art.setAttribute('aria-hidden', 'true');
-        art.append(svg.cloneNode(true));
-        panel.querySelector('h2').after(art);
+    // Project diagrams can play through their stages, one at a time (each part's data-step lists the stages it's lit
+    // in), then show whole for a moment and start again: a write-up's for as long as it's open, a card's while the
+    // mouse is over the card. With motion off they simply show whole.
+    const diagramPlayer = (art, startAfter) => {
         const parts = [...art.querySelectorAll('[data-step]')];
         const stages = Math.max(...parts.flatMap((el) => el.dataset.step.split(' ').map(Number)));
         let stage = 0; // 0 is the whole diagram
@@ -933,22 +929,58 @@
             art.classList.toggle('solo', art.querySelectorAll('.dg-node.on').length === 1);
         };
         const play = () => {
-            if (!panel.open || !motion) {
-                stage = 0;
-                light();
-                return;
-            }
-            stage = stage < stages ? stage + 1 : 0;
+            stage = motion && stage < stages ? stage + 1 : 0;
             light();
-            timer = setTimeout(play, stage === 0 ? 1600 : stage === stages ? 1800 : 1300);
+            if (motion) timer = setTimeout(play, stage === 0 ? 1600 : stage === stages ? 1800 : 1300);
         };
-        // Starts from the whole diagram each time the write-up opens, and stops when it closes
-        new MutationObserver(() => {
+        const stop = () => {
             clearTimeout(timer);
             stage = 0;
             light();
-            if (panel.open && motion) timer = setTimeout(play, 700);
-        }).observe(panel, { attributes: true, attributeFilter: ['open'] });
+            art.classList.remove('playing');
+        };
+        const start = () => {
+            stop();
+            if (!motion) return;
+            // Playing (pauses on the whole diagram included), a card's nodes don't pulse on their own; from now on its
+            // parts fade together, not left to right as when it drew in
+            art.classList.add('playing', 'played');
+            timer = setTimeout(play, startAfter);
+        };
+        return { start, stop };
+    };
+    // Each write-up shows its project's diagram under the title, held near the top while the text scrolls under it,
+    // playing from the whole diagram each time the write-up opens
+    panels.forEach((panel) => {
+        const card = panelCard.get(panel);
+        const svg = card && card.querySelector('.art-dg svg');
+        if (!svg) return;
+        const art = document.createElement('div');
+        art.className = 'panel-art art-dg drawn';
+        art.setAttribute('aria-hidden', 'true');
+        art.append(svg.cloneNode(true));
+        panel.querySelector('h2').after(art);
+        const player = diagramPlayer(art, 700);
+        new MutationObserver(() => (panel.open ? player.start() : player.stop())).observe(panel, { attributes: true, attributeFilter: ['open'] });
+    });
+    // A card's diagram plays while the mouse is over the card (touch screens have no hovering, so theirs rest)
+    cards.forEach((card) => {
+        const art = card.querySelector('.art-dg');
+        if (!art) return;
+        const player = diagramPlayer(art, 250);
+        card.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') player.start(); });
+        card.addEventListener('pointerleave', player.stop);
+    });
+
+    // With a write-up open, ← and → step to the previous and next project (round, like Next project)
+    document.addEventListener('keydown', (e) => {
+        if ((e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+        if (e.target.closest && e.target.closest('input, textarea, select, [contenteditable]')) return;
+        const from = projectPanels.find((panel) => panel.open);
+        if (!from) return;
+        e.preventDefault();
+        const i = projectPanels.indexOf(from) + (e.key === 'ArrowRight' ? 1 : -1);
+        switchPanel(from, projectPanels[(i + projectPanels.length) % projectPanels.length]);
     });
 
     // A write-up link followed while the page is already open
@@ -1277,7 +1309,9 @@
         document.querySelectorAll('[data-panel]').forEach((btn) => {
             const panel = document.getElementById(btn.dataset.panel);
             const title = panel && panel.querySelector('h2, h3');
-            if (title) list.push({ group: 'Projects', label: title.textContent.trim(), keys: 'project read case study', icon: ICON.read, panel });
+            if (!title) return;
+            if (btn.closest('.card')) list.push({ group: 'Projects', label: title.textContent.trim(), keys: 'project read case study', icon: ICON.read, panel });
+            else list.push({ group: 'Actions', label: title.textContent.trim(), keys: 'colophon about site source code fonts built', icon: ICON.read, panel });
         });
         if (email) {
             list.push({
@@ -2019,15 +2053,19 @@
         document.addEventListener('pointerdown', (e) => { if (!proverb.contains(e.target)) proverb.classList.remove('show'); });
     }
 
-    /* ---------- Coming back from the résumé ---------- */
-    // The page remembers where it was when the visitor leaves. If they come back through the résumé's Back link
-    // without the browser's own Back (see resume.js), it puts them at the same spot, again once the fonts settle.
+    /* ---------- Coming back to the page ---------- */
+    // The page remembers where it was when the visitor leaves, and puts them back at the same spot, before it's first
+    // shown, when they return by the résumé's Back link (see resume.js), or by the browser's back button or a reload
+    // that loads the page again (rather than restoring it as it was). The browser's own restoring can run before the
+    // page has grown to its full height and land short. It's set once more when the fonts settle.
     window.addEventListener('pagehide', () => {
         try { sessionStorage.setItem('returnY', String(Math.round(window.scrollY))); } catch (e) {}
     });
     let returnY = 0;
     try {
-        if (sessionStorage.getItem('fromResume')) returnY = Number(sessionStorage.getItem('returnY')) || 0;
+        const nav = performance.getEntriesByType('navigation')[0];
+        const loadedAgain = nav && (nav.type === 'back_forward' || nav.type === 'reload');
+        if (sessionStorage.getItem('fromResume') || loadedAgain) returnY = Number(sessionStorage.getItem('returnY')) || 0;
         sessionStorage.removeItem('fromResume');
     } catch (e) {}
     if (returnY) {

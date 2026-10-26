@@ -32,6 +32,8 @@
             if (m ? m === 'on' : !matchMedia('(prefers-reduced-motion: reduce)').matches) root.classList.add('motion');
         })();
     </script>
+    <!-- Asks for the eased page transitions here, not only in styles.css: Chrome decides whether a page wants them before a stylesheet is always read (opened from disk, or on a busy machine), and then skips them -->
+    <style>@view-transition { navigation: auto; types: page; }</style>
     <link rel="stylesheet" href="assets/css/styles.css">
     <style>
         /* This page only: a short top bar, then one centered message */

@@ -63,13 +63,26 @@
             const on = pref ? pref === 'on' : !matchMedia('(prefers-reduced-motion: reduce)').matches;
             if (on && 'IntersectionObserver' in window) {
                 document.documentElement.classList.add('motion');
-                // The first screen's text stays hidden until the script scrambles it to decode (see .intro in
-                // styles.css), or for three seconds at most, in case the script never runs
-                document.documentElement.classList.add('intro');
-                setTimeout(() => document.documentElement.classList.remove('intro'), 3000);
+                // Back again in the same visit (from the résumé, say), the first screen is shown as it was left, without
+                // its opening (see .again in styles.css). A reload plays it again.
+                let again = false;
+                try {
+                    const nav = performance.getEntriesByType('navigation')[0];
+                    again = sessionStorage.getItem('opened') === '1' && !(nav && nav.type === 'reload');
+                } catch (e) {}
+                if (again) {
+                    document.documentElement.classList.add('again');
+                } else {
+                    // The first screen's text stays hidden until the script scrambles it to decode (see .intro in
+                    // styles.css), or for three seconds at most, in case the script never runs
+                    document.documentElement.classList.add('intro');
+                    setTimeout(() => document.documentElement.classList.remove('intro'), 3000);
+                }
             }
         })();
     </script>
+    <!-- Asks for the eased page transitions here, not only in styles.css: Chrome decides whether a page wants them before a stylesheet is always read (opened from disk, or on a busy machine), and then skips them -->
+    <style>@view-transition { navigation: auto; types: page; }</style>
     <link rel="stylesheet" href="assets/css/styles.css">
     <script src="assets/js/ink.js" defer></script>
     <script src="assets/js/main.js" defer></script>
@@ -402,7 +415,7 @@
                             <article class="card spot" id="project-pocer" data-name="Bug PoCer" data-skills="Python, C#, Solidity, Forge (Foundry), OpenAI API">
                                 <div class="card-art art-dg" aria-hidden="true">
                                     <svg viewBox="0 0 300 150" preserveAspectRatio="xMidYMid meet">
-                                        <circle data-step="1 2 3 4" class="dg-orbit" cx="150" cy="75" r="48"/>
+                                        <circle data-step="1 2 3 4" class="dg-orbit" cx="150" cy="75" r="48" pathLength="304"/>
                                         <g data-step="1" class="dg-node" style="--i:0"><rect x="116" y="15" width="68" height="23" rx="11.5"/><text x="150" y="30" text-anchor="middle">Ideate</text></g>
                                         <g data-step="2" class="dg-node" style="--i:1"><rect x="190" y="64" width="68" height="23" rx="11.5"/><text x="224" y="79" text-anchor="middle">Exploit</text></g>
                                         <g data-step="3" class="dg-node" style="--i:2"><rect x="116" y="112" width="68" height="23" rx="11.5"/><text x="150" y="127" text-anchor="middle">Parse</text></g>
@@ -570,6 +583,7 @@
                 <span class="footer-meta">Last updated <span id="updated">October 2026</span></span>
             </p>
             <p class="footer-side footer-actions">
+                <button class="footer-link" type="button" data-panel="panel-colophon"><span class="lk-t">How this site is built</span></button><span class="sep"><span class="visually-hidden">, </span></span>
                 <span class="footer-kbd" hidden><kbd class="kbd-mod">Ctrl</kbd> <kbd>K</kbd> to jump anywhere<span class="sep"><span class="visually-hidden">, </span></span></span>
                 <a href="#top"><span class="lk-t">Back to top</span> ↑</a>
             </p>
@@ -645,6 +659,33 @@
                 <h3>What I built</h3>
                 <p>The dashboard: it fetches each manuscript's valid actions from the backend workflow API, shows only the ones the viewer's role (editor, author, or referee) allows, and sends transitions through an Axios client with inline error handling. I also built the login flow and landing page, with Jest and React Testing Library component tests, shipped through a branch-and-merge workflow to a deployed Heroku app.</p>
             <ul class="chips" aria-label="Technologies"><li>React</li><li>Jest</li><li>React Testing Library</li><li>Axios</li><li>Flask API</li><li>Heroku</li></ul>
+        </div>
+    </dialog>
+
+    <dialog class="panel" id="panel-colophon" aria-labelledby="panel-colophon-title">
+        <div class="panel-inner">
+            <div class="panel-top">
+                <p class="panel-meta">About this site</p>
+                <div class="panel-tools">
+                    <button class="panel-link" type="button"><svg class="i-link" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13.5a4 4 0 0 0 5.7.3l3-3a4 4 0 0 0-5.7-5.6l-1.3 1.3"/><path d="M14 10.5a4 4 0 0 0-5.7-.3l-3 3a4 4 0 0 0 5.7 5.6l1.3-1.3"/></svg><svg class="i-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span class="panel-link-label">Copy link</span></button>
+                    <button class="panel-close" type="button" aria-label="Close" autofocus>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                    </button>
+                </div>
+            </div>
+            <span class="visually-hidden panel-status" role="status"></span>
+            <h2 id="panel-colophon-title">How this site is built</h2>
+                <h3>By hand</h3>
+                <p>Plain HTML, CSS, and JavaScript that I write myself: no framework, no build step, and no trackers. GitHub Pages serves it straight from the repository.</p>
+                <h3>Type</h3>
+                <p>Newsreader for reading, Instrument Sans for labels, and JetBrains Mono for the diagrams. The proverb is set in Ma Shan Zheng, cut down to just the characters it needs, so it loads in a blink.</p>
+                <h3>Motion</h3>
+                <p>Scroll effects run on the browser's own scroll-driven animations where it has them, and page and theme changes use view transitions. All of it follows your reduced-motion setting, and the pause button in the top bar turns it off.</p>
+                <h3>For everyone</h3>
+                <p>Contrast follows your system too, with a button for more. Everything works from the keyboard (Ctrl+K, or ⌘K on a Mac, jumps anywhere), and the site keeps a copy of itself so it opens fast and still works offline.</p>
+                <h3>Checked on every update</h3>
+                <p>Each update runs automatic checks for broken links and for Lighthouse's accessibility, best practices, and SEO scores. <a class="panel-src" href="https://github.com/sunnnnyli/sunnnnyli.github.io">The source is on GitHub.</a></p>
+            <ul class="chips" aria-label="Built with"><li>HTML</li><li>CSS</li><li>JavaScript</li><li>GitHub Pages</li><li>GitHub Actions</li></ul>
         </div>
     </dialog>
 

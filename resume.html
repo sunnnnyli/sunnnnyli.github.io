@@ -55,6 +55,8 @@
             e.viewTransition.finished.then(() => html.classList.remove('vt-in'));
         });
     </script>
+    <!-- Asks for the eased page transitions here, not only in styles.css: Chrome decides whether a page wants them before a stylesheet is always read (opened from disk, or on a busy machine), and then skips them -->
+    <style>@view-transition { navigation: auto; types: page; }</style>
     <link rel="stylesheet" href="assets/css/styles.css">
     <link rel="stylesheet" href="assets/css/resume.css">
     <script src="assets/js/ink.js" defer></script>
