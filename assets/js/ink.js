@@ -237,3 +237,92 @@ window.spreadTheme = (() => {
         if (it && it.host === e.target) lift(it.lk);
     });
 })();
+// The progress lines (the tab track on desktop, the line under the top bar on phones, the project row's bar, a
+// write-up's line, and the résumé's) painted as one long dry-brush stroke: a slanted press where it starts, like the first stroke of 一, a solid
+// core that narrows as the brush dries, and bristles around it that skip more and more, so streaks of paper show
+// through toward the end. Each line's stroke is drawn once for its width (and again if that changes) as a mask,
+// --brush, and styles.css shows it up to the reading position with a soft front edge. Until it's drawn, or where
+// masks can't be combined, they stay plain lines.
+(() => {
+    const TAU = Math.PI * 2;
+    const rand = (a, b) => a + Math.random() * (b - a);
+    const f = (n) => n.toFixed(1);
+    // Each line, with its stroke's box height and thickness in px
+    const lines = [
+        ['.nav-track > span', 10, 3.2],
+        ['.nav-progress > span', 11, 4],
+        ['.gallery-progress > span', 11, 4],
+        ['.panel-progress > span', 11, 4],
+        ['.r-progress > span', 11, 4],
+    ];
+
+    const stroke = (W, H, T) => {
+        const y0 = H / 2;
+        const N = Math.max(60, Math.round(W / 4));
+        const [wave, waves, wavePhase] = [T * 0.12, rand(1.2, 2.4), rand(0, TAU)];
+        const [push, pushes, pushPhase] = [0.16, rand(3, 6), rand(0, TAU)];
+        // How dry the brush is along the way: drier toward the end, with a few patches where it skipped early
+        const patches = Array.from({ length: 2 + Math.floor(W / 500) }, () => [rand(0.12, 0.8), rand(0.03, 0.07)]);
+        const dry = (u) => Math.min(1, 0.12 + 0.7 * Math.pow(u, 1.3) + Math.max(0, ...patches.map(([c, w]) => Math.max(0, 1 - Math.abs(u - c) / w) * 0.45)));
+        const half = (u) => (T / 2) * (1 + push * Math.sin(TAU * pushes * u + pushPhase)) * (u > 0.97 ? 1 + ((u - 0.97) / 0.03) * 0.25 : 1);
+        const x0 = T * 0.6;
+        const at = (i) => {
+            const u = i / N;
+            return [x0 + (W - 1 - x0) * u, y0 + wave * Math.sin(TAU * waves * u + wavePhase), u];
+        };
+        // The core, solid, narrowing from the stroke's full width to about a third of it
+        const top = [];
+        const bottom = [];
+        for (let i = 0; i <= N; i++) {
+            const [x, y, u] = at(i);
+            const w = half(u) * (1 - 0.62 * Math.pow(u, 0.8));
+            top.push(`${f(x)} ${f(y - w)}`);
+            bottom.push(`${f(x)} ${f(y + w)}`);
+        }
+        let ink = `<path d="M${top.join(' L')} L${bottom.reverse().join(' L')} Z"/>`;
+        // The press where it starts: the brush comes down at a slant, then turns to run along
+        const cx = f(T * 1.05);
+        const cy = f(y0 - T * 0.1);
+        ink += `<ellipse cx="${cx}" cy="${cy}" rx="${f(T * 1.15)}" ry="${f(T * 0.62)}" transform="rotate(-28 ${cx} ${cy})"/>`;
+        // The bristles across its full width, each skipping where it lifts off the paper, the outer ones most
+        for (let k = 0; k < 6; k++) {
+            const spread = (k / 5 - 0.5) * 1.65;
+            const edge = Math.abs(spread) > 0.6;
+            const pts = [];
+            for (let i = 0; i <= N; i++) {
+                const [x, y, u] = at(i);
+                pts.push(`${f(x)} ${f(y + spread * half(u) * 0.78)}`);
+            }
+            const dash = [];
+            for (let x = 0; x < W;) {
+                const d = Math.min(1, dry(x / W) * (edge ? 1.35 : 1));
+                const on = rand(10, 90) * (1 - d * 0.8) + 2;
+                const off = rand(0.6, 1.4) + d * rand(1.5, 7);
+                dash.push(f(on), f(off));
+                x += on + off;
+            }
+            ink += `<path d="M${pts.join(' L')}" fill="none" stroke="#000" stroke-width="${f(T * (edge ? 0.2 : 0.26))}" stroke-dasharray="${dash.join(' ')}"/>`;
+        }
+        return `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${ink}</svg>`)}")`;
+    };
+
+    const paint = (span, H, T) => {
+        const W = span.parentElement.offsetWidth;
+        if (!W || W === span._brushW) return; // hidden (the phone's line on a desktop, a closed write-up), or unchanged
+        span._brushW = W;
+        span.style.setProperty('--brush', stroke(W, H, T));
+        span.style.setProperty('--bh', `${H}px`);
+        span.style.setProperty('--bt', `${T}px`);
+        span.classList.add('brushed');
+    };
+    const start = () => {
+        if (!window.ResizeObserver || !window.CSS || !(CSS.supports('mask-composite', 'intersect') || CSS.supports('-webkit-mask-composite', 'source-in'))) return;
+        lines.forEach(([sel, H, T]) => document.querySelectorAll(sel).forEach((span) => {
+            new ResizeObserver(() => paint(span, H, T)).observe(span.parentElement);
+        }));
+    };
+    // Once the page's own scripts have run: main.js, which comes after this file, adds each write-up's line. Deferred
+    // scripts run while the page already counts as interactive, before DOMContentLoaded, so that's the event to wait for.
+    if (document.readyState === 'complete') start();
+    else document.addEventListener('DOMContentLoaded', start);
+})();

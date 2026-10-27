@@ -19,7 +19,6 @@ const CORE = [
     './assets/fonts/instrument-sans-latin.woff2',
     './assets/fonts/jetbrains-mono-latin.woff2',
     './assets/fonts/ma-shan-zheng-proverb.woff2',
-    './assets/fonts/ma-shan-zheng-numerals.woff2',
     './assets/img/grain-light.png',
     './assets/img/grain-dark.png',
     './assets/icons/favicon.svg',

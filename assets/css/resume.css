@@ -292,7 +292,15 @@
     .r-item:hover :is(.r-where, .r-when) { color: var(--text); }
 }
 
-/* Reading progress along the bottom of the top bar */
+/* Reading progress along the bottom of the top bar. --read-at is how far down the page you are, 0 to 1: the browser
+   tracks it with the scroll where it can, and elsewhere resume.js sets --scroll. Once ink.js has drawn it, it's a brush
+   stroke (see "Brush progress lines" in styles.css). */
+@property --read-at {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 0;
+}
+
 .r-progress {
     position: absolute;
     left: 0;
@@ -303,10 +311,11 @@
 }
 
 .r-progress span {
+    --read-at: var(--scroll, 0);
     display: block;
     height: 100%;
     background: var(--accent);
-    transform: scaleX(var(--scroll, 0));
+    transform: scaleX(var(--read-at));
     transform-origin: 0 50%;
 }
 
@@ -315,8 +324,8 @@
 }
 
 @keyframes rProgress {
-    from { transform: scaleX(0); }
-    to { transform: scaleX(1); }
+    from { --read-at: 0; }
+    to { --read-at: 1; }
 }
 
 /* My signature closes the page and signs itself once when you reach it */

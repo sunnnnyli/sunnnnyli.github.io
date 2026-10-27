@@ -393,6 +393,8 @@
     let pinnedDist = null; // how far the pinned gallery scrolls sideways; null when it isn't pinned
     let pinnedHold = 0; // and how long it then holds still while Education rises over it (a screen)
     const layoutGallery = () => {
+        // Where the swipeable row is, since measuring below hides the card copies for a moment, which would pull it back
+        const rowLeft = gallery.querySelector('.gallery-sticky').scrollLeft;
         pinnedDist = null;
         gallery.classList.remove('gallery--free');
         projects.classList.remove('holds');
@@ -410,6 +412,7 @@
             gallery.classList.add('gallery--free');
             projects.classList.add('holds'); // so it holds under Education like the other sections
             gallery.style.height = '';
+            sticky.scrollLeft = rowLeft;
             return;
         }
         const dist = Math.max(0, track.offsetWidth - sticky.clientWidth);
@@ -423,6 +426,7 @@
         gallery.style.height = `${dist + window.innerHeight + pinnedHold}px`;
         gallery.style.setProperty('--vw', window.innerWidth);
         cards.forEach((card) => card.style.setProperty('--c', card._c.toFixed(1)));
+        sticky.scrollLeft = 0; // where the swipeable row was left doesn't carry over to the pinned one
     };
 
     const navTrack = document.querySelector('.nav-track');
@@ -1040,8 +1044,8 @@
     // When something's copied, a check mark is written in ink over the button's icon, the way a teacher ticks a page:
     // pressed at the start, a little heavier at the turn, then flicked up and to the right, thinning until the brush
     // runs dry. It's painted on a small canvas in the button's accent color, with a touch of paper grain rubbed out of
-    // it, and the dry bristles break up differently every time. It fades after a second and the icon's own check comes
-    // back. With motion off it's skipped, and the check icon says it alone.
+    // it, and the dry bristles break up differently every time. It stays while the button says it's copied, then fades
+    // out as the copy icon fades back in. With motion off it's skipped, and the check icon says it alone.
     const inkTick = (() => {
         const TAU = Math.PI * 2;
         const c01 = (x) => Math.max(0, Math.min(1, x));
@@ -1072,7 +1076,8 @@
         };
         // How much is written t ms in: the stroke down by 95, a beat at the turn, then the flick, quickening, by 275
         const written = (t) => (t < 95 ? turn * smooth(t / 95) : t < 125 ? turn : turn + (1 - turn) * Math.pow(c01((t - 125) / 150), 1.5));
-        const SPAN = 1450; // fading out over the last 450ms
+        const FADE = 450; // ms, once the button's back to its copy icon
+        const LONGEST = 6000; // and in any case by then
         let grain = null;
         const runs = new Map();
         let looping = false;
@@ -1127,19 +1132,23 @@
         };
         const end = (btn) => {
             runs.get(btn).c.remove();
-            btn.classList.remove('inking');
+            btn.classList.remove('inking', 'ink-cover');
             runs.delete(btn);
         };
         const step = (now) => {
             runs.forEach((run, btn) => {
                 const t = now - run.start;
-                if (t >= SPAN) {
-                    end(btn);
-                    return;
-                }
                 if (!run.dry) paint(run, t); // once it's all written, only the fading changes
                 run.dry = t > 280;
-                run.c.style.opacity = 1 - smooth((t - 1000) / 450);
+                if (run.fading === undefined) {
+                    if (btn.classList.contains('copied') && t < LONGEST) return;
+                    run.fading = now; // the button's gone back to its copy icon
+                    return; // drawn hidden for a frame first, so it fades in from there with the tick (see .ink-cover)
+                }
+                btn.classList.remove('ink-cover'); // the icon comes back; the tick stays put while it fades
+                const gone = (now - run.fading) / FADE;
+                if (gone >= 1) end(btn);
+                else run.c.style.opacity = 1 - smooth(gone);
             });
             if (runs.size) requestAnimationFrame(step);
             else looping = false;
@@ -1147,9 +1156,14 @@
 
         return (btn) => {
             if (!root.classList.contains('motion')) return;
-            const icon = [...btn.querySelectorAll('svg')].find((s) => s.getBoundingClientRect().width);
-            if (!icon) return;
             if (runs.has(btn)) end(btn); // copied again: a fresh tick
+            // The icon steps aside before anything's measured, or the check would be drawn for a moment first
+            btn.classList.add('inking', 'ink-cover');
+            const icon = [...btn.querySelectorAll('svg')].find((s) => s.getBoundingClientRect().width);
+            if (!icon) {
+                btn.classList.remove('inking', 'ink-cover');
+                return;
+            }
             if (!grain) {
                 grain = document.createElement('canvas');
                 grain.width = grain.height = 48;
@@ -1171,7 +1185,6 @@
             c.style.width = c.style.height = `${half * 2}px`;
             c.style.left = `${at.left + at.width / 2 - box.left - btn.clientLeft - half}px`;
             c.style.top = `${at.top + at.height / 2 - box.top - btn.clientTop - half}px`;
-            btn.classList.add('inking');
             btn.append(c);
             const rand = (a, b) => a + Math.random() * (b - a);
             const run = {
@@ -1238,6 +1251,24 @@
             }, 2000);
         });
     });
+
+    /* ---------- My local time, under the reply note ---------- */
+    // So someone writing from another time zone can tell whether it's the middle of my night. It keeps to the minute,
+    // and without the script the line simply isn't there.
+    const localTime = document.querySelector('.local-time');
+    if (localTime) {
+        const clock = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
+        const hour = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hourCycle: 'h23' });
+        const tick = () => {
+            const now = new Date();
+            const h = Number(hour.format(now));
+            const night = h >= 23 || h < 7;
+            localTime.textContent = `It’s ${clock.format(now)} for me in New York${night ? ', so I’ll write back in the morning' : ''}.`;
+            localTime.hidden = false;
+            setTimeout(tick, 60000 - (now.getTime() % 60000) + 50); // just after the next minute turns
+        };
+        tick();
+    }
 
     /* ---------- Printing: show final numbers, not a count-up in progress ---------- */
     const finishCounters = () => document.querySelectorAll('[data-count]').forEach((el) => { el.textContent = fmt(el, Number(el.dataset.count)); });
@@ -1684,6 +1715,27 @@
     // Shown when the row scrolls sideways on its own (phones, or with motion off) instead of following the page.
     const row = gallery.querySelector('.gallery-sticky');
     const dotRow = gallery.querySelector('.gallery-dots');
+    // The row loops: a copy of every card sits on each side of the real ones, so swiping (or pressing →) past the last
+    // card carries on round to the first, and ← from the first comes round to the last. Once a swipe settles on a
+    // copy, the row moves to the real card in its place, which looks no different. The copies are only for show:
+    // hidden from screen readers, out of reach of the keyboard, and left out of everything else that looks at the
+    // cards. The pinned row doesn't show them (.card-loop in styles.css).
+    cards.forEach((card, i) => { card._real = i; });
+    const copyOf = (card) => {
+        const copy = card.cloneNode(true);
+        copy.classList.add('card-loop');
+        [copy, ...copy.querySelectorAll('[id]')].forEach((el) => el.removeAttribute('id'));
+        copy.removeAttribute('data-name');
+        copy.removeAttribute('data-skills');
+        copy.querySelectorAll('.rv, .rv-scale').forEach((el) => el.classList.add('in'));
+        copy.setAttribute('aria-hidden', 'true');
+        copy.inert = true;
+        copy._real = card._real;
+        return copy;
+    };
+    const ring = [...cards.map(copyOf), ...cards, ...cards.map(copyOf)]; // along the row, left to right
+    cards[0].before(...ring.slice(0, cards.length));
+    cards[cards.length - 1].after(...ring.slice(cards.length * 2));
     const offCenter = (card) => {
         const r = row.getBoundingClientRect();
         const c = card.getBoundingClientRect();
@@ -1709,10 +1761,10 @@
     let aimed = null;
     let aimTimer;
     const aimAt = (i) => {
-        aimed = clamp(i, 0, cards.length - 1);
+        aimed = clamp(i, -cards.length, cards.length * 2 - 1); // past either end: on to the copies there
         clearTimeout(aimTimer);
         aimTimer = setTimeout(() => { aimed = null; }, 900);
-        scrollRowTo(cards[aimed]);
+        scrollRowTo(ring[aimed + cards.length]);
     };
     const arrow = (dir, label, path) => {
         const b = document.createElement('button');
@@ -1741,11 +1793,12 @@
         dotQueued = false;
         let best = 0;
         let bestOff = Infinity;
-        cards.forEach((card, i) => {
+        ring.forEach((card) => {
+            if (!card.offsetWidth) return; // a copy, while the row is pinned
             const off = Math.abs(offCenter(card));
             if (off < bestOff) {
                 bestOff = off;
-                best = i;
+                best = card._real;
             }
         });
         if (best === currentDot) return;
@@ -1754,9 +1807,6 @@
             if (i === best) d.setAttribute('aria-current', 'true');
             else d.removeAttribute('aria-current');
         });
-        // At either end the arrow dims but keeps focus, so keyboard users aren't dropped back to the top of the page
-        prevBtn.setAttribute('aria-disabled', String(best === 0));
-        nextBtn.setAttribute('aria-disabled', String(best === cards.length - 1));
     };
     const queueDots = () => {
         if (dotQueued) return;
@@ -1766,6 +1816,42 @@
     row.addEventListener('scroll', queueDots, { passive: true });
     window.addEventListener('resize', queueDots);
     afterPaint(syncDots);
+    // Once a swipe (or an arrow's slide) comes to rest on a copy, the row moves to the real card in its place
+    const settle = () => {
+        if (pinnedDist !== null) return;
+        let near = null;
+        let nearOff = Infinity;
+        ring.forEach((card) => {
+            const off = Math.abs(offCenter(card));
+            if (card.offsetWidth && off < nearOff) {
+                nearOff = off;
+                near = card;
+            }
+        });
+        if (!near || !near.classList.contains('card-loop')) return;
+        row.scrollTo({ left: row.scrollLeft + cards[near._real].offsetLeft - near.offsetLeft, behavior: 'instant' });
+        if (aimed !== null) aimed = near._real;
+    };
+    if ('onscrollend' in window) row.addEventListener('scrollend', settle);
+    else {
+        let settleTimer;
+        row.addEventListener('scroll', () => {
+            clearTimeout(settleTimer);
+            settleTimer = setTimeout(settle, 150);
+        }, { passive: true });
+    }
+    // The row starts on the real first card, with the last card's copy just showing at its left, and stays on the same
+    // card when its size changes. Pinned, it doesn't scroll sideways at all.
+    let homed = false;
+    const home = () => {
+        if (pinnedDist !== null) {
+            homed = false;
+            return;
+        }
+        row.scrollTo({ left: row.scrollLeft + offCenter(cards[homed ? Math.max(0, currentDot) : 0]), behavior: 'instant' });
+        homed = true;
+    };
+    new ResizeObserver(() => afterPaint(home)).observe(row);
 
     /* ---------- Toolkit: where each skill was used ---------- */
     // Picking a skill marks the roles and projects that used it (each lists its skills in data-skills)

@@ -223,17 +223,6 @@
     unicode-range: U+300C-300D, U+585E, U+5931, U+7109, U+77E5, U+798F, U+7FC1, U+975E, U+9A6C, U+FF0C;
 }
 
-/* The same brush, cut down to the five section numbers, 一 to 五 (about 2 KB). They're only decoration, so they wait
-   for it rather than showing in another font first. */
-@font-face {
-    font-family: "Ma Shan Zheng";
-    font-style: normal;
-    font-weight: 400;
-    font-display: block;
-    src: url("../fonts/ma-shan-zheng-numerals.woff2") format("woff2");
-    unicode-range: U+4E00, U+4E09, U+4E8C, U+4E94, U+56DB;
-}
-
 /* Zhi Mang Xing, a flowing running-script brush, cut down to the one character on the hidden surprise's seal, 福
    (about 1 KB). The card is built, hidden, as the page opens, so it's loaded long before the seal is pressed. License:
    zhi-mang-xing-OFL.txt. */
@@ -356,30 +345,6 @@ img, svg { -webkit-user-drag: none; }
     letter-spacing: -0.02em;
     line-height: 1.08;
 }
-
-/* The section's number in brush script, large and faint at the right of its heading (centered in Contact), rising in
-   with it. It sits behind everything else in the section, so it never covers a card. */
-.brush-num { position: relative; z-index: -1; height: 0; opacity: 0.08; pointer-events: none; }
-.container:has(> .brush-num) { isolation: isolate; }
-
-.brush-num > span {
-    position: absolute;
-    top: calc(4rem - 0.5em);
-    right: 0;
-    font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", var(--serif);
-    font-size: clamp(8rem, 20vw, 15rem);
-    font-weight: 400;
-    line-height: 1;
-    rotate: -4deg;
-}
-
-.contact .brush-num > span { top: calc(3.5rem - 0.5em); right: auto; left: 50%; translate: -50% 0; }
-
-/* In Projects the gallery starts right where the heading ends and paints over anything hanging below it, so there the
-   number rests on the heading's bottom edge instead */
-.projects-head { position: relative; }
-.projects-head > .brush-num { position: absolute; inset: auto 0 0; }
-.projects-head > .brush-num > span { top: auto; bottom: -0.06em; }
 
 /* Buttons and links */
 .pill {
@@ -1717,6 +1682,13 @@ html:not(.motion) .dot-grid canvas { display: none; }
 .motion .gallery--free .card { transform: none; opacity: 1; }
 .motion .gallery--free .gallery-progress { display: none; }
 
+/* The swipeable row loops: the script puts a copy of every card on each side of the real ones. The pinned row
+   doesn't use them. */
+.card.card-loop { display: none; }
+
+html:not(.motion) .card.card-loop,
+.motion .gallery--free .card.card-loop { display: flex; }
+
 /* Pinned, the row holds one more screen once its cards have slid by, while Education rises over it: the slide runs
    over the first part (--slide, which its cards and progress bar follow) and the hold is the rest (--cover), as the
    row steps back a little. The script sets the slide's length (--dist) and the hold's (--hold), in pixels. */
@@ -1891,6 +1863,9 @@ html:not(.motion) .dot-grid canvas { display: none; }
     color: var(--text-3);
 }
 
+/* The time where I am, on its own line under the reply note (the script fills it in) */
+.local-time { display: block; margin-top: 0.25rem; font-variant-numeric: tabular-nums; text-wrap: balance; }
+
 /* ================= Footer ================= */
 .footer {
     padding: 1.5rem 0 calc(2rem + var(--safe-bottom));
@@ -1988,12 +1963,13 @@ html:not(.motion) .dot-grid canvas { display: none; }
 .copy-btn.copied .i-copy { display: none; }
 .copy-btn.copied .i-check { display: block; }
 
-/* When something's copied, a brush tick is written in ink over the button's icon (inkTick in main.js), and the icon
-   steps aside until it fades */
+/* When something's copied, a brush tick is written in ink over the button's icon (inkTick in main.js). The button
+   holds the tick in place until it's gone (.inking); the icon steps aside while the tick shows (.ink-cover), and the
+   copy icon fades back in as the tick fades out. */
 .inking { position: relative; }
 .ink-tick { position: absolute; z-index: 1; pointer-events: none; }
-:is(.copy-btn, .panel-link, .anchor-btn) > svg { transition: opacity 0.2s; }
-.inking > svg { opacity: 0; }
+:is(.copy-btn, .panel-link, .anchor-btn) > svg { transition: opacity 0.45s var(--ease); }
+.ink-cover > svg { opacity: 0; transition-duration: 0.15s; }
 
 /* Thin drawn divider between two parts of a label */
 .sep {
@@ -2042,7 +2018,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
     @page { margin: 14mm; }
 
     body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky { background-image: none !important; }
-    .gallery-dots, .skill-hits, .toolkit-hint, .toast, .seal-card, .anchor-btn, .brush-num { display: none !important; }
+    .gallery-dots, .skill-hits, .toolkit-hint, .toast, .seal-card, .anchor-btn, .card-loop, .local-time { display: none !important; }
     .sig-pen { stroke-dashoffset: 0 !important; animation: none !important; }
     .sig-ink { opacity: 1 !important; animation: none !important; }
 
@@ -2642,6 +2618,37 @@ button:focus-visible > .lk-t:not(.brushing) { background-position: 0 100%; backg
 /* The brush stroke sits just under the text; a link's own icon rules (a nudge on hover, say) don't move it */
 .lk-t.brushing { position: relative; }
 .lk-t.brushing > .brush-line { position: absolute; max-width: none; margin: 0; overflow: visible; transform: none; transition: none; pointer-events: none; }
+
+/* ================= Brush progress lines ================= */
+/* The progress lines are painted as one long dry-brush stroke: ink.js draws it for each line's width (--brush) and
+   marks the line .brushed. It shows up to the reading position, --x (0 to 1), by widening the second mask, which
+   fades out over its last 12px for a soft front edge where the brush is; the stroke's own image never changes while
+   you scroll. */
+:is(.nav-track, .nav-progress, .panel-progress, .r-progress, .gallery-progress) > span.brushed {
+    height: var(--bh);
+    margin-top: calc((2px - var(--bh)) / 2);
+    transform: none;
+    -webkit-mask-image: var(--brush), linear-gradient(to right, #000 calc(100% - 12px), transparent);
+    mask-image: var(--brush), linear-gradient(to right, #000 calc(100% - 12px), transparent);
+    -webkit-mask-size: 100% 100%, calc(var(--x) * (100% + 12px)) 100%;
+    mask-size: 100% 100%, calc(var(--x) * (100% + 12px)) 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+}
+
+.nav-track > span.brushed { --x: var(--fill, 0); }
+.nav-track:has(> .brushed) { overflow: visible; }
+.nav-progress > span.brushed { --x: var(--scroll, 0); }
+.r-progress > span.brushed { --x: var(--read-at, 0); }
+
+/* The project row's bar is 3px, not 2 */
+.gallery-progress > span.brushed { --x: var(--p, 0); margin-top: calc((3px - var(--bh)) / 2); }
+.gallery-progress:has(> .brushed) { overflow: visible; }
+
+/* A write-up's line sits along its top edge, so the stroke hangs down from it rather than centering on it */
+.panel-progress > span.brushed { --x: var(--read, 0); margin-top: calc((var(--bt) - var(--bh)) / 2); }
 
 /* ================= Top bar ================= */
 /* Slims down once the page has scrolled and grows back at the very top. It's fixed, so nothing below moves. */
