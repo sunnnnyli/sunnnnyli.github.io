@@ -2628,15 +2628,20 @@ main [tabindex="-1"]:focus { outline: none; }
 }
 
 /* ================= Link underlines ================= */
-/* The underline draws in from the left on hover and slides off to the right afterwards */
+/* The underline draws in from the left on hover and slides off to the right afterwards. With a mouse or the keyboard
+   it's written with a dry brush instead (see ink.js), which marks the text .brushing while its stroke shows. */
 .lk-t { background: linear-gradient(currentColor, currentColor) no-repeat 100% 100% / 0 1px; }
 
-a:hover .lk-t,
-a:focus-visible .lk-t,
-button:hover > .lk-t,
-button:focus-visible > .lk-t { background-position: 0 100%; background-size: 100% 1px; }
+a:hover .lk-t:not(.brushing),
+a:focus-visible .lk-t:not(.brushing),
+button:hover > .lk-t:not(.brushing),
+button:focus-visible > .lk-t:not(.brushing) { background-position: 0 100%; background-size: 100% 1px; }
 
 .motion .lk-t { transition: background-size 0.45s var(--ease); }
+
+/* The brush stroke sits just under the text; a link's own icon rules (a nudge on hover, say) don't move it */
+.lk-t.brushing { position: relative; }
+.lk-t.brushing > .brush-line { position: absolute; max-width: none; margin: 0; overflow: visible; transform: none; transition: none; pointer-events: none; }
 
 /* ================= Top bar ================= */
 /* Slims down once the page has scrolled and grows back at the very top. It's fixed, so nothing below moves. */
