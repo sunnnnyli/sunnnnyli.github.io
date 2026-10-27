@@ -387,16 +387,27 @@
                                         <text data-step="3 5 7" class="dg-cap" x="258" y="16" text-anchor="middle">notice sent</text>
                                         <rect data-step="1" class="dg-box dg-hl" x="16" y="58" width="58" height="34" rx="7"/>
                                         <text data-step="1" class="dg-strong" x="45" y="79" text-anchor="middle">CSV</text>
-                                        <path data-step="2 4 6" class="dg-line" d="M74 75 H102 M102 34 V116 M102 34 H124 M102 75 H124 M102 116 H124"/>
-                                        <path data-step="2 4 6" class="dg-flow" d="M74 75 H102 V34 H124 M102 75 H124 M102 75 V116 H124"/>
+                                        <!-- Each agency's own route out of the CSV, so a step lights only its row; each flow starts at the CSV, so the
+                                             dashes run on unbroken through the fork -->
+                                        <path data-step="2 4 6" class="dg-line" d="M74 75 H102"/>
+                                        <path data-step="2" class="dg-line" d="M102 75 V34 H124"/>
+                                        <path data-step="4" class="dg-line" d="M102 75 H124"/>
+                                        <path data-step="6" class="dg-line" d="M102 75 V116 H124"/>
+                                        <path data-step="2" class="dg-flow" d="M74 75 H102 V34 H124"/>
+                                        <path data-step="4" class="dg-flow" d="M74 75 H124"/>
+                                        <path data-step="6" class="dg-flow" d="M74 75 H102 V116 H124"/>
                                         <rect data-step="2" class="dg-box" x="124" y="22" width="66" height="24" rx="6"/>
                                         <rect data-step="4" class="dg-box" x="124" y="63" width="66" height="24" rx="6"/>
                                         <rect data-step="6" class="dg-box" x="124" y="104" width="66" height="24" rx="6"/>
                                         <text data-step="2" class="dg-text" x="157" y="38" text-anchor="middle">Agency A</text>
                                         <text data-step="4" class="dg-text" x="157" y="79" text-anchor="middle">Agency B</text>
                                         <text data-step="6" class="dg-text" x="157" y="120" text-anchor="middle">Agency C</text>
-                                        <path data-step="3 5 7" class="dg-line" d="M190 34 H226 M190 75 H226 M190 116 H226"/>
-                                        <path data-step="3 5 7" class="dg-flow" d="M190 34 H226 M190 75 H226 M190 116 H226"/>
+                                        <path data-step="3" class="dg-line" d="M190 34 H226"/>
+                                        <path data-step="5" class="dg-line" d="M190 75 H226"/>
+                                        <path data-step="7" class="dg-line" d="M190 116 H226"/>
+                                        <path data-step="3" class="dg-flow" d="M190 34 H226"/>
+                                        <path data-step="5" class="dg-flow" d="M190 75 H226"/>
+                                        <path data-step="7" class="dg-flow" d="M190 116 H226"/>
                                         <g class="dg-doc"><rect data-step="3" x="226" y="21" width="22" height="27" rx="3"/><rect data-step="5" x="226" y="62" width="22" height="27" rx="3"/><rect data-step="7" x="226" y="103" width="22" height="27" rx="3"/></g>
                                         <g class="dg-acc"><rect data-step="3" x="230" y="26" width="11" height="2.4" rx="1"/><rect data-step="5" x="230" y="67" width="11" height="2.4" rx="1"/><rect data-step="7" x="230" y="108" width="11" height="2.4" rx="1"/></g>
                                         <g class="dg-docline"><rect data-step="3" x="230" y="31" width="14" height="1.6"/><rect data-step="3" x="230" y="35" width="10" height="1.6"/><rect data-step="5" x="230" y="72" width="14" height="1.6"/><rect data-step="5" x="230" y="76" width="10" height="1.6"/><rect data-step="7" x="230" y="113" width="14" height="1.6"/><rect data-step="7" x="230" y="117" width="10" height="1.6"/></g>
