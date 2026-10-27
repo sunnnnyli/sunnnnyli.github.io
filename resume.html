@@ -46,6 +46,8 @@
             try { pref = localStorage.getItem('motion'); } catch (e) {}
             if (pref ? pref === 'on' : !matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('motion');
         })();
+        // Lighter effects for the rest of the visit, once the portfolio has found this device struggling (see main.js)
+        try { if (sessionStorage.getItem('lite') === '1') document.documentElement.classList.add('lite'); } catch (e) {}
         // Arriving with a page transition, the transition brings the sheet in, so the page's own opening stands down.
         // vt-in lasts only for that transition, so leaving later moves the page as one piece.
         addEventListener('pagereveal', (e) => {

@@ -31,6 +31,8 @@
             if (c ? c === 'more' : matchMedia('(prefers-contrast: more)').matches) root.classList.add('contrast');
             if (m ? m === 'on' : !matchMedia('(prefers-reduced-motion: reduce)').matches) root.classList.add('motion');
         })();
+        // Lighter effects for the rest of the visit, once the portfolio has found this device struggling (see main.js)
+        try { if (sessionStorage.getItem('lite') === '1') document.documentElement.classList.add('lite'); } catch (e) {}
     </script>
     <!-- Asks for the eased page transitions here, not only in styles.css: Chrome decides whether a page wants them before a stylesheet is always read (opened from disk, or on a busy machine), and then skips them -->
     <style>@view-transition { navigation: auto; types: page; }</style>

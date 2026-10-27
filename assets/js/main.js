@@ -710,7 +710,7 @@
     };
     // Inside a write-up, the headings, paragraphs, and chips below the first screen rise in as you scroll to them.
     // What's on screen when it opens shows at once.
-    const partsOf = (panel) => panel.querySelectorAll('.panel-inner > :is(h3, p:not(.panel-meta), .chips, .panel-next)');
+    const partsOf = (panel) => panel.querySelectorAll('.panel-inner > :is(h3, p:not(.panel-meta, .panel-keys), .chips, .panel-next)');
     const settleParts = (panel) => {
         panel.scrollTop = 0;
         if (!motion) return;
@@ -780,7 +780,13 @@
         btn.insertAdjacentHTML('beforeend', '<span class="chev" aria-hidden="true">→</span>');
         btn.setAttribute('aria-keyshortcuts', 'ArrowRight');
         btn.addEventListener('click', () => switchPanel(panel, next));
-        panel.querySelector('.panel-inner').append(btn);
+        // Under it (on desktop, see .panel-keys), a quiet note that the arrow keys do the same; screen readers hear it
+        // from the button's aria-keyshortcuts instead
+        const keys = document.createElement('p');
+        keys.className = 'panel-keys';
+        keys.setAttribute('aria-hidden', 'true');
+        keys.innerHTML = 'Or use <kbd>←</kbd> <kbd>→</kbd> to switch projects';
+        panel.querySelector('.panel-inner').append(btn, keys);
     });
     document.querySelectorAll('[data-panel]').forEach((btn) => {
         const panel = document.getElementById(btn.dataset.panel);
@@ -841,7 +847,10 @@
             }
             const ok = await copyText(url);
             linkBtn.classList.toggle('copied', ok);
-            if (ok) tap();
+            if (ok) {
+                tap();
+                inkTick(linkBtn);
+            }
             linkLabel.textContent = ok ? 'Copied' : 'Copy failed';
             linkStatus.textContent = ok ? 'Link copied' : 'Could not copy the link';
             clearTimeout(linkTimer);
@@ -1027,6 +1036,164 @@
             try { navigator.vibrate(12); } catch (e) {}
         }
     };
+
+    // When something's copied, a check mark is written in ink over the button's icon, the way a teacher ticks a page:
+    // pressed at the start, a little heavier at the turn, then flicked up and to the right, thinning until the brush
+    // runs dry. It's painted on a small canvas in the button's accent color, with a touch of paper grain rubbed out of
+    // it, and the dry bristles break up differently every time. It fades after a second and the icon's own check comes
+    // back. With motion off it's skipped, and the check icon says it alone.
+    const inkTick = (() => {
+        const TAU = Math.PI * 2;
+        const c01 = (x) => Math.max(0, Math.min(1, x));
+        const smooth = (x) => { x = c01(x); return x * x * (3 - 2 * x); };
+        // The tick's line, in units of its size: a short stroke down, then a long one up and to the right
+        const line = [];
+        const curve = (a, c, b, n) => {
+            for (let i = 0; i <= n; i++) {
+                const u = i / n;
+                line.push([(1 - u) * (1 - u) * a[0] + 2 * (1 - u) * u * c[0] + u * u * b[0], (1 - u) * (1 - u) * a[1] + 2 * (1 - u) * u * c[1] + u * u * b[1]]);
+            }
+        };
+        curve([-0.95, -0.08], [-0.62, 0.3], [-0.3, 0.64], 60);
+        line.pop();
+        curve([-0.3, 0.64], [0.22, 0.02], [1.15, -0.92], 160);
+        const along = [0];
+        for (let i = 1; i < line.length; i++) along.push(along[i - 1] + Math.hypot(line[i][0] - line[i - 1][0], line[i][1] - line[i - 1][1]));
+        const total = along[along.length - 1];
+        const turn = along[60] / total;
+        // Half the stroke's width at each point along it (0 to 1)
+        const width = (s) => {
+            if (s < turn) {
+                const u = s / turn;
+                return 0.21 + 0.12 * Math.exp(-u * 9) + 0.04 * u;
+            }
+            const u = (s - turn) / (1 - turn);
+            return 0.27 * Math.pow(1 - u, 0.8) + 0.015 + (u < 0.1 ? 0.03 * (1 - u / 0.1) : 0);
+        };
+        // How much is written t ms in: the stroke down by 95, a beat at the turn, then the flick, quickening, by 275
+        const written = (t) => (t < 95 ? turn * smooth(t / 95) : t < 125 ? turn : turn + (1 - turn) * Math.pow(c01((t - 125) / 150), 1.5));
+        const SPAN = 1450; // fading out over the last 450ms
+        let grain = null;
+        const runs = new Map();
+        let looping = false;
+
+        const paint = (run, t) => {
+            const { c, g, R, half, dpr } = run;
+            g.setTransform(1, 0, 0, 1, 0, 0);
+            g.clearRect(0, 0, c.width, c.height);
+            g.setTransform(dpr, 0, 0, dpr, half * dpr, half * dpr);
+            g.fillStyle = 'rgba(0, 0, 0, 0.92)';
+            const upto = written(t) * total;
+            let k = 0;
+            // Pressed along the line as overlapping dabs; where the brush runs dry, only scattered bristles touch
+            for (let i = 1; i < line.length && along[i - 1] < upto; i++) {
+                const [x0, y0] = line[i - 1];
+                const [x1, y1] = line[i];
+                const seg = along[i] - along[i - 1];
+                const n = Math.max(1, Math.ceil((seg * R) / 0.3));
+                const nx = -(y1 - y0) / seg;
+                const ny = (x1 - x0) / seg;
+                for (let m = 0; m < n; m++) {
+                    const d = along[i - 1] + (seg * m) / n;
+                    if (d > upto) break;
+                    const s = d / total;
+                    const x = (x0 + ((x1 - x0) * m) / n) * R;
+                    const y = (y0 + ((y1 - y0) * m) / n) * R;
+                    const w = width(s) * R;
+                    const dry = s > turn ? c01(((s - turn) / (1 - turn) - 0.5) / 0.5) : 0;
+                    if (dry < 0.05) {
+                        g.beginPath();
+                        g.arc(x, y, w * run.jitter[k++ & 63], 0, TAU);
+                        g.fill();
+                        continue;
+                    }
+                    run.hairs.forEach((h) => {
+                        if (0.5 + 0.5 * Math.sin(d * R * h.f1 + h.ph) * Math.cos(d * R * h.f2 + h.ph * 2) < dry * 0.85) return;
+                        g.beginPath();
+                        g.arc(x + nx * h.o * w, y + ny * h.o * w, Math.max(0.35, w * 0.32), 0, TAU);
+                        g.fill();
+                    });
+                }
+            }
+            g.setTransform(1, 0, 0, 1, 0, 0);
+            g.globalCompositeOperation = 'destination-out';
+            g.globalAlpha = 0.14;
+            g.drawImage(grain, 0, 0, c.width, c.height);
+            g.globalAlpha = 1;
+            g.globalCompositeOperation = 'source-in';
+            g.fillStyle = run.color;
+            g.fillRect(0, 0, c.width, c.height);
+            g.globalCompositeOperation = 'source-over';
+        };
+        const end = (btn) => {
+            runs.get(btn).c.remove();
+            btn.classList.remove('inking');
+            runs.delete(btn);
+        };
+        const step = (now) => {
+            runs.forEach((run, btn) => {
+                const t = now - run.start;
+                if (t >= SPAN) {
+                    end(btn);
+                    return;
+                }
+                if (!run.dry) paint(run, t); // once it's all written, only the fading changes
+                run.dry = t > 280;
+                run.c.style.opacity = 1 - smooth((t - 1000) / 450);
+            });
+            if (runs.size) requestAnimationFrame(step);
+            else looping = false;
+        };
+
+        return (btn) => {
+            if (!root.classList.contains('motion')) return;
+            const icon = [...btn.querySelectorAll('svg')].find((s) => s.getBoundingClientRect().width);
+            if (!icon) return;
+            if (runs.has(btn)) end(btn); // copied again: a fresh tick
+            if (!grain) {
+                grain = document.createElement('canvas');
+                grain.width = grain.height = 48;
+                const g = grain.getContext('2d');
+                const d = g.createImageData(48, 48);
+                for (let i = 3; i < d.data.length; i += 4) d.data[i] = Math.random() * 255;
+                g.putImageData(d, 0, 0);
+            }
+            // Sized to the icon, centered on it, and a little bigger than it, like a mark made over the top
+            const box = btn.getBoundingClientRect();
+            const at = icon.getBoundingClientRect();
+            const R = at.width * 0.78;
+            const half = Math.ceil(R * 1.7);
+            const dpr = Math.min(3, window.devicePixelRatio || 1);
+            const c = document.createElement('canvas');
+            c.className = 'ink-tick';
+            c.setAttribute('aria-hidden', 'true');
+            c.width = c.height = Math.ceil(half * 2 * dpr);
+            c.style.width = c.style.height = `${half * 2}px`;
+            c.style.left = `${at.left + at.width / 2 - box.left - btn.clientLeft - half}px`;
+            c.style.top = `${at.top + at.height / 2 - box.top - btn.clientTop - half}px`;
+            btn.classList.add('inking');
+            btn.append(c);
+            const rand = (a, b) => a + Math.random() * (b - a);
+            const run = {
+                c,
+                g: c.getContext('2d'),
+                R,
+                half,
+                dpr,
+                color: getComputedStyle(btn).getPropertyValue('--accent').trim(),
+                hairs: Array.from({ length: 7 }, (_, j) => ({ o: (j / 6 - 0.5) * 1.7, f1: rand(0.6, 1.4), f2: rand(0.2, 0.5), ph: rand(0, TAU) })),
+                jitter: Array.from({ length: 64 }, () => rand(0.93, 1.07)),
+                start: performance.now(),
+                dry: false,
+            };
+            paint(run, 0);
+            runs.set(btn, run);
+            if (!looping) {
+                looping = true;
+                requestAnimationFrame(step);
+            }
+        };
+    })();
     const copyText = async (text) => {
         // The clipboard API can hang waiting on a permission prompt, so give it a moment, then fall back.
         let ok = false;
@@ -1057,7 +1224,10 @@
         copyBtn.addEventListener('click', async () => {
             const ok = await copyText(copyBtn.dataset.copy);
             copyBtn.classList.toggle('copied', ok);
-            if (ok) tap();
+            if (ok) {
+                tap();
+                inkTick(copyBtn);
+            }
             copyLabel.textContent = ok ? 'Copied' : 'Copy failed';
             copyStatus.textContent = ok ? 'Email address copied' : 'Could not copy the email address';
             clearTimeout(copyTimer);
@@ -1903,7 +2073,10 @@
         b.addEventListener('click', async () => {
             const ok = await copyText(`${location.origin}${location.pathname}#${sec.id}`);
             b.classList.toggle('copied', ok);
-            if (ok) tap();
+            if (ok) {
+                tap();
+                inkTick(b);
+            }
             toast(ok ? `Link to ${name} copied` : 'Couldn’t copy the link');
             clearTimeout(timer);
             timer = setTimeout(() => b.classList.remove('copied'), 1800);
@@ -2031,6 +2204,54 @@
         draw();
         new ResizeObserver(() => { fit(); draw(); }).observe(dotGrid);
         new MutationObserver(() => { readColors(); draw(); }).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+    }
+
+    /* ---------- Lighter effects on a struggling device ---------- */
+    // While the page scrolls, it watches how often frames come late. If over a couple of seconds of scrolling more than a
+    // third come slower than 40 a second, it turns on .lite for the rest of the visit (the head scripts carry it to the
+    // next page): the blurs, the drifting glow, and the paper grain step aside (see "Lighter effects" in styles.css),
+    // the costliest things to repaint, while the motion itself stays. A device that keeps up is left alone.
+    if (!root.classList.contains('lite')) {
+        let frames = 0;
+        let late = 0;
+        let watching = false;
+        let lastFrame = 0;
+        let lastScroll = 0;
+        const settled = performance.now() + 2500; // not while the page is still opening
+        const watch = (now) => {
+            if (lastFrame) {
+                const gap = now - lastFrame;
+                if (gap < 250) { // a longer gap is a pause (a hidden tab, say), not a slow frame
+                    frames++;
+                    if (gap > 25) late++;
+                }
+            }
+            lastFrame = now;
+            const lite = frames >= 120 && late / frames > 0.35;
+            if (lite || frames >= 900) {
+                window.removeEventListener('scroll', onScroll);
+                if (lite) {
+                    root.classList.add('lite');
+                    try { sessionStorage.setItem('lite', '1'); } catch (e) {}
+                    console.info('Lighter effects on: frames kept coming late on this device, so the blurs, glow, and grain are off.');
+                }
+                return;
+            }
+            if (now - lastScroll < 300) requestAnimationFrame(watch);
+            else {
+                watching = false;
+                lastFrame = 0;
+            }
+        };
+        const onScroll = () => {
+            const now = performance.now();
+            if (now < settled) return;
+            lastScroll = now;
+            if (watching) return;
+            watching = true;
+            requestAnimationFrame(watch);
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
     }
 
     /* ---------- Offline copy ---------- */

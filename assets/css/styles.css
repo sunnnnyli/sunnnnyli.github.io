@@ -223,6 +223,17 @@
     unicode-range: U+300C-300D, U+585E, U+5931, U+7109, U+77E5, U+798F, U+7FC1, U+975E, U+9A6C, U+FF0C;
 }
 
+/* The same brush, cut down to the five section numbers, 一 to 五 (about 2 KB). They're only decoration, so they wait
+   for it rather than showing in another font first. */
+@font-face {
+    font-family: "Ma Shan Zheng";
+    font-style: normal;
+    font-weight: 400;
+    font-display: block;
+    src: url("../fonts/ma-shan-zheng-numerals.woff2") format("woff2");
+    unicode-range: U+4E00, U+4E09, U+4E8C, U+4E94, U+56DB;
+}
+
 /* Zhi Mang Xing, a flowing running-script brush, cut down to the one character on the hidden surprise's seal, 福
    (about 1 KB). The card is built, hidden, as the page opens, so it's loaded long before the seal is pressed. License:
    zhi-mang-xing-OFL.txt. */
@@ -345,6 +356,24 @@ img, svg { -webkit-user-drag: none; }
     letter-spacing: -0.02em;
     line-height: 1.08;
 }
+
+/* The section's number in brush script, large and faint at the right of its heading (centered in Contact), rising in
+   with it. It sits behind everything else in the section, so it never covers a card. */
+.brush-num { position: relative; z-index: -1; height: 0; opacity: 0.08; pointer-events: none; }
+.container:has(> .brush-num) { isolation: isolate; }
+
+.brush-num > span {
+    position: absolute;
+    top: calc(4rem - 0.5em);
+    right: 0;
+    font-family: "Ma Shan Zheng", "Kaiti SC", "STKaiti", "KaiTi", var(--serif);
+    font-size: clamp(8rem, 20vw, 15rem);
+    font-weight: 400;
+    line-height: 1;
+    rotate: -4deg;
+}
+
+.contact .brush-num > span { top: calc(3.5rem - 0.5em); right: auto; left: 50%; translate: -50% 0; }
 
 /* Buttons and links */
 .pill {
@@ -1953,6 +1982,13 @@ html:not(.motion) .dot-grid canvas { display: none; }
 .copy-btn.copied .i-copy { display: none; }
 .copy-btn.copied .i-check { display: block; }
 
+/* When something's copied, a brush tick is written in ink over the button's icon (inkTick in main.js), and the icon
+   steps aside until it fades */
+.inking { position: relative; }
+.ink-tick { position: absolute; z-index: 1; pointer-events: none; }
+:is(.copy-btn, .panel-link, .anchor-btn) > svg { transition: opacity 0.2s; }
+.inking > svg { opacity: 0; }
+
 /* Thin drawn divider between two parts of a label */
 .sep {
     display: inline-block;
@@ -2000,7 +2036,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
     @page { margin: 14mm; }
 
     body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky { background-image: none !important; }
-    .gallery-dots, .skill-hits, .toolkit-hint, .toast, .seal-card, .anchor-btn { display: none !important; }
+    .gallery-dots, .skill-hits, .toolkit-hint, .toast, .seal-card, .anchor-btn, .brush-num { display: none !important; }
     .sig-pen { stroke-dashoffset: 0 !important; animation: none !important; }
     .sig-ink { opacity: 1 !important; animation: none !important; }
 
@@ -2307,6 +2343,18 @@ html:has(.panel[open]) { overflow: hidden; }
 .panel p:not(.panel-meta) { font-size: 1.05rem; line-height: 1.6; color: var(--text-2); }
 .panel .chips { margin-top: 1.75rem; }
 
+/* Under Next project, on desktop: the arrow keys do the same (the script adds the note) */
+.panel p.panel-keys { display: none; margin: 0.75rem 0 0; font-family: var(--font); font-size: 0.75rem; line-height: 1.5; text-align: center; color: var(--text-3); }
+
+@media (hover: hover) and (pointer: fine) {
+    .panel p.panel-keys { display: block; }
+}
+
+/* It's the very last line, so it rises in with Next project rather than on its own */
+.motion .panel .panel-keys { transition: opacity 0.6s var(--ease), transform 0.7s var(--ease); }
+.motion .panel .panel-next.pr:not(.in) + .panel-keys { opacity: 0; transform: translate3d(0, 16px, 0); }
+.motion .panel .panel-next.now + .panel-keys { transition: none; }
+
 /* A write-up's diagram: its card's, held near the top while the text scrolls under it (the edge in the panel's color
    keeps the text from showing around its corners). With motion on, the script plays its stages one at a time: the
    stage playing stays lit (the script marks its parts .on, and the diagram .focus) while the rest steps back. */
@@ -2545,7 +2593,8 @@ main [tabindex="-1"]:focus { outline: none; }
 .cmdk-status { margin-left: auto; color: var(--accent); font-weight: 600; }
 
 .cmdk kbd,
-.footer-kbd kbd {
+.footer-kbd kbd,
+.panel-keys kbd {
     display: inline-block;
     min-width: 1.5em;
     margin-right: 0.15em;
@@ -2564,7 +2613,8 @@ main [tabindex="-1"]:focus { outline: none; }
 .cmdk-esc { flex: none; }
 
 /* In the footer the keys sit inline with the text without making the line taller */
-.footer-kbd kbd { padding: 0 0.35em; border-bottom-width: 1px; line-height: 1.25; vertical-align: 0.05em; }
+.footer-kbd kbd,
+.panel-keys kbd { padding: 0 0.35em; border-bottom-width: 1px; line-height: 1.25; vertical-align: 0.05em; }
 
 /* Phones and touch screens have no keyboard shortcut to advertise */
 @media (pointer: coarse) {
@@ -3467,7 +3517,7 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
     .footer-name .sig { width: 64px; } /* a little smaller, so the line fits beside the button from 375px wide */
     /* One line level with the button: the name, the year, and How this site is built (the only one of the footer's
        shortcuts that stays here); Last updated sits under it in small print */
-    .footer-inner { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; row-gap: 0.1rem; min-height: 0; }
+    .footer-inner { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; align-items: center; row-gap: 0.1rem; min-height: 0; }
     .footer-side { display: contents; }
     .footer-actions > :not(.footer-link) { display: none; }
     .footer-link { order: 1; }
@@ -3610,6 +3660,21 @@ picture { display: contents; }
     .gallery-progress span,
     .motion .jobs::before { background: Highlight; }
 }
+
+/* ================= Lighter effects ================= */
+/* On a device that keeps dropping frames while scrolling, the script turns on .lite for the rest of the visit: the
+   costliest things to repaint step aside (the blurs, the drifting glow behind the intro, the portrait's glow, and the
+   paper grain), the way touch screens already go without blur. The motion itself stays. */
+.lite .nav { background: rgb(var(--bg-rgb)); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.lite .panel::backdrop { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.lite .photo-glow { display: none; }
+.motion.lite .hero-copy { filter: none; }
+.motion.lite .rv { filter: none; transition-property: opacity, transform; }
+.lite .hero-title .ch { animation-name: charInLite; }
+.motion.lite .load { animation-name: fadeUpLite; }
+.motion.lite .hero-photo { animation-name: photoInLite; }
+.motion.lite .aurora span { animation: none; }
+:root.lite :is(body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .gallery-sticky) { background-image: none !important; }
 
 /* Back again in the same visit (the head script sets .again): the first screen is already in place, without its
    opening (the name rising in, the lines fading up, the portrait arriving) */
