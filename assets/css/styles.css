@@ -375,6 +375,12 @@ img, svg { -webkit-user-drag: none; }
 
 .contact .brush-num > span { top: calc(3.5rem - 0.5em); right: auto; left: 50%; translate: -50% 0; }
 
+/* In Projects the gallery starts right where the heading ends and paints over anything hanging below it, so there the
+   number rests on the heading's bottom edge instead */
+.projects-head { position: relative; }
+.projects-head > .brush-num { position: absolute; inset: auto 0 0; }
+.projects-head > .brush-num > span { top: auto; bottom: -0.06em; }
+
 /* Buttons and links */
 .pill {
     display: inline-flex;
