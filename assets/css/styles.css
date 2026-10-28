@@ -1601,6 +1601,10 @@ html:not(.motion) .dot-grid canvas { display: none; }
 
 /* With motion on: dashes flow along the connectors, and the highlight steps through each stage */
 .motion .dg-flow { opacity: 0.9; animation: dgFlow 1.4s linear infinite; }
+/* Vulnerability Management's branches start where the line out of the CSV ends, 28 units along. At 20 units every
+   1.4s, its dashes get there 1.96s after they set off, so a branch runs that far behind (less two rounds, so it's
+   already going) and its dashes carry on from the line's without a break. */
+.motion .dg-flow.dg-branch { animation-delay: -0.84s; }
 /* (the ring's dashes move exactly three dashes a round, and the ring's length fits the dashes exactly too, so they
    flow on round it without a jump or a seam) */
 .motion .dg-orbit { animation: dgOrbit 3.36s linear infinite; }
@@ -1626,7 +1630,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
 .motion .art-dg:not(.drawn) svg > text { transform: translateY(4px); }
 .motion .art-dg svg > .dg-line[pathLength] { stroke-dasharray: 1; }
 .motion .art-dg:not(.drawn) svg > .dg-line { opacity: 1; transform: none; stroke-dashoffset: 1; }
-.motion .art-dg.drawn svg > .dg-flow { transition-delay: calc(0.8s + var(--x, 0) * 0.7s); }
+.motion .art-dg.drawn:not(.played) svg > .dg-flow { transition-delay: calc(0.8s + var(--x, 0) * 0.7s); }
 
 @keyframes dgStep {
     0%, 26%, 100% { stroke: var(--line); fill: var(--surface); }
