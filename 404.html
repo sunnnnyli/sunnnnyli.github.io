@@ -159,6 +159,28 @@
         @media (max-width: 760px), (pointer: coarse) {
             .motion .nf > * { animation-name: fadeUpLite; }
         }
+
+        /* Ink dropped on the page (see "Leave a drop of ink" below): on the paper, under everything else. In the light
+           theme it multiplies with the paper, as real ink does. Each drop is the simulation's grid, scaled up and
+           softened a touch (ink on soft paper has no hard edge), with its spatter drawn smooth over it. */
+        .nf-ink { position: absolute; top: 0; left: 0; z-index: 0; width: 100%; overflow: hidden; pointer-events: none; }
+        :root:not([data-theme="dark"]) .nf-ink { mix-blend-mode: multiply; }
+        .nf-drop { position: absolute; }
+        .nf-drop canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+        .nf-drop canvas:first-child { filter: blur(0.7px); }
+        .nf-bar,
+        .nf-main { position: relative; z-index: 1; }
+
+        .nf-ink-hint { margin: 2rem 0 0; font-family: var(--font); font-size: 0.8rem; color: var(--text-3); }
+        .nf-ink-hint > span { transition: opacity 0.8s var(--ease); }
+        .nf-ink-hint .hint-touch { display: none; }
+        .nf-ink-hint.used > span { opacity: 0; }
+        .motion .nf > .nf-ink-hint { animation-delay: 0.4s; }
+
+        @media (pointer: coarse) {
+            .nf-ink-hint .hint-fine { display: none; }
+            .nf-ink-hint .hint-touch { display: inline; }
+        }
     </style>
 </head>
 <body>
@@ -213,6 +235,7 @@
                     <li><a href="index.html#contact">Contact</a></li>
                 </ul>
             </nav>
+            <p class="nf-ink-hint" aria-hidden="true"><span class="hint-fine">Lost? Click anywhere to leave a drop of ink.</span><span class="hint-touch">Lost? Tap anywhere to leave a drop of ink.</span></p>
         </div>
     </main>
 
@@ -282,6 +305,284 @@
                 sync();
             });
             sync();
+
+            // Leave a drop of ink: a click or tap on the page (not on a link or button) splashes a drop of ink there, as if
+            // it fell from a brush held up high. It's simulated rather than drawn. Each drop gets its own patch of paper,
+            // with patchy absorbency and long fibers that wick ink faster, and the ink's water and pigment spread through it
+            // cell by cell:
+            // - the heavy pigment stains the paper where the splat, its stubby fingers, and its spatter land
+            // - the water runs ahead, carrying the fine pigment more slowly, so a pale wet halo opens around the splat
+            // - a dry patch of paper only wets once enough water is beside it, so the edge fingers out unevenly
+            // - the paper soaks the water up, and the pigment settles fastest at the drying edge, so that dries darker
+            // - the wet paper shows a little darker until it's dry, by about 3.5s, and later the drop fades away
+            // The simulation gets a few milliseconds of each frame, shared by every drop still spreading, so a slower device
+            // sees the ink spread a little slower rather than stutter. With motion off, a drop is worked out out of sight
+            // and shown already dry, then goes after a few seconds.
+            (() => {
+                const TAU = Math.PI * 2;
+                const rand = (a, b) => a + Math.random() * (b - a);
+                const G = 160; // cells across a drop's patch of paper
+                const CELL = 2.1; // px per cell
+                const SIZE = G * CELL;
+                const STEPS = 1600; // the whole spread and drying
+                const STEPS_PER_MS = STEPS / 3500; // most of it in the first second, dry by about 3.5s
+                const BUDGET = 6; // ms of each frame for the simulation
+                const LIFE = 12500; // ms from landing to gone
+                const FADE = 2500; // the last of it
+                // How fast water moves, how freely the fine pigment moves with it, how fast the paper soaks water up, how
+                // fast the pigment settles, and how much faster it settles at the drying edge
+                const RATE = 0.085, MOB = 0.7, ABSORB = 0.00008, DEP = 0.0004, EDGE = 30, DRY = 0.004;
+                const NB = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, 0.7], [1, -1, 0.7], [-1, 1, 0.7], [-1, -1, 0.7]];
+
+                // Smooth random noise at a given scale (in cells), 0 to 1
+                const noise = (scale) => {
+                    const n = Math.ceil(G / scale) + 2;
+                    const lat = Float32Array.from({ length: n * n }, Math.random);
+                    const out = new Float32Array(G * G);
+                    for (let y = 0; y < G; y++) {
+                        const fy = y / scale, y0 = Math.floor(fy), ty = fy - y0, sy = ty * ty * (3 - 2 * ty);
+                        for (let x = 0; x < G; x++) {
+                            const fx = x / scale, x0 = Math.floor(fx), tx = fx - x0, sx = tx * tx * (3 - 2 * tx);
+                            const a = lat[y0 * n + x0], b = lat[y0 * n + x0 + 1], c = lat[(y0 + 1) * n + x0], d = lat[(y0 + 1) * n + x0 + 1];
+                            out[y * G + x] = (a + (b - a) * sx) * (1 - sy) + (c + (d - c) * sx) * sy;
+                        }
+                    }
+                    return out;
+                };
+                // A patch of paper: how readily each cell takes up water (P), how much water a dry cell needs beside it
+                // before it wets (T: little along a fiber, more where the paper resists), and its grain
+                const paper = () => {
+                    const big = noise(15), mid = noise(6), small = noise(2.4), fine = noise(1.2);
+                    const P = new Float32Array(G * G), T = new Float32Array(G * G), grain = new Float32Array(G * G);
+                    for (let i = 0; i < G * G; i++) {
+                        const v = big[i] * 0.45 + mid[i] * 0.35 + small[i] * 0.2;
+                        P[i] = Math.min(0.85, Math.max(0.06, Math.pow(v, 1.7) * 1.7)); // some of it barely takes ink at all
+                        grain[i] = fine[i] * 0.6 + small[i] * 0.4;
+                    }
+                    for (let k = 0; k < 300; k++) { // the fibers: long, slightly curving strands the ink runs along
+                        let x = rand(0, G), y = rand(0, G), a = rand(0, TAU);
+                        const len = rand(7, 54), strength = rand(0.55, 0.95), bend = rand(-0.07, 0.07);
+                        for (let s = 0; s < len; s++) {
+                            const xx = Math.floor(x), yy = Math.floor(y);
+                            if (xx >= 0 && yy >= 0 && xx < G && yy < G) P[yy * G + xx] = Math.max(P[yy * G + xx], strength);
+                            x += Math.cos(a);
+                            y += Math.sin(a);
+                            a += bend;
+                        }
+                    }
+                    for (let i = 0; i < G * G; i++) T[i] = 0.004 + 0.06 * (1 - P[i]) * (0.5 + Math.random());
+                    return { P, T, grain };
+                };
+
+                const layer = document.createElement('div');
+                layer.className = 'nf-ink';
+                layer.setAttribute('aria-hidden', 'true');
+                document.body.prepend(layer);
+                const hint = document.querySelector('.nf-ink-hint');
+                const inkOf = document.querySelector('.nf h1');
+                const rgbOf = () => (getComputedStyle(inkOf).color.match(/\d+(\.\d+)?/g) || [30, 30, 30]).slice(0, 3).map(Number);
+
+                const make = (x, y) => {
+                    const { P, T, grain } = paper();
+                    const W = new Float32Array(G * G), I = new Float32Array(G * G), D = new Float32Array(G * G);
+                    const c = G / 2;
+                    const spots = []; // droplets thrown clear, drawn smooth on top: [x, y (px from the middle), rx, ry, turn]
+                    const spot = (cx, cy, r, stretch, turn) => spots.push([(cx - c) * CELL, (cy - c) * CELL, r * CELL * stretch, r * CELL, turn]);
+                    // Ink put down at a spot: water, the fine pigment carried in it, and the heavy pigment that stains
+                    // where it lands, softly at its edge
+                    const put = (cx, cy, r, w, ink, stain) => {
+                        for (let yy = Math.max(1, Math.floor(cy - r)); yy <= Math.min(G - 2, Math.ceil(cy + r)); yy++) {
+                            for (let xx = Math.max(1, Math.floor(cx - r)); xx <= Math.min(G - 2, Math.ceil(cx + r)); xx++) {
+                                const d = Math.hypot(xx - cx, yy - cy) / r;
+                                if (d > 1) continue;
+                                const i = yy * G + xx;
+                                const fall = 1 - d * d * 0.35;
+                                const soft = d < 0.6 ? 1 : 1 - (d - 0.6) / 0.4;
+                                W[i] = Math.max(W[i], w * fall);
+                                I[i] = Math.max(I[i], ink * fall);
+                                D[i] = Math.max(D[i], stain * soft * soft * (3 - 2 * soft));
+                            }
+                        }
+                    };
+                    const r0 = rand(5.4, 6.7);
+                    for (let k = 0; k < 8; k++) { // the splat itself, lumpy rather than round
+                        const a = rand(0, TAU), o = r0 * rand(0, 0.5);
+                        put(c + Math.cos(a) * o, c + Math.sin(a) * o, r0 * rand(0.45, 0.85), 3.4, 1.4, 1);
+                    }
+                    const fingers = Math.round(rand(5, 10));
+                    for (let k = 0; k < fingers; k++) { // stubby fingers, tapering and curving outward
+                        let a = rand(0, TAU);
+                        const L = r0 * (0.3 + Math.pow(Math.random(), 0.8) * 1.6), w0 = rand(1.5, 3.1), bend = rand(-0.18, 0.18);
+                        let fx = c + Math.cos(a) * r0 * 0.7;
+                        let fy = c + Math.sin(a) * r0 * 0.7;
+                        for (let u = 0; u < 1; u += 0.04) {
+                            put(fx, fy, w0 * Math.pow(1 - u, 0.8) + 0.35, 1.1 * (1 - u) + 0.2, 0.9, 0.85 * (1 - u * 0.4));
+                            fx += Math.cos(a) * L * 0.04;
+                            fy += Math.sin(a) * L * 0.04;
+                            a += bend * 0.04;
+                        }
+                        if (Math.random() < 0.4) put(fx, fy, rand(0.8, 1.6), 0.6, 1, 0.9); // a blob where it stopped
+                        else if (Math.random() < 0.7) spot(fx + Math.cos(a) * rand(1.4, 6), fy + Math.sin(a) * rand(1.4, 6), rand(0.55, 1.2), rand(1.2, 2), a); // or a droplet thrown off
+                    }
+                    for (let k = 0; k < 30; k++) { // fine spatter, smaller the farther it flew, stretched the way it flew
+                        const a = rand(0, TAU), far = rand(0, 1), d = r0 * (1.9 + far * 5.5);
+                        spot(c + Math.cos(a) * d, c + Math.sin(a) * d, 0.2 + (1 - far) * rand(0.2, 0.8), rand(1, 1.8), a);
+                    }
+                    // On the page: the simulation's cells, scaled up and softened by the browser, with the spatter drawn
+                    // smooth on top at full resolution
+                    const box = document.createElement('div');
+                    box.className = 'nf-drop';
+                    box.style.cssText = `left:${x - SIZE / 2}px;top:${y - SIZE / 2}px;width:${SIZE}px;height:${SIZE}px`;
+                    const cells = document.createElement('canvas');
+                    cells.width = cells.height = G;
+                    const flecks = document.createElement('canvas');
+                    flecks.width = flecks.height = Math.round(SIZE * Math.min(2, window.devicePixelRatio || 1));
+                    box.append(cells, flecks);
+                    layer.append(box);
+                    const g = cells.getContext('2d');
+                    return { P, T, grain, W, I, D, dW: new Float32Array(G * G), dI: new Float32Array(G * G), spots, box, g, img: g.createImageData(G, G), flecks, steps: 0, start: performance.now(), area: [c - 30, c - 30, c + 30, c + 30], rgb: '' };
+                };
+
+                // One step: water flows downhill to its neighbors (wetting dry paper only where there's enough of it),
+                // carrying the fine pigment more slowly; then the paper soaks a little up, and some pigment settles
+                const step = (d) => {
+                    const { P, T, W, I, D, dW, dI } = d;
+                    const x0 = Math.max(1, d.area[0] - 1), y0 = Math.max(1, d.area[1] - 1);
+                    const x1 = Math.min(G - 2, d.area[2] + 1), y1 = Math.min(G - 2, d.area[3] + 1);
+                    dW.fill(0);
+                    dI.fill(0);
+                    let ax0 = G, ay0 = G, ax1 = 0, ay1 = 0;
+                    for (let y = y0; y <= y1; y++) {
+                        for (let x = x0; x <= x1; x++) {
+                            const i = y * G + x;
+                            const w = W[i];
+                            if (w < DRY) continue;
+                            if (x < ax0) ax0 = x;
+                            if (x > ax1) ax1 = x;
+                            if (y < ay0) ay0 = y;
+                            if (y > ay1) ay1 = y;
+                            const conc = I[i] / w;
+                            let out = 0;
+                            let outI = 0;
+                            for (let k = 0; k < 8; k++) {
+                                const j = i + NB[k][1] * G + NB[k][0];
+                                const diff = w - W[j];
+                                if (diff <= 0 || (W[j] < DRY && w < T[j])) continue;
+                                const f = RATE * NB[k][2] * diff * P[j];
+                                out += f;
+                                dW[j] += f;
+                                const fi = f * conc * MOB;
+                                outI += fi;
+                                dI[j] += fi;
+                            }
+                            dW[i] -= out;
+                            dI[i] -= outI;
+                        }
+                    }
+                    d.area = [ax0, ay0, ax1, ay1];
+                    for (let y = y0; y <= y1; y++) {
+                        for (let x = x0; x <= x1; x++) {
+                            const i = y * G + x;
+                            W[i] += dW[i];
+                            I[i] = Math.max(0, I[i] + dI[i]);
+                            if (W[i] <= 0) {
+                                W[i] = 0;
+                                continue;
+                            }
+                            let dry = 0;
+                            for (let k = 0; k < 8; k++) if (W[i + NB[k][1] * G + NB[k][0]] < DRY) dry++;
+                            const edge = dry / 8;
+                            W[i] = Math.max(0, W[i] - ABSORB * (0.4 + 0.6 * P[i]) * (1 + 2.5 * edge));
+                            const settle = W[i] < DRY ? 1 : DEP * (1 + EDGE * edge);
+                            const dep = I[i] * settle;
+                            D[i] += dep;
+                            I[i] -= dep;
+                        }
+                    }
+                    d.steps++;
+                };
+
+                // The pigment as ink on the paper, in the page's ink color (its grain showing through, and wet paper a
+                // little darker), and the spatter, drawn again only if that color changes
+                const paint = (d, rgb) => {
+                    const { W, I, D, grain, img } = d;
+                    const px = img.data;
+                    for (let i = 0, k = 0; i < G * G; i++, k += 4) {
+                        const pig = (D[i] + I[i] * 0.9) * (0.75 + 0.5 * grain[i]);
+                        let a = 1 - Math.exp(-1.9 * pig);
+                        a += (1 - a) * Math.min(1, W[i] * 3) * 0.08;
+                        px[k] = rgb[0];
+                        px[k + 1] = rgb[1];
+                        px[k + 2] = rgb[2];
+                        px[k + 3] = a * 255;
+                    }
+                    d.g.putImageData(img, 0, 0);
+                    const key = rgb.join();
+                    if (d.rgb !== key) {
+                        const f = d.flecks.getContext('2d');
+                        const scale = d.flecks.width / SIZE;
+                        f.setTransform(1, 0, 0, 1, 0, 0);
+                        f.clearRect(0, 0, d.flecks.width, d.flecks.height);
+                        f.setTransform(scale, 0, 0, scale, (SIZE / 2) * scale, (SIZE / 2) * scale);
+                        f.fillStyle = `rgba(${key}, 0.9)`;
+                        d.spots.forEach(([sx, sy, rx, ry, turn]) => {
+                            f.beginPath();
+                            f.ellipse(sx, sy, rx, ry, turn, 0, TAU);
+                            f.fill();
+                        });
+                    }
+                    d.rgb = key;
+                };
+
+                const drops = new Set();
+                let looping = false;
+                const remove = (d) => {
+                    d.box.remove();
+                    drops.delete(d);
+                };
+                const tick = (now) => {
+                    const rgb = rgbOf(); // the theme may have changed under it
+                    const key = rgb.join();
+                    const until = performance.now() + BUDGET;
+                    drops.forEach((d) => {
+                        const t = now - d.start;
+                        const before = d.steps;
+                        const due = d.still ? STEPS : Math.min(STEPS, Math.floor(t * STEPS_PER_MS));
+                        while (d.steps < due && performance.now() < until) step(d);
+                        if (d.steps !== before || d.rgb !== key) paint(d, rgb);
+                        if (d.still) {
+                            if (d.steps < STEPS) return;
+                            if (!d.shown) {
+                                d.shown = now;
+                                d.box.style.visibility = '';
+                            }
+                            if (now - d.shown > 5000) remove(d);
+                            return;
+                        }
+                        if (t >= LIFE) remove(d);
+                        else d.box.style.opacity = String(1 - Math.min(1, Math.max(0, (t - (LIFE - FADE)) / FADE)));
+                    });
+                    if (drops.size) requestAnimationFrame(tick);
+                    else looping = false;
+                };
+                document.addEventListener('click', (e) => {
+                    if (e.button !== 0 || (e.target.closest && e.target.closest('a, button, input, textarea, select, label, summary'))) return;
+                    layer.style.height = `${document.documentElement.scrollHeight}px`;
+                    const d = make(e.pageX, e.pageY);
+                    if (hint) hint.classList.add('used');
+                    if (!root.classList.contains('motion')) {
+                        d.still = true;
+                        d.box.style.visibility = 'hidden';
+                    }
+                    paint(d, rgbOf());
+                    drops.add(d);
+                    if (drops.size > 8) remove(drops.values().next().value); // the oldest goes first
+                    if (!looping) {
+                        looping = true;
+                        requestAnimationFrame(tick);
+                    }
+                });
+            })();
 
             // A mistyped address often still names what someone wanted (/project, /resum, /contact-me), so offer the
             // closest page, section, or write-up. Opened straight from disk or as /404.html, there's nothing to read.

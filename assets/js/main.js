@@ -700,6 +700,9 @@
     };
     // Each write-up has its own link (#vm, #pocer, #journal). Opening one puts its link in the address bar,
     // closing it puts the address back, and visiting the link opens the write-up straight away.
+    // Back closes a write-up: opening one from its card adds a step to the browser's history (its link), so Back takes
+    // that step away and the write-up closes with it. Closing it any other way takes the step away too, so Back
+    // afterwards goes where it would have before. Turning to another write-up keeps the same step.
     const slugOf = (panel) => panel.id.replace(/^panel-/, '');
     const panelFromHash = () => {
         let slug = '';
@@ -707,10 +710,17 @@
         const el = slug && document.getElementById(`panel-${slug}`);
         return el && el.classList.contains('panel') ? el : null;
     };
-    const showPanelUrl = (panel) => {
+    let steppingBack = false; // while the page itself takes a write-up's step away (see the panel's close below)
+    const showPanelUrl = (panel, step = false) => {
         const hash = `#${slugOf(panel)}`;
         panel._returnUrl = location.hash === hash ? location.pathname + location.search : location.href;
-        if (location.hash !== hash) history.replaceState(history.state, '', hash);
+        if (location.hash === hash) return;
+        if (step) {
+            history.pushState({ writeUp: true }, '', hash);
+            panel._stepped = true;
+        } else {
+            history.replaceState(history.state, '', hash);
+        }
     };
     // Inside a write-up, the headings, paragraphs, and chips below the first screen rise in as you scroll to them.
     // What's on screen when it opens shows at once.
@@ -749,7 +759,7 @@
         };
         if (grow) morph(card, panel, show);
         else show();
-        showPanelUrl(panel);
+        showPanelUrl(panel, true);
     };
     const closePanel = (panel) => {
         if (!panel.open) return;
@@ -762,17 +772,49 @@
     const panels = [...document.querySelectorAll('.panel')];
     // The write-ups (each opened from its project card); the others, like How this site is built, stand apart
     const projectPanels = [...document.querySelectorAll('.card [data-panel]')].map((btn) => document.getElementById(btn.dataset.panel));
-    const switchPanel = (from, to) => {
-        const returnUrl = from._returnUrl; // closing the next one puts the address back to where the first began
-        from.close();
-        const card = panelCard.get(to);
-        if (card) scrollToCard(card, 'instant');
-        to.classList.remove('grown');
-        to._shrink = motion && !!card; // closePanel checks the card is on screen by then
-        to.showModal();
-        settleParts(to);
-        showPanelUrl(to);
-        to._returnUrl = returnUrl;
+    // With motion on, one write-up turns to the next like a page (a view transition, see "Turning between write-ups" in
+    // styles.css): forward (dir 1) the next slides in from the right over this one, back (-1) this one slides away to
+    // the right to show the one before
+    let turn = null; // the turn under way, if any
+    const switchPanel = (from, to, dir = 1) => {
+        const swap = () => {
+            const returnUrl = from._returnUrl; // closing the next one puts the address back to where the first began
+            from.close();
+            from.style.transform = ''; // where a swipe left it leaning
+            from.style.transition = '';
+            const card = panelCard.get(to);
+            if (card) scrollToCard(card, 'instant');
+            to.classList.toggle('grown', !!turn); // turning, it doesn't also slide in on its own
+            to._shrink = motion && !!card; // closePanel checks the card is on screen by then
+            to.showModal();
+            settleParts(to);
+            showPanelUrl(to);
+            to._returnUrl = returnUrl;
+            to._stepped = from._stepped; // the history step goes with whichever write-up is showing
+            from._stepped = false;
+        };
+        if (!motion || !document.startViewTransition || morphing) {
+            swap();
+            return;
+        }
+        if (turn) turn.skipTransition(); // turned again mid-turn: that one finishes at once
+        root.classList.remove('turn-next', 'turn-prev');
+        root.classList.add(dir > 0 ? 'turn-next' : 'turn-prev');
+        from.classList.add('turning');
+        const vt = document.startViewTransition(() => {
+            from.classList.remove('turning');
+            swap();
+            to.classList.add('turning');
+        });
+        turn = vt;
+        const done = () => {
+            if (turn !== vt) return; // a newer turn has taken over
+            turn = null;
+            to.classList.remove('turning');
+            root.classList.remove('turn-next', 'turn-prev');
+        };
+        vt.ready.catch(() => {});
+        vt.finished.then(done, done);
     };
     projectPanels.forEach((panel, i) => {
         const next = projectPanels[(i + 1) % projectPanels.length];
@@ -783,13 +825,13 @@
         btn.querySelector('.panel-next-name').textContent = next.querySelector('h2').textContent;
         btn.insertAdjacentHTML('beforeend', '<span class="chev" aria-hidden="true">→</span>');
         btn.setAttribute('aria-keyshortcuts', 'ArrowRight');
-        btn.addEventListener('click', () => switchPanel(panel, next));
-        // Under it (on desktop, see .panel-keys), a quiet note that the arrow keys do the same; screen readers hear it
-        // from the button's aria-keyshortcuts instead
+        btn.addEventListener('click', () => switchPanel(panel, next, 1));
+        // Under it, a quiet note that the arrow keys do the same, or on a touch screen a sideways swipe (see
+        // .panel-keys); screen readers hear about the keys from the button's aria-keyshortcuts instead
         const keys = document.createElement('p');
         keys.className = 'panel-keys';
         keys.setAttribute('aria-hidden', 'true');
-        keys.innerHTML = 'Or use <kbd>←</kbd> <kbd>→</kbd> to switch projects';
+        keys.innerHTML = '<span class="keys-fine">Or use <kbd>←</kbd> <kbd>→</kbd> to switch projects</span><span class="keys-touch">Or swipe sideways to switch projects</span>';
         panel.querySelector('.panel-inner').append(btn, keys);
     });
     document.querySelectorAll('[data-panel]').forEach((btn) => {
@@ -824,7 +866,17 @@
             closePanel(panel);
         });
         panel.addEventListener('close', () => {
-            if (location.hash === `#${slugOf(panel)}`) history.replaceState(history.state, '', panel._returnUrl || location.pathname + location.search);
+            const stepped = panel._stepped;
+            panel._stepped = false;
+            if (location.hash !== `#${slugOf(panel)}`) return; // already gone (Back, or turned to another write-up)
+            if (stepped && history.state && history.state.writeUp) {
+                // Take away the step its opening added, so Back from here leaves as it would have
+                steppingBack = true;
+                setTimeout(() => { steppingBack = false; }, 1000);
+                history.back();
+            } else {
+                history.replaceState(history.state, '', panel._returnUrl || location.pathname + location.search);
+            }
         });
 
         // Copy link: a link that opens this write-up directly. On phones with a share sheet it's Share instead, so the
@@ -867,35 +919,69 @@
     });
     // Phones: the write-up sheet can be pulled down from its top to close. It follows the finger, closes past a
     // quarter of its height (or on a quick flick), and springs back otherwise. Scrolling inside it works as usual.
+    // On any touch screen, a project's write-up can also be swiped sideways to turn to the next project (a swipe to the
+    // left, as a page turns) or back to the one before: it leans after the finger, turns once the swipe has gone a
+    // little way (or on a quick flick), and settles back otherwise.
     const sheetLayout = matchMedia('(max-width: 760px)');
     panels.forEach((panel) => {
+        const swipes = projectPanels.includes(panel);
+        let startX = 0;
         let startY = 0;
         let startT = 0;
         let pull = 0;
-        let state = 'idle'; // 'maybe' until the first move shows which way the finger is going, then 'drag'
+        let swept = 0;
+        let canPull = false;
+        let canSwipe = false;
+        let state = 'idle'; // 'maybe' until the first move shows which way the finger is going, then 'drag' or 'swipe'
         const setPull = (px) => {
             pull = px;
             panel.style.transform = px ? `translateY(${px}px)` : '';
             panel.style.setProperty('--pull', (px / panel.offsetHeight).toFixed(3));
         };
         panel.addEventListener('touchstart', (e) => {
-            state = sheetLayout.matches && e.touches.length === 1 && panel.scrollTop <= 0 ? 'maybe' : 'idle';
-            startY = e.touches[0].clientY;
+            const t = e.touches[0];
+            canPull = sheetLayout.matches && panel.scrollTop <= 0;
+            // Not from the screen's very edges, where the phone's own back and forward swipes start
+            canSwipe = swipes && t.clientX >= 24 && t.clientX <= window.innerWidth - 24;
+            state = e.touches.length === 1 && (canPull || canSwipe) ? 'maybe' : 'idle';
+            startX = t.clientX;
+            startY = t.clientY;
             startT = performance.now();
         }, { passive: true });
         panel.addEventListener('touchmove', (e) => {
             if (state === 'idle') return;
+            const dx = e.touches[0].clientX - startX;
             const dy = e.touches[0].clientY - startY;
             if (state === 'maybe') {
-                if (Math.abs(dy) < 6) return;
-                state = dy > 0 ? 'drag' : 'idle'; // a push up is an ordinary scroll
+                if (Math.max(Math.abs(dx), Math.abs(dy)) < 8) return;
+                if (canSwipe && Math.abs(dx) > Math.abs(dy) * 1.3) state = 'swipe';
+                else if (canPull && dy > 0 && dy >= Math.abs(dx)) state = 'drag';
+                else state = 'idle'; // a push up, or a slant, is an ordinary scroll
                 if (state === 'idle') return;
                 panel.style.transition = 'none';
             }
             e.preventDefault();
-            setPull(Math.max(0, dy));
+            if (state === 'drag') {
+                setPull(Math.max(0, dy));
+                return;
+            }
+            swept = dx;
+            if (motion) panel.style.transform = `translateX(${(dx * 0.35).toFixed(1)}px)`; // leaning, held back a little
         }, { passive: false });
         const release = () => {
+            if (state === 'swipe') {
+                state = 'idle';
+                const quick = Math.abs(swept) / Math.max(1, performance.now() - startT) > 0.5;
+                if (Math.abs(swept) > 70 || (quick && Math.abs(swept) > 30)) {
+                    const dir = swept < 0 ? 1 : -1;
+                    const i = projectPanels.indexOf(panel) + dir;
+                    switchPanel(panel, projectPanels[(i + projectPanels.length) % projectPanels.length], dir); // the turn carries on from the lean
+                } else {
+                    panel.style.transition = motion ? 'transform 0.28s cubic-bezier(0.2, 0.7, 0.3, 1)' : 'none';
+                    panel.style.transform = '';
+                }
+                return;
+            }
             if (state !== 'drag') {
                 state = 'idle';
                 return;
@@ -992,14 +1078,28 @@
         const from = projectPanels.find((panel) => panel.open);
         if (!from) return;
         e.preventDefault();
-        const i = projectPanels.indexOf(from) + (e.key === 'ArrowRight' ? 1 : -1);
-        switchPanel(from, projectPanels[(i + projectPanels.length) % projectPanels.length]);
+        const dir = e.key === 'ArrowRight' ? 1 : -1;
+        const i = projectPanels.indexOf(from) + dir;
+        switchPanel(from, projectPanels[(i + projectPanels.length) % projectPanels.length], dir);
     });
 
     // A write-up link followed while the page is already open
     window.addEventListener('hashchange', () => {
         const panel = panelFromHash();
         if (panel && !panel.open) openPanel(panel);
+    });
+    // Back (or Forward) to a place without the open write-up's link closes the write-up
+    window.addEventListener('popstate', () => {
+        if (steppingBack) {
+            steppingBack = false; // the page's own step back, after a close
+            return;
+        }
+        const wanted = panelFromHash();
+        panels.forEach((panel) => {
+            if (!panel.open || panel === wanted) return;
+            panel._stepped = false; // Back has taken the step away already
+            closePanel(panel);
+        });
     });
 
     /* ---------- Experience: how long each role lasted ---------- */

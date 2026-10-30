@@ -2329,11 +2329,19 @@ html:has(.panel[open]) { overflow: hidden; }
 .panel p:not(.panel-meta) { font-size: 1.05rem; line-height: 1.6; color: var(--text-2); }
 .panel .chips { margin-top: 1.75rem; }
 
-/* Under Next project, on desktop: the arrow keys do the same (the script adds the note) */
+/* Under Next project: the arrow keys do the same on a computer, and a sideways swipe on a touch screen (the script
+   adds the note) */
 .panel p.panel-keys { display: none; margin: 0.75rem 0 0; font-family: var(--font); font-size: 0.75rem; line-height: 1.5; text-align: center; color: var(--text-3); }
+.panel-keys .keys-touch { display: none; }
 
 @media (hover: hover) and (pointer: fine) {
     .panel p.panel-keys { display: block; }
+}
+
+@media (pointer: coarse) {
+    .panel p.panel-keys { display: block; }
+    .panel-keys .keys-fine { display: none; }
+    .panel-keys .keys-touch { display: inline; }
 }
 
 /* It's the very last line, so it rises in with Next project rather than on its own */
@@ -2687,6 +2695,28 @@ html.vt-morph::view-transition-new(root) { animation: vtIn 0.4s var(--ease) both
 
 @keyframes vtIn { from { opacity: 0; } }
 @keyframes vtOut { to { opacity: 0; } }
+
+/* ================= Turning between write-ups ================= */
+/* Next project, the arrow keys, and a sideways swipe turn one write-up to the next like a page (a view transition,
+   with the script naming the two for the moment of the turn): going on, the next slides in from the right over this
+   one, which eases off to the left and fades away under it; going back, this one slides away to the right and the
+   one before comes back out from under it. The page underneath fades all the way, so nothing is left to vanish when
+   the turn ends. The page on top casts a soft shadow along its edge. */
+.turning { view-transition-name: sheet; }
+
+::view-transition-group(sheet) { animation-duration: 0.5s; animation-timing-function: var(--ease); }
+::view-transition-old(sheet),
+::view-transition-new(sheet) { mix-blend-mode: normal; }
+
+html.turn-next::view-transition-old(sheet) { animation: turnUnder 0.5s var(--ease) both; }
+html.turn-next::view-transition-new(sheet) { animation: turnOver 0.5s var(--ease) both; box-shadow: -14px 0 36px rgba(0, 0, 0, 0.16); }
+html.turn-prev::view-transition-old(sheet) { z-index: 1; animation: turnAway 0.5s var(--ease) both; box-shadow: -14px 0 36px rgba(0, 0, 0, 0.16); }
+html.turn-prev::view-transition-new(sheet) { animation: turnBack 0.5s var(--ease) both; }
+
+@keyframes turnOver { from { transform: translateX(100%); } }
+@keyframes turnUnder { to { transform: translateX(-28%); opacity: 0; } }
+@keyframes turnAway { to { transform: translateX(100%); } }
+@keyframes turnBack { from { transform: translateX(-28%); opacity: 0; } }
 
 /* ================= Moving between pages ================= */
 /* Going between the portfolio, the résumé, and the 404 page eases one page into the next instead of a hard cut.
