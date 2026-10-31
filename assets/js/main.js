@@ -675,7 +675,8 @@
     // closing it puts the address back, and visiting the link opens the write-up straight away.
     // Back closes a write-up: opening one from its card adds a step to the browser's history (its link), so Back takes
     // that step away and the write-up closes with it. Closing it any other way takes the step away too, so Back
-    // afterwards goes where it would have before. Turning to another write-up keeps the same step.
+    // afterwards goes where it would have before. Turning to another write-up keeps the same step. A write-up opened
+    // from the résumé (_fromResume) goes back there when it's closed, the same as Back does.
     const slugOf = (panel) => panel.id.replace(/^panel-/, '');
     const panelFromHash = () => {
         let slug = '';
@@ -684,6 +685,14 @@
         return el && el.classList.contains('panel') ? el : null;
     };
     let steppingBack = false; // while the page itself takes a write-up's step away (see the panel's close below)
+    // One step, however many ways it's closed on the way out (a double click, or Esc, which can close it regardless)
+    let leaving = false;
+    const backToResume = () => {
+        if (leaving) return;
+        leaving = true;
+        history.back();
+    };
+    window.addEventListener('pageshow', () => { leaving = false; }); // Forward, back to this page as it was left
     const showPanelUrl = (panel, step = false) => {
         const hash = `#${slugOf(panel)}`;
         panel._returnUrl = location.hash === hash ? location.pathname + location.search : location.href;
@@ -736,6 +745,10 @@
     };
     const closePanel = (panel) => {
         if (!panel.open) return;
+        if (panel._fromResume) {
+            backToResume(); // it stays up until the résumé takes over, so the page behind never shows
+            return;
+        }
         const card = panelCard.get(panel);
         if (panel._shrink && card && onScreen(card)) morph(panel, card, () => panel.close());
         else panel.close();
@@ -765,6 +778,8 @@
             to._returnUrl = returnUrl;
             to._stepped = from._stepped; // the history step goes with whichever write-up is showing
             from._stepped = false;
+            to._fromResume = from._fromResume;
+            from._fromResume = false;
         };
         if (!motion || !document.startViewTransition || morphing) {
             swap();
@@ -834,11 +849,15 @@
         panel.addEventListener('click', (e) => { if (e.target === panel) closePanel(panel); });
         // Esc shrinks it back into its card as well
         panel.addEventListener('cancel', (e) => {
-            if (!panel._shrink) return;
+            if (!panel._shrink && !panel._fromResume) return;
             e.preventDefault();
             closePanel(panel);
         });
         panel.addEventListener('close', () => {
+            if (panel._fromResume) {
+                backToResume(); // closed without going through closePanel: pulled down, or Esc before any click
+                return;
+            }
             const stepped = panel._stepped;
             panel._stepped = false;
             if (location.hash !== `#${slugOf(panel)}`) return; // already gone (Back, or turned to another write-up)
@@ -1071,6 +1090,7 @@
         panels.forEach((panel) => {
             if (!panel.open || panel === wanted) return;
             panel._stepped = false; // Back has taken the step away already
+            panel._fromResume = false;
             closePanel(panel);
         });
     });
@@ -2439,6 +2459,7 @@
     // that loads the page again (rather than restoring it as it was). The browser's own restoring can run before the
     // page has grown to its full height and land short. It's set once more when the fonts settle.
     window.addEventListener('pagehide', () => {
+        if (panels.some((panel) => panel._fromResume)) return; // a detour from the résumé: the spot to return to is unchanged
         try { sessionStorage.setItem('returnY', String(Math.round(window.scrollY))); } catch (e) {}
     });
     let returnY = 0;
@@ -2464,6 +2485,12 @@
         if (card) scrollToCard(card, 'instant');
         linkedPanel.classList.remove('grown');
         linkedPanel._shrink = motion && !!card; // closing shrinks it back into its card, like one opened from the card
+        // The résumé's write-up links say where they came from (?from=resume), which the address doesn't keep. It's kept
+        // with this history step instead, so a reload still knows. Opened in a new tab, there's nothing to go back to.
+        if (new URLSearchParams(location.search).get('from') === 'resume') {
+            history.replaceState(history.length > 1 ? { fromResume: true } : history.state, '', location.pathname + location.hash);
+        }
+        linkedPanel._fromResume = !!(history.state && history.state.fromResume);
         linkedPanel.showModal();
         settleParts(linkedPanel);
         showPanelUrl(linkedPanel);

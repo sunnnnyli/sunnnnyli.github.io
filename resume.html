@@ -54,7 +54,9 @@
             if (!e.viewTransition) return;
             const html = document.documentElement;
             html.classList.add('arrived', 'vt-in');
-            e.viewTransition.finished.then(() => html.classList.remove('vt-in'));
+            const done = () => html.classList.remove('vt-in');
+            e.viewTransition.ready.catch(() => {}); // the browser drops it if the page is already back on screen
+            e.viewTransition.finished.then(done, done);
         });
     </script>
     <!-- Asks for the eased page transitions here, not only in styles.css: Chrome decides whether a page wants them before a stylesheet is always read (opened from disk, or on a busy machine), and then skips them -->
@@ -103,8 +105,8 @@
             <ul class="r-contact" aria-label="Contact">
                 <li><svg class="lk-ic lk-stroke" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.8-6.5-11a6.5 6.5 0 0 1 13 0c0 5.2-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>Brooklyn, NY</li>
                 <li><a href="mailto:sunnyli2003@gmail.com"><svg class="lk-ic lk-stroke" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg><span class="lk-t">sunnyli2003@gmail.com</span></a></li>
-                <li><a href="https://www.linkedin.com/in/sunnyli2003"><svg class="lk-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg><span class="lk-t">linkedin.com/in/sunnyli2003</span></a></li>
-                <li><a href="https://github.com/sunnnnyli"><svg class="lk-ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span class="lk-t">github.com/sunnnnyli</span></a></li>
+                <li><a href="https://www.linkedin.com/in/sunnyli2003" target="_blank" rel="noopener"><svg class="lk-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg><span class="lk-t">linkedin.com/in/sunnyli2003</span></a></li>
+                <li><a href="https://github.com/sunnnnyli" target="_blank" rel="noopener"><svg class="lk-ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span class="lk-t">github.com/sunnnnyli</span></a></li>
             </ul>
         </header>
 
@@ -139,7 +141,7 @@
                     <li>Ported the system from Python into the company’s C# codebase, learning C# on the job and building a reusable agent template so new agents could be added by defining their role.</li>
                     <li>Built a Forge-based harness validating generated exploits at runtime against a corpus of 20–30 Solidity contracts, independently reproducing a documented exploit responsible for a $10K loss and confirming it against a published PoC.</li>
                 </ul>
-                <a class="r-more" href="index.html#pocer"><span class="lk-t">Read the Bug PoCer write-up</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+                <a class="r-more" href="index.html?from=resume#pocer"><span class="lk-t">Read the Bug PoCer write-up</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
             </article>
         </section>
 
@@ -154,7 +156,7 @@
                     <li>Built Apex and Flow automation generating single-page Visualforce PDF notifications from case data, auto-attaching them, and emailing formatted CVE details to affected agencies.</li>
                     <li>Developed a parent/child case pipeline splitting master vulnerability CSVs into agency-scoped files, attaching each to its child case on parent approval, and dispatching remediation notices to selected recipients.</li>
                 </ul>
-                <a class="r-more" href="index.html#vm"><span class="lk-t">Read the write-up<span class="visually-hidden">: Vulnerability Management Case Automation</span></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+                <a class="r-more" href="index.html?from=resume#vm"><span class="lk-t">Read the write-up<span class="visually-hidden">: Vulnerability Management Case Automation</span></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
             </article>
 
             <article class="r-item rv">
@@ -164,7 +166,7 @@
                     <li>Built dashboard for collaborative editorial platform: fetched each manuscript’s state-valid actions from backend workflow API, filtered by the viewer’s editor/author/referee role, and dispatched transitions over an Axios client with inline error handling.</li>
                     <li>Implemented the login flow and landing page, with Jest and React Testing Library component tests, shipped through a branch-and-merge workflow to a deployed Heroku app.</li>
                 </ul>
-                <a class="r-more" href="index.html#journal"><span class="lk-t">Read the write-up<span class="visually-hidden">: Journal Editorial Management System</span></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+                <a class="r-more" href="index.html?from=resume#journal"><span class="lk-t">Read the write-up<span class="visually-hidden">: Journal Editorial Management System</span></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
             </article>
         </section>
 

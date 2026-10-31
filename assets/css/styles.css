@@ -339,6 +339,9 @@ img, svg { -webkit-user-drag: none; }
     text-transform: uppercase;
 }
 
+/* The room between a section's label and what follows it, on top of the label's own margin */
+:root { --label-gap: clamp(0.875rem, 1.6vw, 1.375rem); }
+
 /* Buttons and links */
 .pill {
     display: inline-flex;
@@ -1188,7 +1191,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 1rem;
-    margin-top: clamp(2.5rem, 6vw, 4rem);
+    margin-top: var(--label-gap);
 }
 
 .tile {
@@ -1358,7 +1361,7 @@ html:not(.motion) .dot-grid canvas { display: none; }
     --jobs-gap: clamp(4rem, 9vw, 7rem);
     display: grid;
     gap: var(--jobs-gap);
-    margin-top: clamp(3rem, 7vw, 5rem);
+    margin-top: var(--label-gap);
 }
 
 .job {
@@ -1445,9 +1448,18 @@ html:not(.motion) .dot-grid canvas { display: none; }
 .motion .feats li.on { opacity: 1; }
 
 /* ================= Projects gallery ================= */
-.projects-head { padding-top: clamp(5rem, 12vw, 9.5rem); }
+/* The row's top padding (room for the top bar when it's pinned) is more than a label's gap, so the row is pulled up
+   under the label to close it, and the label stays in front of the row's background */
+.projects-head {
+    position: relative;
+    z-index: 1;
+    padding-top: clamp(5rem, 12vw, 9.5rem);
+}
 
-.gallery { position: relative; }
+.gallery {
+    position: relative;
+    margin-top: calc(var(--label-gap) - 1.75rem);
+}
 
 .gallery-sticky {
     padding: 1.75rem 0 1.25rem;
@@ -1675,6 +1687,7 @@ html:not(.motion) .card.card-loop,
    over the first part (--slide, which its cards and progress bar follow) and the hold is the rest (--cover), as the
    row steps back a little. The script sets the slide's length (--dist) and the hold's (--hold), in pixels. */
 .motion .gallery:not(.gallery--free) {
+    margin-top: calc(var(--label-gap) - 1.75rem - var(--nav-h) - var(--safe-top));
     --slide: min(1, var(--p, 0) * (var(--dist, 0) + var(--hold, 0)) / max(1, var(--dist, 0)));
     --cover: max(0, (var(--p, 0) * (var(--dist, 0) + var(--hold, 0)) - var(--dist, 0)) / max(1, var(--hold, 0)));
 }
@@ -1698,7 +1711,7 @@ html:not(.motion) .card.card-loop,
     display: grid;
     grid-template-columns: 1.4fr 1fr;
     gap: 1rem;
-    margin-top: clamp(2.5rem, 6vw, 4rem);
+    margin-top: var(--label-gap);
 }
 
 .edu-school {
@@ -2010,6 +2023,7 @@ html:not(.motion) .card.card-loop,
     .card-art, .copy-btn, .photo-glow, .spot::before, .card-more, .to-top, .panel, .tile-turn, .tile-story { display: none !important; }
 
     .hero, .story, .gallery { height: auto !important; }
+    .gallery { margin-top: 0 !important; }
     .rise { margin-top: 0 !important; border-top: 0 !important; translate: none !important; border-radius: 0 !important; box-shadow: none !important; overflow: visible !important; }
     .holds::after { display: none !important; }
     .holds > .hold { position: static !important; padding-bottom: 0 !important; }
