@@ -91,19 +91,6 @@
         return i;
     };
 
-    // Which line each word of a split headline sits on, so the lines can rise one after another. It's measured as
-    // the headline comes into view, since where the lines break depends on the screen width and the fonts.
-    const numberLines = (headline) => {
-        let line = -1;
-        let top = -Infinity;
-        headline.querySelectorAll('.hl-w').forEach((w) => {
-            if (w.offsetTop > top + 2) {
-                line++;
-                top = w.offsetTop;
-            }
-            w.style.setProperty('--line', line);
-        });
-    };
     // Text resolves from scrambled characters, left to right: the section labels ("01 | Impact") as they come into
     // view, and everything on the first screen as the page opens. It's scrambled from its very first frame,
     // so the real words never show before they decode. Each word keeps its real width while it scrambles (and is cut
@@ -231,7 +218,6 @@
         root.classList.remove('intro'); // it's all scrambled now, so the text can show (see .intro in styles.css)
     };
     const reveal = (el) => {
-        if (el.classList.contains('split')) numberLines(el);
         if (el.classList.contains('eyebrow')) decode(el, { signs: true });
         el.classList.add('in');
     };
@@ -285,19 +271,6 @@
                 hl.style.setProperty('--i0', words[0].style.getPropertyValue('--i'));
                 hl.style.setProperty('--c', words.length);
             });
-        });
-
-        // Section headlines: each word sits in its own clipped box, so it can rise into view from behind its edge
-        document.querySelectorAll('.headline').forEach((h) => {
-            wrapWords(h, (word) => {
-                const box = document.createElement('span');
-                box.className = 'hl-w';
-                const s = document.createElement('span');
-                s.textContent = word;
-                box.append(s);
-                return box;
-            });
-            h.classList.add('split');
         });
 
         // Marquees: repeat items until a row is wider than the screen, then double it for a seamless loop.
@@ -2247,7 +2220,7 @@
     checkpoints.forEach(({ a, sec }) => {
         const label = sec.querySelector('.eyebrow');
         if (!label) return;
-        const name = a.textContent.trim();
+        const name = (a.querySelector('.visually-hidden') || a).textContent.trim(); // the link may still be decoding
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'anchor-btn';
