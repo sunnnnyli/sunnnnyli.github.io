@@ -851,16 +851,16 @@ html:not(.motion) .dot-grid canvas { display: none; }
 
 @media (hover: hover) {
     .quote-zh:hover :is(.py, .py-line) { opacity: 1; }
-    .hero-quote:has(.quote-zh:hover) blockquote { transform: translateY(var(--py-room)); }
+    .hero-quote:has(.quote-zh:hover) :is(blockquote, .more-btn) { transform: translateY(var(--py-room)); }
 }
 
 .quote-zh.show :is(.py, .py-line),
 .quote-zh:focus-visible :is(.py, .py-line) { opacity: 1; }
-.hero-quote:has(.quote-zh.show) blockquote,
-.hero-quote:has(.quote-zh:focus-visible) blockquote { transform: translateY(var(--py-room)); }
+.hero-quote:has(.quote-zh.show) :is(blockquote, .more-btn),
+.hero-quote:has(.quote-zh:focus-visible) :is(blockquote, .more-btn) { transform: translateY(var(--py-room)); }
 .quote-zh:focus { outline: none; }
 .quote-zh:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; }
-.motion .hero-quote blockquote { transition: transform 0.4s var(--ease); }
+.motion .hero-quote :is(blockquote, .more-btn) { transition: transform 0.4s var(--ease); }
 .motion :is(.py, .py-line) { transition: opacity 0.35s var(--ease); }
 
 .quote-en {
@@ -879,6 +879,92 @@ html:not(.motion) .dot-grid canvas { display: none; }
     font-size: 0.92rem;
     color: var(--text-3);
     text-wrap: balance; /* where it takes two lines, they come out even */
+}
+
+/* A button that opens something more: the story under the proverb (the script shows that one, since the story needs
+   the script to open), and the note under the Contact links. */
+.more-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.4rem;
+    padding: 0.2rem 0;
+    border: 0;
+    background: none;
+    font-family: var(--font);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--accent);
+    cursor: pointer;
+}
+
+.more-btn:hover .chev { transform: translateX(3px); }
+.more-btn[aria-expanded="true"] .chev { transform: rotate(90deg); }
+
+/* The story behind the proverb. The hero is pinned to one screen, so there's no room for it to open under the proverb;
+   it takes the intro's place instead, and nothing else moves. It stays laid out while hidden, so its brush stroke is
+   painted ahead of time. The stroke dips at each misfortune and rises at each blessing (see ink.js), written from left
+   to right as the story's four turns rise in. */
+.hero-copy { position: relative; }
+
+.tale {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    max-height: calc(100svh - 9rem);
+    padding-bottom: 0.875rem; /* room for the last line as it rises in, or a scrollbar would flash until it's settled */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    translate: 0 -50%;
+    visibility: hidden;
+    opacity: 0;
+}
+
+.tale:focus { outline: none; }
+.hero-copy.telling > .tale { visibility: visible; opacity: 1; }
+.hero-copy.telling > :not(.tale) { visibility: hidden; opacity: 0 !important; }
+.hero-copy.told > .load { animation: none; } /* the entrance is over, and its held end state would stop these fades */
+
+/* With motion on, the two cross-fade, whichever is leaving going first */
+.motion .tale,
+.motion .hero-copy.telling > :not(.tale) { transition: opacity 0.3s var(--ease), visibility 0s 0.3s; }
+.motion .hero-copy > :not(.tale),
+.motion .hero-copy.telling > .tale { transition: opacity 0.45s var(--ease) 0.15s; }
+
+.tale-top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.tale-title { font-size: clamp(1.65rem, 3.3vw, 2.5rem); font-weight: 400; line-height: 1.12; letter-spacing: -0.015em; color: var(--text); }
+
+.tale-line { display: flow-root; height: 2px; margin: 1.75rem 0 2.1rem; }
+.tale-line > span { display: block; height: 100%; background: var(--accent); }
+
+.tale-beats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.1rem; padding: 0; list-style: none; }
+.tale h3 { font-family: var(--font); font-size: 0.82rem; font-weight: 500; line-height: 1.3; color: var(--accent); }
+.tale-beats p { margin-top: 0.3rem; font-size: 0.93rem; line-height: 1.42; color: var(--text-2); }
+.tale-beats em { color: var(--text); }
+.tale-end { margin-top: 1.2rem; font-size: 0.93rem; line-height: 1.42; color: var(--text-3); }
+
+.motion :is(.tale-beats > li, .tale-end) {
+    opacity: 0;
+    translate: 0 12px;
+    transition: opacity 0.6s var(--ease), translate 0.6s var(--ease);
+}
+
+.motion .telling :is(.tale-beats > li, .tale-end) {
+    opacity: 1;
+    translate: none;
+    transition-delay: calc(0.05s + var(--i) * 0.2s);
+}
+
+@media (max-width: 1120px) {
+    .tale-beats { grid-template-columns: repeat(2, 1fr); gap: 0.9rem 1.1rem; }
+}
+
+@media (max-width: 760px) {
+    .tale { top: 0; max-height: calc(100svh - 14rem); translate: none; }
+    .tale-line { margin: 1.5rem 0 1.85rem; }
+    .tale-beats p, .tale-end { font-size: 0.9rem; }
+    .hero-quote .more-btn { margin-top: 0.15rem; font-size: 0.8rem; }
 }
 
 .motion .hero-photo-wrap {
@@ -1861,6 +1947,24 @@ html:not(.motion) .card.card-loop,
 /* The time where I am, on its own line under the reply note (the script fills it in) */
 .local-time { display: block; margin-top: 0.25rem; font-variant-numeric: tabular-nums; text-wrap: balance; }
 
+/* A last, quieter note under the links, under a short brush stroke that's written as it comes into view. Its label folds
+   it away: the note sits in a grid row that shrinks to nothing, which can animate to and from the note's full height. */
+.off-work { max-width: 31em; margin: 3.5rem auto 0; }
+.off-work-line { width: 7.5rem; height: 2px; margin: 0 auto 1.1rem; }
+.off-work-line > span { display: block; height: 100%; background: var(--accent); }
+.off-work .more-btn { min-height: 36px; margin-top: 0; font-size: 0.9rem; }
+
+.off-work-note { display: grid; grid-template-rows: 1fr; }
+.off-work-note > div { min-height: 0; overflow: hidden; }
+.off-work p { padding-top: 0.45rem; font-size: clamp(1.1rem, 1.7vw, 1.3rem); line-height: 1.4; text-wrap: balance; color: var(--on-dark); }
+.off-work .nb { white-space: nowrap; }
+
+.off-work.folded .off-work-note { grid-template-rows: 0fr; visibility: hidden; }
+.off-work.folded p { opacity: 0; }
+.motion .off-work.pressed .off-work-note { transition: grid-template-rows 0.55s var(--ease); }
+.motion .off-work.pressed.folded .off-work-note { transition: grid-template-rows 0.45s var(--ease), visibility 0s 0.45s; }
+.motion .off-work.pressed p { transition: opacity 0.45s var(--ease); }
+
 /* ================= Footer ================= */
 .footer {
     padding: 1.5rem 0 calc(2rem + var(--safe-bottom));
@@ -2370,6 +2474,217 @@ html:has(.panel[open]) { overflow: hidden; }
 .art-dg.focus .dg-node:not(.on) rect { stroke: var(--line); }
 .art-dg.focus .dg-node:not(.on) text { fill: var(--text-2); }
 
+/* The at-a-glance strip under a write-up's title, for anyone who won't read all of it */
+.panel-glance {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    margin-top: 1.1rem;
+    padding: 0.85rem 0;
+    border-block: 1px solid var(--line);
+}
+
+.panel-glance dt {
+    font-family: var(--font);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.panel-glance dd { margin-top: 0.2rem; font-size: 0.98rem; line-height: 1.28; color: var(--text); }
+
+@media (max-width: 520px) {
+    .panel-glance { grid-template-columns: 1fr; gap: 0.45rem; }
+    .panel-glance > div { display: grid; grid-template-columns: 4.6rem 1fr; align-items: baseline; }
+    .panel-glance dd { margin-top: 0; }
+}
+
+/* A write-up's sample run: a button under the diagram, and the stage it opens (the script builds it all). The dot that
+   travels the diagram is .dg-token. */
+.sample { margin-top: 0.85rem; }
+.sample-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem 0.8rem; }
+
+.sample-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 36px;
+    padding: 0.4rem 0.95rem 0.4rem 0.75rem;
+    border: 1px solid rgba(var(--accent-rgb), 0.6);
+    border-radius: 980px;
+    background: rgba(var(--accent-rgb), 0.08);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.3s, border-color 0.3s, opacity 0.3s;
+}
+
+.sample-btn svg { flex: none; width: 15px; height: 15px; fill: var(--accent); }
+.sample-btn:hover { background: rgba(var(--accent-rgb), 0.16); }
+.sample-btn[aria-disabled="true"] { border-color: var(--line); background: none; color: var(--text-2); cursor: default; }
+.sample-btn[aria-disabled="true"] svg { fill: var(--text-3); }
+
+.panel p.sample-note { font-family: var(--font); font-size: 0.78rem; line-height: 1.35; color: var(--text-3); }
+.sample-stage { margin-top: 0.8rem; }
+.panel p.sample-status { margin-top: 0.65rem; font-size: 0.95rem; line-height: 1.4; color: var(--text); }
+.panel p.sample-status:empty { display: none; }
+
+.dg-token { fill: var(--accent); stroke: var(--surface); stroke-width: 1.2; }
+
+/* Vulnerability Management: the master list, and a file for each agency that turns into its notice, a sheet of paper
+   like the PDFs on the diagram (dark ink and the light theme's accent in either theme, since the paper stays light) */
+.vm, .jr { display: grid; gap: 0.5rem; font-family: var(--mono); font-size: 0.72rem; line-height: 1.55; color: var(--text-2); }
+.vm ol, .vm ul, .jr ol { padding: 0; list-style: none; }
+.vm-list, .jr-api { padding: 0.6rem 0.75rem; border: 1px solid var(--line); border-radius: 12px; background: var(--art-bg); }
+.sample-head { display: flex; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.3rem; font-size: 0.68rem; color: var(--text-3); }
+.vm-row { display: grid; grid-template-columns: 1fr auto 4.2rem; gap: 0.75rem; transition: color 0.25s, opacity 0.35s; }
+.vm-row.on { color: var(--accent); }
+.vm-row.done { opacity: 0.62; }
+
+.vm-files { display: grid; grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr)); gap: 0.5rem; }
+
+.vm-file {
+    padding: 0.5rem 0.6rem;
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+    transition: background 0.4s, border-color 0.4s, color 0.4s, box-shadow 0.4s;
+}
+
+.vm-file ul { min-height: 4.65em; }
+.vm-file li { position: relative; z-index: 1; font-size: clamp(0.62rem, 2.6vw, 0.72rem); color: var(--text); }
+
+.sample-tick {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.15rem;
+    color: var(--accent);
+    font-family: var(--font);
+    font-weight: 500;
+    visibility: hidden;
+}
+
+.sample-tick svg { flex: none; width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+
+.vm-file.sent, .jr-dash.accepted {
+    --accent: #a84a33;
+    border: 1px solid transparent;
+    background: var(--sheet);
+    box-shadow: 0 8px 18px -14px rgba(0, 0, 0, 0.6);
+    color: #59616c;
+}
+
+:is(.vm-file.sent, .jr-dash.accepted) .sample-head { color: #59616c; }
+.vm-file.sent li, .jr-dash.accepted .jr-title { color: #242a31; }
+:is(.vm-file.sent, .jr-dash.accepted) .sample-tick { visibility: visible; }
+
+/* Bug PoCer: the log of a run. It keeps its height and scrolls on its own, following the newest line. */
+.term {
+    height: 17rem;
+    padding: 0.8rem 0.9rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--art-bg);
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    line-height: 1.55;
+    color: var(--text-2);
+}
+
+.term-line { display: grid; grid-template-columns: 9ch 1fr; gap: 0.75ch; }
+.term-line > :first-child { color: var(--text-3); }
+.term-line.head { display: block; margin-top: 0.6rem; font-weight: 500; color: var(--text); }
+.term-line.head:first-child { margin-top: 0; }
+.term-line.head > :first-child { display: none; }
+.term-line.bad > :last-child { color: var(--text); }
+.term-line.good > :last-child { color: var(--accent); font-weight: 500; }
+
+.motion .term.running::after {
+    content: '';
+    display: inline-block;
+    width: 0.55em;
+    height: 1em;
+    margin-top: 0.2em;
+    background: var(--accent);
+    animation: termCaret 1s steps(2, jump-none) infinite;
+}
+
+@keyframes termCaret {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* Journal: the workflow API's list beside the dashboard that keeps the viewer's share of it, in the site's plain sans
+   like a real screen. A role that has to act next is marked; an accepted manuscript turns into a sheet of paper, like
+   the notices above. */
+.jr-roles { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; font-family: var(--font); font-size: 0.78rem; color: var(--text-3); }
+.jr-roles > span { margin-right: 0.2rem; }
+
+.jr-role {
+    min-height: 34px;
+    padding: 0.25rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 980px;
+    background: none;
+    color: var(--text-2);
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.3s, border-color 0.3s, color 0.3s, opacity 0.3s;
+}
+
+.jr-role:hover { color: var(--text); }
+.jr-role[aria-pressed="true"] { border-color: rgba(var(--accent-rgb), 0.6); background: rgba(var(--accent-rgb), 0.08); color: var(--text); }
+.jr-role.next { border-style: dashed; border-color: var(--accent); color: var(--text); }
+.motion .jr-role.next { animation: jrNext 2.2s ease-in-out infinite; }
+.jr.closed .jr-role { opacity: 0.55; cursor: default; }
+
+@keyframes jrNext {
+    50% { box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.14); }
+}
+
+.jr-main { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+
+.jr-api ol { min-height: 6.2em; }
+.jr-row { display: flex; justify-content: space-between; gap: 0.75rem; opacity: 0.62; transition: color 0.25s, opacity 0.25s; }
+.jr-row.on { color: var(--accent); opacity: 1; }
+
+.jr-dash {
+    display: flex;
+    flex-direction: column;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    transition: background 0.4s, box-shadow 0.4s, color 0.4s;
+}
+
+.jr-title { font-family: var(--font); font-size: 0.95rem; line-height: 1.25; color: var(--text); transition: color 0.4s; }
+.jr-slot { min-height: 4.85rem; margin-top: 0.5rem; }
+.jr-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.jr-actions .jr-act { position: relative; z-index: 1; padding-inline: 0.8rem; font-size: 0.8rem; }
+.jr-note { font-family: var(--font); font-size: 0.8rem; line-height: 1.35; color: var(--text-3); }
+.jr-actions:not(:empty) + .jr-note:not(:empty) { margin-top: 0.4rem; }
+.jr-note.bad { color: var(--text); }
+.jr-dash .sample-tick { display: none; margin-top: 0.5rem; }
+.jr-dash.accepted .sample-tick { display: flex; }
+.jr-dash.accepted .jr-slot { display: none; }
+
+@media (max-width: 520px) {
+    .jr-main { grid-template-columns: 1fr; }
+    .jr-slot { min-height: 2.5rem; }
+}
+
+/* The roles' own label gives way so they stay on one line; the dashboard's heading says whose it is */
+@media (max-width: 360px) {
+    .jr-roles > span { display: none; }
+}
+
 /* A thin line along the top of a write-up fills as you read down it (the script sets --read) */
 .panel-progress {
     position: sticky;
@@ -2627,7 +2942,7 @@ button:focus-visible > .lk-t:not(.brushing) { background-position: 0 100%; backg
    marks the line .brushed. It shows up to the reading position, --x (0 to 1), by widening the second mask, which
    fades out over its last 12px for a soft front edge where the brush is; the stroke's own image never changes while
    you scroll. */
-:is(.nav-track, .nav-progress, .panel-progress, .r-progress, .gallery-progress) > span.brushed {
+:is(.nav-track, .nav-progress, .panel-progress, .r-progress, .gallery-progress, .off-work-line, .tale-line) > span.brushed {
     height: var(--bh);
     margin-top: calc((2px - var(--bh)) / 2);
     transform: none;
@@ -2652,6 +2967,14 @@ button:focus-visible > .lk-t:not(.brushing) { background-position: 0 100%; backg
 
 /* A write-up's line sits along its top edge, so the stroke hangs down from it rather than centering on it */
 .panel-progress > span.brushed { --x: var(--read, 0); margin-top: calc((var(--bt) - var(--bh)) / 2); }
+
+/* The strokes over "Outside of work" and the proverb's story aren't progress lines: each is written once, left to right */
+@property --write-in { syntax: "<number>"; inherits: false; initial-value: 1; }
+:is(.off-work-line, .tale-line) > span.brushed { --x: var(--write-in, 1); }
+.motion .off-work:not(.in) .off-work-line > span.brushed,
+.motion .hero-copy:not(.telling) .tale-line > span.brushed { --write-in: 0; }
+.motion .off-work.in .off-work-line > span.brushed { transition: --write-in 1.1s var(--ease) calc(var(--d, 0s) + 0.35s); }
+.motion .hero-copy.telling .tale-line > span.brushed { transition: --write-in 1.5s var(--ease) 0.2s; }
 
 /* ================= Top bar ================= */
 /* Slims down once the page has scrolled and grows back at the very top. It's fixed, so nothing below moves. */
@@ -3691,7 +4014,7 @@ picture { display: contents; }
 .motion.contrast .card { opacity: 1; }
 .motion.contrast .marquee { -webkit-mask-image: none; mask-image: none; }
 .contrast .gallery-dot::before { background: var(--text-2); }
-.contrast :is(.nav-links a, .theme-btn, .motion-btn, .contrast-btn, .panel-close, .panel-link, .gallery-arrow, .r-btn) { border-color: var(--line); }
+.contrast :is(.nav-links a, .theme-btn, .motion-btn, .contrast-btn, .panel-close, .panel-link, .sample-btn, .jr-role, .gallery-arrow, .r-btn) { border-color: var(--line); }
 
 /* Windows high contrast: the drawn lines and indicators use the system's colors */
 @media (forced-colors: active) {

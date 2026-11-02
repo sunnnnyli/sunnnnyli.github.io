@@ -706,7 +706,7 @@
     };
     // Inside a write-up, the headings, paragraphs, and chips below the first screen rise in as you scroll to them.
     // What's on screen when it opens shows at once.
-    const partsOf = (panel) => panel.querySelectorAll('.panel-inner > :is(h3, p:not(.panel-meta, .panel-keys), .chips, .panel-next)');
+    const partsOf = (panel) => panel.querySelectorAll('.panel-inner > :is(h3, p:not(.panel-meta, .panel-keys), .chips, .panel-next, .panel-glance, .sample)');
     const settleParts = (panel) => {
         panel.scrollTop = 0;
         if (!motion) return;
@@ -932,7 +932,7 @@
         };
         panel.addEventListener('touchstart', (e) => {
             const t = e.touches[0];
-            canPull = sheetLayout.matches && panel.scrollTop <= 0;
+            canPull = sheetLayout.matches && panel.scrollTop <= 0 && !e.target.closest('.term'); // the log scrolls on its own
             // Not from the screen's very edges, where the phone's own back and forward swipes start
             canSwipe = swipes && t.clientX >= 24 && t.clientX <= window.innerWidth - 24;
             state = e.touches.length === 1 && (canPull || canSwipe) ? 'maybe' : 'idle';
@@ -1030,6 +1030,13 @@
             light();
             art.classList.remove('playing');
         };
+        // Held on one stage, while a sample run below the diagram steps through it (0 is the whole diagram)
+        const hold = (at) => {
+            clearTimeout(timer);
+            stage = at;
+            light();
+            art.classList.add('playing', 'played');
+        };
         const start = () => {
             stop();
             if (!motion) return;
@@ -1038,10 +1045,10 @@
             art.classList.add('playing', 'played');
             timer = setTimeout(play, startAfter);
         };
-        return { start, stop };
+        return { start, stop, hold };
     };
-    // Each write-up shows its project's diagram under the title, held near the top while the text scrolls under it,
-    // playing from the whole diagram each time the write-up opens
+    // Each write-up shows its project's diagram under the title and its at-a-glance strip, held near the top while the
+    // text scrolls under it, playing from the whole diagram each time the write-up opens
     panels.forEach((panel) => {
         const card = panelCard.get(panel);
         const svg = card && card.querySelector('.art-dg svg');
@@ -1050,8 +1057,9 @@
         art.className = 'panel-art art-dg drawn';
         art.setAttribute('aria-hidden', 'true');
         art.append(svg.cloneNode(true));
-        panel.querySelector('h2').after(art);
+        (panel.querySelector('.panel-glance') || panel.querySelector('h2')).after(art);
         const player = diagramPlayer(art, 700);
+        panel._player = player;
         new MutationObserver(() => (panel.open ? player.start() : player.stop())).observe(panel, { attributes: true, attributeFilter: ['open'] });
     });
     // A card's diagram plays while the mouse is over the card (touch screens have no hovering, so theirs rest)
@@ -1061,6 +1069,405 @@
         const player = diagramPlayer(art, 250);
         card.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') player.start(); });
         card.addEventListener('pointerleave', player.stop);
+    });
+
+    /* ---------- Sample runs in the write-ups ---------- */
+    // Three write-ups can show their project working on made-up data: a button under the diagram opens a stage below it
+    // and plays a run there, lighting the diagram's stages as it goes. Closing the write-up puts everything back. With
+    // motion off, each step lands at once.
+    const sampleRun = (panel, { label, again, note, stage, reset, play }) => {
+        const art = panel.querySelector('.panel-art');
+        const box = document.createElement('div');
+        box.className = 'sample';
+        box.innerHTML = `<div class="sample-bar"><button class="sample-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg><span></span></button><p class="sample-note">${note}</p></div><div class="sample-stage" hidden></div><p class="sample-status" role="status"></p>`;
+        const btn = box.querySelector('.sample-btn');
+        const word = btn.querySelector('span');
+        const shelf = box.querySelector('.sample-stage');
+        const status = box.querySelector('.sample-status');
+        shelf.append(stage);
+        art.after(box);
+        let round = 0; // the run under way; moving this on stops it at its next step
+        let onPress = null;
+        const offer = (text, then) => {
+            word.textContent = text;
+            onPress = then;
+            btn.setAttribute('aria-disabled', String(!then));
+        };
+        // Scrolls just far enough to show the whole stage, without taking its top under the held diagram
+        const inView = () => {
+            const bottom = box.offsetTop + box.offsetHeight;
+            if (bottom <= panel.scrollTop + panel.clientHeight) return;
+            panel.scrollTo({ top: Math.min(box.offsetTop - art.offsetHeight - 24, bottom - panel.clientHeight + 16), behavior: motion ? 'smooth' : 'auto' });
+        };
+        const begin = async () => {
+            const mine = ++round;
+            shelf.hidden = false;
+            status.textContent = '';
+            reset();
+            inView();
+            await play({
+                live: () => mine === round,
+                pause: (ms) => (motion ? new Promise((done) => { setTimeout(done, ms); }) : Promise.resolve()),
+                say: (text) => {
+                    status.textContent = text;
+                    inView();
+                },
+                offer,
+                ask: (text) => new Promise((done) => { offer(text, done); }),
+                restart: begin,
+                player: panel._player,
+            });
+            if (mine !== round) return;
+            inView();
+            panel._player.start();
+            offer(again, begin);
+        };
+        offer(label, begin);
+        btn.addEventListener('click', () => { if (onPress) onPress(); });
+        panel.addEventListener('close', () => {
+            round++;
+            shelf.hidden = true;
+            status.textContent = '';
+            reset();
+            offer(label, begin);
+        });
+    };
+
+    // A dot travels a route on a diagram, through its corner points (in the diagram's own units)
+    const travel = (svg, points, duration) => {
+        if (!motion) return;
+        const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        dot.setAttribute('class', 'dg-token');
+        dot.setAttribute('r', '3');
+        svg.append(dot);
+        let run = 0;
+        const along = points.map(([x, y], i) => {
+            if (i) run += Math.hypot(x - points[i - 1][0], y - points[i - 1][1]);
+            return run;
+        });
+        dot.animate(points.map(([x, y], i) => ({ transform: `translate(${x}px, ${y}px)`, offset: along[i] / run })), { duration, easing: 'ease-in-out' }).finished.catch(() => {}).finally(() => dot.remove());
+    };
+    // An element that's just been moved in the page glides there from where it was
+    const glide = (el, from) => {
+        if (!motion) return;
+        const to = el.getBoundingClientRect();
+        el.animate([{ transform: `translate(${from.left - to.left}px, ${from.top - to.top}px)` }, { transform: 'none' }], { duration: 520, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
+    };
+
+    // Vulnerability Management: the master list splits row by row into a file for each agency, then, once the visitor
+    // approves the parent case, each file goes out as a notice. The CVE numbers and agencies are placeholders.
+    const VM_ROWS = [
+        ['CVE-0000-0101', 'B', 'Critical'],
+        ['CVE-0000-0102', 'A', 'High'],
+        ['CVE-0000-0103', 'C', 'High'],
+        ['CVE-0000-0104', 'A', 'Medium'],
+        ['CVE-0000-0105', 'B', 'High'],
+        ['CVE-0000-0106', 'A', 'Critical'],
+    ];
+    // Each agency's way through the diagram: from the CSV to its box, from its box to its PDF, and those two stages
+    const VM_ROUTES = {
+        A: { split: [[74, 75], [102, 75], [102, 34], [124, 34]], send: [[190, 34], [226, 34]], stages: [2, 3] },
+        B: { split: [[74, 75], [124, 75]], send: [[190, 75], [226, 75]], stages: [4, 5] },
+        C: { split: [[74, 75], [102, 75], [102, 116], [124, 116]], send: [[190, 116], [226, 116]], stages: [6, 7] },
+    };
+    const vmStage = document.createElement('div');
+    vmStage.className = 'vm';
+    vmStage.innerHTML = `<div class="vm-list"><div class="sample-head"><span>master-list.csv</span><span>${VM_ROWS.length} rows</span></div><ol>${VM_ROWS.map(([id, agency, level]) => `<li class="vm-row" data-id="${id}" data-agency="${agency}"><span>${id}</span><span>Agency ${agency}</span><span>${level}</span></li>`).join('')}</ol></div><div class="vm-files">${Object.keys(VM_ROUTES).map((agency) => `<div class="vm-file" data-agency="${agency}"><div class="sample-head"><span>Agency ${agency}</span><span class="vm-count"></span></div><ul></ul><div class="sample-tick"><svg class="i-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Emailed</div></div>`).join('')}</div>`;
+    const vmRows = [...vmStage.querySelectorAll('.vm-row')];
+    const vmFile = (agency) => vmStage.querySelector(`.vm-file[data-agency="${agency}"]`);
+    sampleRun(document.getElementById('panel-vm'), {
+        label: 'Run with sample data',
+        again: 'Run it again',
+        note: 'Six made-up CVEs for three made-up agencies',
+        stage: vmStage,
+        reset: () => {
+            vmRows.forEach((row) => row.classList.remove('on', 'done'));
+            vmStage.querySelectorAll('.vm-file').forEach((file) => {
+                file.classList.remove('sent');
+                file.querySelector('ul').replaceChildren();
+                file.querySelector('.vm-count').textContent = '';
+                file.querySelector('.sample-tick').classList.remove('copied');
+            });
+        },
+        play: async ({ live, pause, say, offer, ask, player }) => {
+            const svg = document.querySelector('#panel-vm .panel-art svg');
+            offer('Splitting the list', null);
+            say('Splitting the master list by agency.');
+            for (const row of vmRows) {
+                const route = VM_ROUTES[row.dataset.agency];
+                const file = vmFile(row.dataset.agency);
+                player.hold(route.stages[0]);
+                row.classList.add('on');
+                travel(svg, route.split, 440);
+                await pause(300);
+                if (!live()) return;
+                const from = row.getBoundingClientRect();
+                const item = document.createElement('li');
+                item.textContent = row.dataset.id;
+                file.querySelector('ul').append(item);
+                glide(item, from);
+                file.querySelector('.vm-count').textContent = file.querySelectorAll('li').length;
+                row.classList.replace('on', 'done');
+                await pause(380);
+                if (!live()) return;
+            }
+            player.hold(0);
+            say('Three agency files are ready. Nothing goes out until the parent case is approved.');
+            await ask('Approve the parent case');
+            if (!live()) return;
+            offer('Sending notices', null);
+            say('Attaching each file to its child case and emailing its notice.');
+            for (const agency of Object.keys(VM_ROUTES)) {
+                const route = VM_ROUTES[agency];
+                const file = vmFile(agency);
+                const sent = file.querySelector('.sample-tick');
+                player.hold(route.stages[1]);
+                travel(svg, route.send, 320);
+                await pause(320);
+                if (!live()) return;
+                file.classList.add('sent');
+                sent.classList.add('copied');
+                inkTick(sent);
+                if (motion) file.animate([{ transform: 'scale(0.96)' }, { transform: 'none' }], { duration: 420, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
+                await pause(460);
+                if (!live()) return;
+            }
+            say('Three notices emailed. By hand, this work took each analyst about 15 hours a week.');
+        },
+    });
+
+    // Bug PoCer: a run's log, with the diagram following along. Each line is its stage on the diagram (0 leaves it
+    // where it is), which agent is speaking, what it said, and how it reads. It's a made-up contract and a simplified log.
+    const POCER_LOG = [
+        [0, '', 'attempt 1', 'head'],
+        [1, 'ideate', 'Vault.withdraw() pays out before it updates the balance. Try re-entering it.'],
+        [2, 'exploit', 'wrote test/Exploit.t.sol'],
+        [2, 'forge', 'compile failed: Undeclared identifier "attacker"', 'bad'],
+        [3, 'parse', 'compiler error on line 14'],
+        [4, 'feedback', 'declare the attacker contract, then try again'],
+        [0, '', 'attempt 2', 'head'],
+        [2, 'exploit', 'rewrote test/Exploit.t.sol'],
+        [2, 'forge', '[FAIL] testExploit(): attacker balance unchanged', 'bad'],
+        [3, 'parse', 'it compiled, but the attacker never re-entered withdraw()'],
+        [4, 'feedback', 'add a receive() that calls withdraw() again'],
+        [0, '', 'attempt 3', 'head'],
+        [2, 'exploit', 'rewrote test/Exploit.t.sol'],
+        [2, 'forge', '[PASS] testExploit(): drained 10 ETH from Vault', 'good'],
+        [5, '', 'exploit confirmed on attempt 3', 'good'],
+    ];
+    const term = document.createElement('div');
+    term.className = 'term';
+    term.tabIndex = 0;
+    term.setAttribute('role', 'log');
+    term.setAttribute('aria-label', 'Sample run of the agents');
+    sampleRun(document.getElementById('panel-pocer'), {
+        label: 'Replay a sample run',
+        again: 'Replay it',
+        note: 'A made-up contract and a simplified log',
+        stage: term,
+        reset: () => {
+            term.replaceChildren();
+            term.classList.remove('running');
+        },
+        play: async ({ live, pause, say, offer, player }) => {
+            let skipping = false;
+            offer('Skip to the end', () => { skipping = true; });
+            term.classList.add('running');
+            for (const [stage, agent, text, kind] of POCER_LOG) {
+                if (stage) player.hold(stage);
+                const line = document.createElement('div');
+                line.className = `term-line${kind ? ` ${kind}` : ''}`;
+                const who = document.createElement('span');
+                who.textContent = agent;
+                const said = document.createElement('span');
+                said.textContent = text;
+                line.append(who, said);
+                term.append(line);
+                term.scrollTop = term.scrollHeight;
+                if (!skipping) await pause(kind === 'head' ? 320 : 640);
+                if (!live()) return;
+            }
+            term.classList.remove('running');
+            say('Each failure’s error went into the next attempt.');
+        },
+    });
+
+    // Journal: a made-up manuscript through a simplified workflow, taken in any of its three roles. At each stage the
+    // workflow API lists every valid action and the dashboard keeps the ones the viewer's role allows, so the same
+    // manuscript looks different to each role. The first review sent fails on purpose, to show the inline error.
+    const JOURNAL_ROLES = {
+        editor: { stage: 2, y: 48, a: 'an editor' },
+        author: { stage: 3, y: 75, a: 'an author' },
+        referee: { stage: 4, y: 102, a: 'a referee' },
+    };
+    // Where a manuscript can wait: its valid actions there, who may take each, and where each leads. The first one
+    // listed belongs to the role it's waiting on.
+    const JOURNAL_FLOW = {
+        Submitted: [['Assign referee', 'editor', 'In review'], ['Reject', 'editor', 'Rejected'], ['Withdraw', 'author', 'Withdrawn']],
+        'In review': [['Submit review', 'referee', 'Reviewed'], ['Withdraw', 'author', 'Withdrawn']],
+        Reviewed: [['Accept', 'editor', 'Accepted'], ['Request revisions', 'editor', 'Revisions'], ['Reject', 'editor', 'Rejected'], ['Withdraw', 'author', 'Withdrawn']],
+        Revisions: [['Resubmit', 'author', 'In review'], ['Withdraw', 'author', 'Withdrawn']],
+    };
+    const titled = (word) => word[0].toUpperCase() + word.slice(1);
+    const jr = document.createElement('div');
+    jr.className = 'jr';
+    jr.innerHTML = `<div class="jr-roles" role="group" aria-label="Viewing as"><span>Viewing as</span>${Object.keys(JOURNAL_ROLES).map((role) => `<button class="jr-role" type="button" data-role="${role}">${titled(role)}</button>`).join('')}</div><div class="jr-main"><div class="jr-api"><div class="sample-head"><span>workflow API</span><span class="jr-count"></span></div><ol></ol></div><div class="jr-dash"><div class="sample-head"><span class="jr-whose"></span><span class="jr-place"></span></div><div class="jr-title">On the Drying Time of Iron Gall Ink</div><div class="jr-slot"><div class="jr-actions"></div><div class="jr-note" aria-live="polite"></div></div><div class="sample-tick"><svg class="i-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Accepted</div></div></div>`;
+    const [jrList, jrActions, jrNote, jrDash, jrTick] = ['ol', '.jr-actions', '.jr-note', '.jr-dash', '.sample-tick'].map((sel) => jr.querySelector(sel));
+    const jrRoles = [...jr.querySelectorAll('.jr-role')];
+    let jrPress = null; // what the stage's buttons do, while a run is under way
+    jr.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (btn && jrPress) jrPress(btn);
+    });
+    sampleRun(document.getElementById('panel-journal'), {
+        label: 'Try the dashboard',
+        again: 'Start over',
+        note: 'A made-up manuscript and a simplified workflow',
+        stage: jr,
+        reset: () => {
+            jrPress = null;
+            jr.classList.remove('closed');
+            jrDash.classList.remove('accepted');
+            jrTick.classList.remove('copied');
+            jrRoles.forEach((btn) => btn.removeAttribute('aria-disabled'));
+        },
+        play: async ({ live, pause, say, offer, restart, player }) => {
+            const svg = document.querySelector('#panel-journal .panel-art svg');
+            let place = 'Submitted';
+            let role = 'editor';
+            let busy = false; // a request is on its way
+            let failed = false; // the review has had its one failure
+            let shown = 0; // the latest redraw; an older one stops at its next step
+            let finish = null;
+            const route = () => {
+                const { y } = JOURNAL_ROLES[role];
+                return [[88, 75], [110, 75], [120, y], [180, y], [190, 75], [212, 75]];
+            };
+            const leaveNote = (text, bad) => {
+                jrNote.textContent = text;
+                jrNote.classList.toggle('bad', Boolean(bad));
+            };
+            // What the API says about the manuscript where it is now
+            const list = () => {
+                const rows = JOURNAL_FLOW[place] || [];
+                jr.querySelector('.jr-place').textContent = place;
+                jr.querySelector('.jr-count').textContent = rows.length ? `${rows.length} valid actions` : 'no actions left';
+                jrList.replaceChildren(...rows.map(([action, who]) => {
+                    const row = document.createElement('li');
+                    row.className = 'jr-row';
+                    row.dataset.action = action;
+                    row.dataset.role = who;
+                    const name = document.createElement('span');
+                    name.textContent = action.toLowerCase().replace(' ', '_');
+                    const by = document.createElement('span');
+                    by.textContent = who;
+                    row.append(name, by);
+                    return row;
+                }));
+            };
+            // The viewer's share of that, drawn on their dashboard; a button rises out of its line in the API's list
+            const show = async (refocus) => {
+                const mine = ++shown;
+                const current = () => live() && mine === shown;
+                const rows = JOURNAL_FLOW[place];
+                const ours = rows.filter(([, who]) => who === role);
+                const turn = rows[0][1];
+                jrRoles.forEach((btn) => {
+                    btn.setAttribute('aria-pressed', String(btn.dataset.role === role));
+                    btn.classList.toggle('next', btn.dataset.role === turn && turn !== role);
+                });
+                jr.querySelector('.jr-whose').textContent = `${titled(role)}’s dashboard`;
+                jrList.querySelectorAll('li').forEach((row) => row.classList.toggle('on', row.dataset.role === role));
+                jrActions.replaceChildren();
+                leaveNote('');
+                player.hold(1);
+                travel(svg, route(), 620);
+                await pause(200);
+                if (!current()) return;
+                player.hold(JOURNAL_ROLES[role].stage);
+                await pause(260);
+                if (!current()) return;
+                player.hold(5);
+                ours.forEach(([action]) => {
+                    const from = jrList.querySelector(`[data-action="${action}"]`).getBoundingClientRect();
+                    const btn = document.createElement('button');
+                    btn.className = 'sample-btn jr-act';
+                    btn.type = 'button';
+                    btn.dataset.action = action;
+                    btn.textContent = action;
+                    jrActions.append(btn);
+                    glide(btn, from);
+                });
+                if (!ours.length) leaveNote(`Nothing for ${JOURNAL_ROLES[role].a} to do here. It’s with the ${turn}.`);
+                if (refocus) (jrActions.querySelector('button') || jrRoles.find((btn) => btn.classList.contains('next'))).focus({ preventScroll: true });
+                await pause(420);
+                if (current()) player.hold(JOURNAL_ROLES[role].stage);
+            };
+            // The end of the road: only an accepted manuscript becomes a sheet of paper
+            const close = () => {
+                jrPress = null;
+                jr.classList.add('closed');
+                jrRoles.forEach((btn) => {
+                    btn.classList.remove('next');
+                    btn.setAttribute('aria-disabled', 'true');
+                });
+                jrActions.replaceChildren();
+                if (place === 'Accepted') {
+                    jrDash.classList.add('accepted');
+                    jrTick.classList.add('copied');
+                    inkTick(jrTick);
+                    if (motion) jrDash.animate([{ transform: 'scale(0.97)' }, { transform: 'none' }], { duration: 420, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
+                } else leaveNote('This manuscript is closed.');
+                say(`${place}. Each role only ever saw the actions it could take.`);
+                finish();
+                jr.closest('.sample').querySelector('.sample-btn').focus({ preventScroll: true });
+            };
+            // An action goes back to the API, which moves the manuscript on
+            const send = async (action) => {
+                busy = true;
+                shown++;
+                const held = () => jrActions.querySelectorAll('button');
+                held().forEach((btn) => btn.setAttribute('aria-disabled', 'true'));
+                leaveNote('');
+                say('');
+                player.hold(5);
+                travel(svg, route().reverse(), 620);
+                await pause(200);
+                if (!live()) return;
+                player.hold(JOURNAL_ROLES[role].stage);
+                await pause(260);
+                if (!live()) return;
+                player.hold(1);
+                await pause(240);
+                if (!live()) return;
+                busy = false;
+                if (action === 'Submit review' && !failed) {
+                    failed = true;
+                    player.hold(JOURNAL_ROLES[role].stage);
+                    held().forEach((btn) => btn.removeAttribute('aria-disabled'));
+                    leaveNote('Request timed out. Nothing changed, so it’s safe to try again.', true);
+                    say('That failure was staged, to show the error handled in place.');
+                    return;
+                }
+                place = JOURNAL_FLOW[place].find(([name]) => name === action)[2];
+                list();
+                if (JOURNAL_FLOW[place]) show(true);
+                else close();
+            };
+            jrPress = (btn) => {
+                if (busy) return;
+                if (btn.dataset.action) send(btn.dataset.action);
+                else if (btn.dataset.role !== role) {
+                    role = btn.dataset.role;
+                    show();
+                }
+            };
+            offer('Start over', restart);
+            list();
+            say('The API lists every valid action. The dashboard shows only the ones your role allows, so try switching roles.');
+            show();
+            await new Promise((done) => { finish = done; });
+        },
     });
 
     // With a write-up open, ← and → step to the previous and next project (round, like Next project)
@@ -2300,7 +2707,7 @@
             const g = dotGrid.getBoundingClientRect();
             const range = document.createRange();
             const boxes = [];
-            document.querySelectorAll('.hero-copy > *, .hero-quote').forEach((el) => {
+            document.querySelectorAll('.hero-copy:not(.telling) > :not(.tale), .hero-copy.telling > .tale, .hero-quote').forEach((el) => {
                 range.selectNodeContents(el);
                 [...range.getClientRects()].forEach((r) => {
                     if (r.width && r.height) boxes.push([r.left - g.left, r.top - g.top, r.right - g.left, r.bottom - g.top]);
@@ -2451,6 +2858,45 @@
             proverb.classList.toggle('show');
         });
         document.addEventListener('pointerdown', (e) => { if (!proverb.contains(e.target)) proverb.classList.remove('show'); });
+    }
+
+    /* ---------- The story behind the proverb ---------- */
+    // The button under the proverb swaps the intro for the story, in the same spot (see .tale). Its close button, Escape,
+    // or a press anywhere outside the story and the proverb brings the intro back.
+    const tale = document.getElementById('proverb-story');
+    const taleBtn = document.querySelector('.hero-quote .more-btn');
+    if (tale && taleBtn) {
+        const copy = tale.parentElement;
+        const telling = () => copy.classList.contains('telling');
+        const tell = (open) => {
+            copy.classList.add('told');
+            void copy.offsetWidth; // settled before the fade, the first time
+            copy.classList.toggle('telling', open);
+            taleBtn.setAttribute('aria-expanded', String(open));
+            (open ? tale : taleBtn).focus({ preventScroll: true });
+        };
+        taleBtn.hidden = false;
+        taleBtn.addEventListener('click', () => tell(!telling()));
+        tale.querySelector('.panel-close').addEventListener('click', () => tell(false));
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && telling()) tell(false); });
+        document.addEventListener('pointerdown', (e) => { if (telling() && !e.target.closest('.tale, .hero-quote')) tell(false); });
+    }
+
+    /* ---------- Outside of work ---------- */
+    // The label folds the note away and opens it again. It's folded from here, so the note still shows if the script
+    // can't run, and it only animates once it's been pressed, so nothing moves as the page loads.
+    const offWork = document.querySelector('.off-work');
+    if (offWork) {
+        const offWorkBtn = offWork.querySelector('.more-btn');
+        const fold = (folded) => {
+            offWork.classList.toggle('folded', folded);
+            offWorkBtn.setAttribute('aria-expanded', String(!folded));
+        };
+        fold(true);
+        offWorkBtn.addEventListener('click', () => {
+            offWork.classList.add('pressed');
+            fold(!offWork.classList.contains('folded'));
+        });
     }
 
     /* ---------- Coming back to the page ---------- */

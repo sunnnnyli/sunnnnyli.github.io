@@ -238,25 +238,29 @@ window.spreadTheme = (() => {
     });
 })();
 // The progress lines (the tab track on desktop, the line under the top bar on phones, the project row's bar, a
-// write-up's line, and the résumé's) painted as one long dry-brush stroke: a slanted press where it starts, like the first stroke of 一, a solid
-// core that narrows as the brush dries, and bristles around it that skip more and more, so streaks of paper show
-// through toward the end. Each line's stroke is drawn once for its width (and again if that changes) as a mask,
-// --brush, and styles.css shows it up to the reading position with a soft front edge. Until it's drawn, or where
-// masks can't be combined, they stay plain lines.
+// write-up's line, and the résumé's), the short rule over "Outside of work", and the line through the proverb's story,
+// painted as one long dry-brush stroke: a slanted press where it starts, like the first stroke of 一, a solid core that
+// narrows as the brush dries, and bristles around it that skip more and more, so streaks of paper show through toward
+// the end. Each line's stroke is drawn once for its width (and again if that changes) as a mask, --brush, and styles.css
+// shows it up to the reading position with a soft front edge. Until it's drawn, or where masks can't be combined, they
+// stay plain lines.
 (() => {
     const TAU = Math.PI * 2;
     const rand = (a, b) => a + Math.random() * (b - a);
     const f = (n) => n.toFixed(1);
-    // Each line, with its stroke's box height and thickness in px
+    // Each line, with its stroke's box height and thickness in px, and for a line that isn't straight, how far it sits
+    // below center along the way (0 to 1). The story's line dips at each misfortune and rises at each blessing.
     const lines = [
         ['.nav-track > span', 10, 3.2],
         ['.nav-progress > span', 11, 4],
         ['.gallery-progress > span', 11, 4],
         ['.panel-progress > span', 11, 4],
         ['.r-progress > span', 11, 4],
+        ['.off-work-line > span', 11, 3.4],
+        ['.tale-line > span', 52, 4.6, (u) => 17 * Math.cos(2 * TAU * (u - 0.125))],
     ];
 
-    const stroke = (W, H, T) => {
+    const stroke = (W, H, T, swing = () => 0) => {
         const y0 = H / 2;
         const N = Math.max(60, Math.round(W / 4));
         const [wave, waves, wavePhase] = [T * 0.12, rand(1.2, 2.4), rand(0, TAU)];
@@ -268,7 +272,7 @@ window.spreadTheme = (() => {
         const x0 = T * 0.6;
         const at = (i) => {
             const u = i / N;
-            return [x0 + (W - 1 - x0) * u, y0 + wave * Math.sin(TAU * waves * u + wavePhase), u];
+            return [x0 + (W - 1 - x0) * u, y0 + wave * Math.sin(TAU * waves * u + wavePhase) + swing(u), u];
         };
         // The core, solid, narrowing from the stroke's full width to about a third of it
         const top = [];
@@ -306,19 +310,19 @@ window.spreadTheme = (() => {
         return `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${ink}</svg>`)}")`;
     };
 
-    const paint = (span, H, T) => {
+    const paint = (span, H, T, swing) => {
         const W = span.parentElement.offsetWidth;
         if (!W || W === span._brushW) return; // hidden (the phone's line on a desktop, a closed write-up), or unchanged
         span._brushW = W;
-        span.style.setProperty('--brush', stroke(W, H, T));
+        span.style.setProperty('--brush', stroke(W, H, T, swing));
         span.style.setProperty('--bh', `${H}px`);
         span.style.setProperty('--bt', `${T}px`);
         span.classList.add('brushed');
     };
     const start = () => {
         if (!window.ResizeObserver || !window.CSS || !(CSS.supports('mask-composite', 'intersect') || CSS.supports('-webkit-mask-composite', 'source-in'))) return;
-        lines.forEach(([sel, H, T]) => document.querySelectorAll(sel).forEach((span) => {
-            new ResizeObserver(() => paint(span, H, T)).observe(span.parentElement);
+        lines.forEach(([sel, H, T, swing]) => document.querySelectorAll(sel).forEach((span) => {
+            new ResizeObserver(() => paint(span, H, T, swing)).observe(span.parentElement);
         }));
     };
     // Once the page's own scripts have run: main.js, which comes after this file, adds each write-up's line. Deferred
