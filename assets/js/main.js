@@ -804,6 +804,13 @@
         vt.ready.catch(() => {});
         vt.finished.then(done, done);
     };
+    // Each project write-up's reading time, after its dates: its words at about 230 a minute, the diagram and sample run
+    // aside, so it keeps up when the text changes
+    projectPanels.forEach((panel) => {
+        const words = [...panel.querySelectorAll('.panel-inner > :is(h2, h3, p:not(.panel-meta), .panel-glance)')]
+            .reduce((n, el) => n + el.textContent.trim().split(/\s+/).length, 0);
+        panel.querySelector('.panel-meta').insertAdjacentHTML('beforeend', `<span class="sep"><span class="visually-hidden">, </span></span>${Math.max(1, Math.round(words / 230))} min read`);
+    });
     projectPanels.forEach((panel, i) => {
         const next = projectPanels[(i + 1) % projectPanels.length];
         const btn = document.createElement('button');
@@ -1473,7 +1480,7 @@
     // With a write-up open, ← and → step to the previous and next project (round, like Next project)
     document.addEventListener('keydown', (e) => {
         if ((e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
-        if (e.target.closest && e.target.closest('input, textarea, select, [contenteditable]')) return;
+        if (e.target.closest && e.target.closest('input, textarea, select, [contenteditable], .cmdk')) return;
         const from = projectPanels.find((panel) => panel.open);
         if (!from) return;
         e.preventDefault();
@@ -1986,6 +1993,7 @@
         theme: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
         motion: svg('<path d="M3 12h4l3-8 4 16 3-8h4"/>'),
         contrast: svg('<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor" stroke="none"/>'),
+        keys: svg('<rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/>'),
     };
     const firstHref = (sel) => { const a = document.querySelector(sel); return a ? a.href : null; };
     const copyBtnEl = document.querySelector('.copy-btn');
@@ -2030,6 +2038,7 @@
         list.push({ group: 'Actions', label: `Switch to ${next} theme`, keys: 'dark light mode color', icon: ICON.theme, run: () => { setTheme(next, true); } });
         list.push({ group: 'Actions', label: motion ? 'Turn animations off' : 'Turn animations back on', keys: 'reduce motion animation', icon: ICON.motion, run: () => { setMotion(!motion); } });
         list.push({ group: 'Actions', label: contrast ? 'Turn high contrast off' : 'Turn high contrast on', keys: 'contrast accessibility readability', icon: ICON.contrast, run: () => { setContrast(!contrast, true); } });
+        list.push({ group: 'Actions', label: 'Show keyboard shortcuts', hint: '?', keys: 'keys keyboard shortcuts hotkeys help', icon: ICON.keys, sheet: true });
         return list.map((c) => ({ ...c, text: `${c.label} ${c.keys} ${c.group}`.toLowerCase() }));
     };
 
@@ -2123,6 +2132,13 @@
             else openPanel(cmd.panel);
             return;
         }
+        if (cmd.sheet) {
+            const from = restoreTo;
+            restoreTo = null; // focus goes back there once the shortcuts close instead
+            closeCmdk();
+            openKeys(from);
+            return;
+        }
         const message = await cmd.run();
         if (message) {
             cmdkStatus.textContent = message;
@@ -2155,6 +2171,30 @@
     const kbdHint = document.querySelector('.footer-kbd');
     if (isMac) document.querySelectorAll('.kbd-mod').forEach((k) => { k.textContent = '⌘'; });
     if (kbdHint && matchMedia('(pointer: fine)').matches) kbdHint.hidden = false;
+
+    /* ---------- Keyboard shortcuts ---------- */
+    // ? lists them all, from anywhere but a text field; ? again, Esc, or a click outside puts the list away
+    const keysSheet = document.getElementById('keys');
+    let keysFrom = null;
+    const openKeys = (from = document.activeElement) => {
+        if (keysSheet.open) return;
+        keysFrom = from;
+        setMenu(false);
+        keysSheet.showModal();
+        keysSheet.focus();
+    };
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== '?' || e.ctrlKey || e.metaKey || e.altKey) return;
+        if (e.target.closest && e.target.closest('input, textarea, select, [contenteditable]')) return;
+        e.preventDefault();
+        if (keysSheet.open) keysSheet.close();
+        else openKeys();
+    });
+    keysSheet.addEventListener('click', (e) => { if (e.target === keysSheet) keysSheet.close(); }); // the dimmed backdrop
+    keysSheet.addEventListener('close', () => {
+        if (keysFrom && keysFrom.isConnected && keysFrom !== document.body) keysFrom.focus({ preventScroll: true });
+        keysFrom = null;
+    });
 
     /* ---------- Signature hand-off ---------- */
     // Once the footer's signature is on screen it takes over: the top bar shows my name in type for the moment,
@@ -2878,7 +2918,7 @@
         taleBtn.hidden = false;
         taleBtn.addEventListener('click', () => tell(!telling()));
         tale.querySelector('.panel-close').addEventListener('click', () => tell(false));
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && telling()) tell(false); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && telling() && !e.target.closest('dialog')) tell(false); }); // a menu on top closes on its own
         document.addEventListener('pointerdown', (e) => { if (telling() && !e.target.closest('.tale, .hero-quote')) tell(false); });
     }
 

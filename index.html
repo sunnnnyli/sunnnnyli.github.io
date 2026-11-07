@@ -592,6 +592,13 @@
                     <div class="off-work-line" aria-hidden="true"><span></span></div>
                     <h3><button class="more-btn" type="button" aria-expanded="true" aria-controls="off-work-note"><span class="lk-t">Outside of work</span> <span class="chev" aria-hidden="true">›</span></button></h3>
                     <div class="off-work-note" id="off-work-note"><div>
+                        <span class="off-work-photo">
+                            <picture>
+                                <source type="image/webp" srcset="assets/img/rocky-160.webp 160w, assets/img/rocky-320.webp 320w, assets/img/rocky-480.webp 480w" sizes="(max-width: 760px) 96px, 112px">
+                                <img src="assets/img/rocky-320.jpg" srcset="assets/img/rocky-160.jpg 160w, assets/img/rocky-320.jpg 320w, assets/img/rocky-480.jpg 480w" sizes="(max-width: 760px) 96px, 112px"
+                                     alt="My dog Rocky on the couch, with a toy bone that says ROCKY" width="480" height="480" fetchpriority="low" decoding="async">
+                            </picture>
+                        </span>
                         <p>Off the clock, I’m usually hanging out with my dog, playing guitar or basketball, or binging anime and <span class="nb">K-dramas</span>. I also love cooking up a nice steak, so feel free to message for show recommendations or recipe swaps!</p>
                     </div></div>
                 </div>
@@ -619,7 +626,7 @@
             </p>
             <p class="footer-side footer-actions">
                 <button class="footer-link" type="button" data-panel="panel-colophon"><span class="lk-t">How this site is built</span></button><span class="sep"><span class="visually-hidden">, </span></span>
-                <span class="footer-kbd" hidden><kbd class="kbd-mod">Ctrl</kbd> <kbd>K</kbd> to jump anywhere<span class="sep"><span class="visually-hidden">, </span></span></span>
+                <span class="footer-kbd" hidden><kbd class="kbd-mod">Ctrl</kbd> <kbd>K</kbd> to jump anywhere<span class="sep"><span class="visually-hidden">, </span></span><kbd>?</kbd> for shortcuts<span class="sep"><span class="visually-hidden">, </span></span></span>
                 <a href="#top"><span class="lk-t">Back to top</span> ↑</a>
             </p>
         </div>
@@ -732,7 +739,7 @@
                 <h3>Motion</h3>
                 <p>Scroll effects run on the browser's own scroll-driven animations where it has them, and page and theme changes use view transitions. All of it follows your reduced-motion setting, and the pause button in the top bar turns it off.</p>
                 <h3>For everyone</h3>
-                <p>Contrast follows your system too, with a button for more. Everything works from the keyboard (Ctrl+K, or ⌘K on a Mac, jumps anywhere), and the site keeps a copy of itself so it opens fast and still works offline.</p>
+                <p>Contrast follows your system too, with a button for more. Everything works from the keyboard (Ctrl+K, or ⌘K on a Mac, jumps anywhere, and ? lists every shortcut), and the site keeps a copy of itself so it opens fast and still works offline.</p>
                 <h3>Checked on every update</h3>
                 <p>Each update runs automatic checks for broken links and for Lighthouse's accessibility, best practices, and SEO scores. <a class="panel-src" href="https://github.com/sunnnnyli/sunnnnyli.github.io">The source is on GitHub.</a></p>
             <ul class="chips" aria-label="Built with"><li>HTML</li><li>CSS</li><li>JavaScript</li><li>GitHub Pages</li><li>GitHub Actions</li></ul>
@@ -753,6 +760,31 @@
             <span><kbd>↑</kbd><kbd>↓</kbd> to move</span>
             <span><kbd>↵</kbd> to select</span>
             <span class="cmdk-status" role="status" aria-live="polite"></span>
+        </div>
+    </dialog>
+
+    <!-- Keyboard shortcuts: ? opens this anywhere but a text field (the footer says so on devices with a keyboard) -->
+    <dialog class="cmdk keys" id="keys" aria-labelledby="keys-title" tabindex="-1">
+        <div class="keys-head">
+            <h2 id="keys-title">Keyboard shortcuts</h2>
+            <kbd class="cmdk-esc">Esc</kbd>
+        </div>
+        <div class="keys-body">
+            <h3>Anywhere</h3>
+            <dl>
+                <div><dt><kbd class="kbd-mod">Ctrl</kbd> <kbd>K</kbd></dt><dd>Jump to a section, copy my email, and more</dd></div>
+                <div><dt><kbd>?</kbd></dt><dd>Show these shortcuts</dd></div>
+                <div><dt><kbd>Esc</kbd></dt><dd>Close whatever is open</dd></div>
+            </dl>
+            <h3>In a project write-up</h3>
+            <dl>
+                <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Previous or next project</dd></div>
+            </dl>
+            <h3>In the command menu</h3>
+            <dl>
+                <div><dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Move through the list</dd></div>
+                <div><dt><kbd>↵</kbd></dt><dd>Choose</dd></div>
+            </dl>
         </div>
     </dialog>
 </body>

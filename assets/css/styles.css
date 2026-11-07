@@ -786,6 +786,13 @@ html:not(.motion) .dot-grid canvas { display: none; }
     color: var(--text);
 }
 
+/* The characters stay on one line: where the column is narrow (tablets and small windows), they shrink with it. The
+   line is about 12.4em wide, punctuation and spacing included. */
+@supports (width: 1cqi) {
+    .hero-quote { container-type: inline-size; }
+    .quote-zh { font-size: min(clamp(1.3rem, 2vw, 1.6rem), 7.9cqi); white-space: nowrap; }
+}
+
 /* Pinyin: each character carries its syllable just above it, hidden and taking no room. When it shows (hover,
    a tap on touch screens, or keyboard focus), the characters and translation slide down to make room and the
    pinyin fades in; they slide back when it hides. It's a slide, so nothing else on the page moves. */
@@ -1959,11 +1966,29 @@ html:not(.motion) .card.card-loop,
 .off-work p { padding-top: 0.45rem; font-size: clamp(1.1rem, 1.7vw, 1.3rem); line-height: 1.4; text-wrap: balance; color: var(--on-dark); }
 .off-work .nb { white-space: nowrap; }
 
+/* Rocky, in a small coin like my portrait at the top of the page: the same gold ring, standing still */
+.off-work-photo {
+    display: block;
+    width: 112px;
+    height: 112px;
+    margin: 0.85rem auto 0.15rem;
+    padding: 3px;
+    border-radius: 50%;
+    background: conic-gradient(var(--accent), var(--ring-2), var(--ring-3), var(--ring-2), var(--accent));
+}
+
+.off-work-photo img { display: block; width: 100%; height: 100%; border: 4px solid var(--dark); border-radius: 50%; object-fit: cover; }
+
+@media (max-width: 760px) {
+    .off-work-photo { width: 96px; height: 96px; }
+}
+
 .off-work.folded .off-work-note { grid-template-rows: 0fr; visibility: hidden; }
-.off-work.folded p { opacity: 0; }
+.off-work.folded :is(p, .off-work-photo) { opacity: 0; }
+.off-work.folded .off-work-photo { scale: 0.85; }
 .motion .off-work.pressed .off-work-note { transition: grid-template-rows 0.55s var(--ease); }
 .motion .off-work.pressed.folded .off-work-note { transition: grid-template-rows 0.45s var(--ease), visibility 0s 0.45s; }
-.motion .off-work.pressed p { transition: opacity 0.45s var(--ease); }
+.motion .off-work.pressed :is(p, .off-work-photo) { transition: opacity 0.45s var(--ease), scale 0.55s var(--ease); }
 
 /* ================= Footer ================= */
 .footer {
@@ -2915,6 +2940,37 @@ main [tabindex="-1"]:focus { outline: none; }
 /* In the footer the keys sit inline with the text without making the line taller */
 .footer-kbd kbd,
 .panel-keys kbd { padding: 0 0.35em; border-bottom-width: 1px; line-height: 1.25; vertical-align: 0.05em; }
+
+/* ================= Keyboard shortcuts (?) ================= */
+/* The command menu's box, narrower, listing every shortcut in groups: the keys on the left, what they do beside them */
+.keys { width: min(440px, calc(100vw - 32px)); }
+.keys:focus { outline: none; }
+
+.keys-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.keys-head h2 { font-family: var(--font); font-size: 1rem; font-weight: 600; letter-spacing: 0; }
+.keys-body { padding: 0 1rem 0.9rem; overflow-y: auto; overscroll-behavior: contain; }
+
+.keys-body h3 {
+    padding: 0.9rem 0 0.35rem;
+    font-family: var(--font);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-3);
+}
+
+.keys-body dl > div { display: grid; grid-template-columns: 6.5rem 1fr; align-items: baseline; gap: 0.75rem; padding: 0.4rem 0; }
+.keys-body dt { white-space: nowrap; }
+.keys-body dd { font-family: var(--font); font-size: 0.9rem; line-height: 1.35; color: var(--text); }
 
 /* Phones and touch screens have no keyboard shortcut to advertise */
 @media (pointer: coarse) {
