@@ -496,14 +496,16 @@
 
                             <article class="card spot" id="project-earlier" data-name="Earlier work" data-skills="Java, C/C++, Python, SQL, Flask">
                                 <div class="card-body">
-                                    <p class="card-meta"><span>Archive</span><span>2022 – 2023</span></p>
+                                    <p class="card-meta"><span>Archive</span><span>2022 – 2024</span></p>
                                     <h3>Earlier work</h3>
                                     <ul class="earlier">
+                                        <li><span class="yr">2024</span><span><strong><a href="https://github.com/sunnnnyli/Kropki-Sudoku-Solver" target="_blank" rel="noopener"><span class="lk-t">Kropki Sudoku solver</span><span class="ext" aria-hidden="true">↗</span></a>.</strong> <span>Backtracking search with forward checking.</span></span></li>
+                                        <li><span class="yr">2024</span><span><strong><a href="https://github.com/sunnnnyli/Robot-Path-Planning" target="_blank" rel="noopener"><span class="lk-t">Robot path planning</span><span class="ext" aria-hidden="true">↗</span></a>.</strong> <span>A* search with a cost for turning.</span></span></li>
                                         <li><span class="yr">2023</span><span><strong>NYU VIP RoboSub.</strong> <span>Navigation for an autonomous underwater vehicle.</span></span></li>
                                         <li><span class="yr">2023</span><span><strong>Office of the Mayor, MIS.</strong> <span>Imaged and deployed 90+ machines.</span></span></li>
                                         <li><span class="yr">2023</span><span><strong>CNCF security self-assessment.</strong> <span>With TAG-Security.</span></span></li>
                                         <li><span class="yr">2023</span><span><strong>Reference monitor.</strong> <span>Repy V2, tested against 500+ attacks.</span></span></li>
-                                        <li><span class="yr">2023</span><span><strong>Java music player.</strong> <span>Thread-concurrent playback.</span></span></li>
+                                        <li><span class="yr">2023</span><span><strong><a href="https://github.com/sunnnnyli/Java-Music-Player" target="_blank" rel="noopener"><span class="lk-t">Java music player</span><span class="ext" aria-hidden="true">↗</span></a>.</strong> <span>Thread-concurrent playback.</span></span></li>
                                         <li><span class="yr">2022</span><span><strong>E20 toolchain.</strong> <span>C++ assembler, simulator, and two-level cache.</span></span></li>
                                         <li><span class="yr">2022</span><span><strong>Airline reservations.</strong> <span>Flask and MySQL.</span></span></li>
                                         <li><span class="yr">2022</span><span><strong>Smart glasses.</strong> <span>Raspberry Pi color recognition.</span></span></li>
@@ -592,13 +594,25 @@
                     <div class="off-work-line" aria-hidden="true"><span></span></div>
                     <h3><button class="more-btn" type="button" aria-expanded="true" aria-controls="off-work-note"><span class="lk-t">Outside of work</span> <span class="chev" aria-hidden="true">›</span></button></h3>
                     <div class="off-work-note" id="off-work-note"><div>
-                        <span class="off-work-photo">
-                            <picture>
-                                <source type="image/webp" srcset="assets/img/rocky-160.webp 160w, assets/img/rocky-320.webp 320w, assets/img/rocky-480.webp 480w" sizes="(max-width: 760px) 96px, 112px">
-                                <img src="assets/img/rocky-320.jpg" srcset="assets/img/rocky-160.jpg 160w, assets/img/rocky-320.jpg 320w, assets/img/rocky-480.jpg 480w" sizes="(max-width: 760px) 96px, 112px"
-                                     alt="My dog Rocky on the couch, with a toy bone that says ROCKY" width="480" height="480" fetchpriority="low" decoding="async">
-                            </picture>
-                        </span>
+                        <!-- Rocky's coin: a press turns it over to a paw print, and another turns it back (see main.js) -->
+                        <button class="off-work-photo" type="button" aria-pressed="false" aria-label="My dog Rocky on the couch, with a toy bone that says ROCKY. Turn the photo over">
+
+                            <span class="off-work-coin">
+                                <span class="off-work-face">
+                                    <picture>
+                                        <source type="image/webp" srcset="assets/img/rocky-160.webp 160w, assets/img/rocky-320.webp 320w, assets/img/rocky-480.webp 480w" sizes="(max-width: 760px) 96px, 112px">
+                                        <img src="assets/img/rocky-320.jpg" srcset="assets/img/rocky-160.jpg 160w, assets/img/rocky-320.jpg 320w, assets/img/rocky-480.jpg 480w" sizes="(max-width: 760px) 96px, 112px"
+                                             alt="My dog Rocky on the couch, with a toy bone that says ROCKY" width="480" height="480" fetchpriority="low" decoding="async">
+                                    </picture>
+                                </span>
+                                <span class="off-work-face off-work-back" aria-hidden="true">
+                                    <svg class="paw" viewBox="0 0 100 100">
+                                        <defs><filter id="paw-ink" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter></defs>
+                                        <g filter="url(#paw-ink)"><path d="M50 52c-10 0-22 13-23 24-1 8 5 12 12 10 5-1 7-3 11-3s6 2 11 3c7 2 13-2 12-10-1-11-13-24-23-24z"/><ellipse cx="25" cy="44" rx="7.5" ry="10" transform="rotate(-22 25 44)"/><ellipse cx="40" cy="27" rx="8" ry="11" transform="rotate(-6 40 27)"/><ellipse cx="61" cy="27" rx="8" ry="11" transform="rotate(8 61 27)"/><ellipse cx="76" cy="45" rx="7.5" ry="10" transform="rotate(24 76 45)"/></g>
+                                    </svg>
+                                </span>
+                            </span>
+                        </button>
                         <p>Off the clock, I’m usually hanging out with my dog, playing guitar or basketball, or binging anime and <span class="nb">K-dramas</span>. I also love cooking up a nice steak, so feel free to message for show recommendations or recipe swaps!</p>
                     </div></div>
                 </div>

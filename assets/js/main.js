@@ -879,7 +879,11 @@
         });
 
         // Copy link: a link that opens this write-up directly. On phones with a share sheet it's Share instead, so the
-        // write-up can go straight into a message, an email, or LinkedIn; if sharing fails, it copies after all.
+        // write-up can go straight into a message, an email, or LinkedIn; if sharing fails, it copies after all. A
+        // project's link is its own small page (vm/ and so on), which gives LinkedIn, Slack, and messages that project's
+        // preview card and sends people on to the write-up. From a copy of the site on disk, it's the live address.
+        const home = location.protocol.startsWith('http') ? `${location.origin}${location.pathname.replace(/[^/]*$/, '')}` : 'https://sunnnnyli.github.io/';
+        const shareUrl = projectPanels.includes(panel) ? `${home}${slugOf(panel)}/` : `${home}#${slugOf(panel)}`;
         const linkBtn = panel.querySelector('.panel-link');
         const linkLabel = linkBtn.querySelector('.panel-link-label');
         const linkStatus = panel.querySelector('.panel-status');
@@ -891,7 +895,7 @@
         }
         let linkTimer;
         linkBtn.addEventListener('click', async () => {
-            const url = `${location.origin}${location.pathname}#${slugOf(panel)}`;
+            const url = shareUrl;
             if (shares) {
                 try {
                     await navigator.share({ title: `${panel.querySelector('h2').textContent}, by Sunny Li`, url });
@@ -2928,15 +2932,20 @@
     const offWork = document.querySelector('.off-work');
     if (offWork) {
         const offWorkBtn = offWork.querySelector('.more-btn');
+        const rocky = offWork.querySelector('.off-work-photo');
+        const turnOver = (back) => rocky.setAttribute('aria-pressed', String(back));
         const fold = (folded) => {
             offWork.classList.toggle('folded', folded);
             offWorkBtn.setAttribute('aria-expanded', String(!folded));
+            if (folded) turnOver(false); // face up again next time it opens
         };
         fold(true);
         offWorkBtn.addEventListener('click', () => {
             offWork.classList.add('pressed');
             fold(!offWork.classList.contains('folded'));
         });
+        // Rocky's coin turns over to its paw print with a press, and back with another
+        rocky.addEventListener('click', () => turnOver(rocky.getAttribute('aria-pressed') !== 'true'));
     }
 
     /* ---------- Coming back to the page ---------- */

@@ -37,6 +37,7 @@ I built it from scratch with plain HTML, CSS, and JavaScript. There's no framewo
 index.html              the page itself
 resume.html             my résumé as a web page
 404.html                where you land if a link is wrong
+vm/, pocer/, journal/   a page for sharing each write-up, with its own link-preview card, that opens the write-up
 Sunny-Li-Resume.pdf     my résumé as a PDF
 sw.js                   keeps a copy of the site for fast repeat visits and offline use
 assets/css/styles.css   the shared styles: both themes, high contrast, motion, and print
@@ -44,7 +45,7 @@ assets/css/resume.css   the résumé page's layout, animations, and one-page pri
 assets/js/main.js       scroll effects, the tilt, the theme, contrast, and motion switches, the Ctrl+K menu, and the toolkit
 assets/js/resume.js     the résumé page's switches, reveals, and Back and Print buttons
 assets/fonts/           self-hosted fonts, with their licenses
-assets/img/             my photo, company logos, the paper grain, and the link-preview image
+assets/img/             my photo, Rocky's, company logos, the paper grain, and the link-preview images
 assets/icons/           favicons and app icons
 .github/                checks that run on every push: broken links, plus Lighthouse audits of both pages
 ```
