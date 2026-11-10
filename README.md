@@ -23,9 +23,9 @@ I built it from scratch with plain HTML, CSS, and JavaScript. There's no framewo
 | **Light on any device** | Self-hosted fonts trimmed to the weights and characters in use, photos sized for each screen, lighter effects on touch screens, and looping animations that pause while they're off screen |
 | **Skills linked to work** | Pick a skill in the toolkit to see the roles and projects where I used it |
 | **Smooth transitions** | Pages ease into each other (the résumé starts loading when you hover its link, so it opens right away), the impact numbers roll into place like an odometer, and the skill rows pick up speed as you scroll |
-| **Little details** | Cards, tiles, and skills lean toward your mouse, project diagrams draw themselves in, project cards open into their write-ups (swipe one down to close it on a phone, or step to the next project), the timeline fills as you scroll, the theme button's sun folds into a moon, the proverb under my photo shows its pinyin and opens the story behind it, each write-up gives its reading time, pressing ? lists every keyboard shortcut, and my signature signs the top bar and footer. On phones, the back-to-top button rings with your progress. |
+| **Little details** | Cards, tiles, and skills lean toward your mouse, project diagrams draw themselves in, project cards open into their write-ups (swipe one down to close it on a phone, or step to the next project), the timeline fills as you scroll, the theme button's sun folds into a moon, the proverb under my photo shows its pinyin and opens the story behind it, each write-up gives its reading time and explains its technical terms in plain words when you hover or tap them, pressing ? lists every keyboard shortcut, and my signature signs the top bar and footer. On phones, the back-to-top button rings with your progress. |
 | **Sample runs** | The Vulnerability Management write-up runs on made-up data, splitting a list by agency and sending notices once you approve it, Bug PoCer replays a made-up run of its agents failing their way to a working exploit, and Journal lets you take a made-up manuscript through its workflow as an editor, author, or referee. Each write-up also opens with an at-a-glance strip. |
-| **Résumé page** | My résumé as a web page, with the same theme, contrast, and motion switches, gentle animations, a reading progress line, and a PDF download |
+| **Résumé page** | My résumé as a web page, with the same theme, contrast, and motion switches, gentle animations, a reading progress line, a PDF download, and a button that copies it as plain text for application forms |
 | **Accessible** | A skip link, native dialogs, keyboard focus styles, alt text, and a high-contrast switch that also follows your system setting |
 | **Print-friendly** | Printing the page gives you a clean, light copy, and the résumé page prints on one sheet |
 | **Shares nicely** | Every section and project write-up has its own link, plus link previews, structured data, a sitemap, and a 404 page that suggests where a mistyped link meant to go |
@@ -43,7 +43,7 @@ sw.js                   keeps a copy of the site for fast repeat visits and offl
 assets/css/styles.css   the shared styles: both themes, high contrast, motion, and print
 assets/css/resume.css   the résumé page's layout, animations, and one-page print
 assets/js/main.js       scroll effects, the tilt, the theme, contrast, and motion switches, the Ctrl+K menu, and the toolkit
-assets/js/resume.js     the résumé page's switches, reveals, and Back and Print buttons
+assets/js/resume.js     the résumé page's switches, reveals, and Back, Print, and Copy text buttons
 assets/fonts/           self-hosted fonts, with their licenses
 assets/img/             my photo, Rocky's, company logos, the paper grain, and the link-preview images
 assets/icons/           favicons and app icons

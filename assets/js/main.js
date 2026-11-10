@@ -360,6 +360,28 @@
     // This visit has seen the page open now, so coming back to it skips the opening
     try { sessionStorage.setItem('opened', '1'); } catch (e) {}
 
+    /* ---------- An intro too tall to pin ---------- */
+    // With motion on, the intro is pinned for a screen while the about paragraph rises over it, which needs it to fit
+    // between the top bar and the bottom of the screen with the browser's toolbars showing. On the smallest phones,
+    // and on phones turned sideways, it doesn't, so there it scrolls like the rest of the page instead (.intro-tall).
+    const heroSticky = document.querySelector('.hero-sticky');
+    const heroLayout = document.querySelector('.hero-layout');
+    const smallScreen = document.createElement('div'); // a box 100svh tall: the screen's height with the toolbars showing
+    smallScreen.setAttribute('aria-hidden', 'true');
+    smallScreen.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100vh;height:100svh;visibility:hidden;pointer-events:none';
+    document.body.append(smallScreen);
+    const fitIntro = () => {
+        if (!heroSticky || !heroLayout) return;
+        root.classList.remove('intro-tall');
+        if (!motion) return;
+        // Where it sits on the screen while pinned (the pinned layer is at the top of the screen then)
+        const top = heroLayout.getBoundingClientRect().top - heroSticky.getBoundingClientRect().top;
+        const bottom = top + heroLayout.offsetHeight;
+        // (a few pixels under the see-through top bar don't matter)
+        root.classList.toggle('intro-tall', top < NAV_H - 8 || bottom > smallScreen.offsetHeight + 1);
+    };
+    fitIntro();
+
     /* ---------- Scroll engine ---------- */
     // Each [data-scene] gets --p (0 → 1). Pinned scenes measure progress through their own height;
     // "enter" scenes measure how far they have risen into the viewport.
@@ -621,6 +643,7 @@
             holders.forEach((sec) => { sec.style.removeProperty('--cover'); sec._cover = undefined; });
         }
 
+        fitIntro();
         layoutGallery();
         measureLayout();
         if (mark) window.scrollTo({ top: window.scrollY + mark.getBoundingClientRect().top - before, behavior: 'instant' });
@@ -808,7 +831,11 @@
     // aside, so it keeps up when the text changes
     projectPanels.forEach((panel) => {
         const words = [...panel.querySelectorAll('.panel-inner > :is(h2, h3, p:not(.panel-meta), .panel-glance)')]
-            .reduce((n, el) => n + el.textContent.trim().split(/\s+/).length, 0);
+            .reduce((n, el) => {
+                const copy = el.cloneNode(true);
+                copy.querySelectorAll('.gloss-tip').forEach((tip) => tip.remove()); // the plain-language hints aren't part of the read
+                return n + copy.textContent.trim().split(/\s+/).length;
+            }, 0);
         panel.querySelector('.panel-meta').insertAdjacentHTML('beforeend', `<span class="sep"><span class="visually-hidden">, </span></span>${Math.max(1, Math.round(words / 230))} min read`);
     });
     projectPanels.forEach((panel, i) => {
@@ -829,6 +856,110 @@
         keys.innerHTML = '<span class="keys-fine">Or use <kbd>←</kbd> <kbd>→</kbd> to switch projects</span><span class="keys-touch">Or swipe sideways to switch projects</span>';
         panel.querySelector('.panel-inner').append(btn, keys);
     });
+
+    // Plain-language hints in the write-ups: a technical term (marked .gloss in the page, with its hint in data-tip)
+    // gets a dotted underline, and hovering it, tapping it, or tabbing to it shows a short note on what it is, for
+    // readers who aren't engineers. One shows at a time, kept inside the write-up's edges, above the term (over the
+    // diagram held at the top if need be, rather than over the next lines), or below it when there's no room above. Esc,
+    // or a tap anywhere else, puts it away, and so does scrolling the term up under the diagram. Screen readers hear
+    // the hint with the term.
+    (() => {
+        const terms = [...document.querySelectorAll('.panel .gloss[data-tip]')];
+        if (!terms.length) return;
+        let open = null;   // the term showing its hint
+        let held = false;  // shown by a click, tap, or the keyboard, not just a passing mouse
+        let leaveTimer;
+        terms.forEach((term, i) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'gloss-btn';
+            btn.append(...term.childNodes);
+            const tip = document.createElement('span');
+            tip.className = 'gloss-tip';
+            tip.id = `gloss-tip-${i}`;
+            tip.setAttribute('role', 'tooltip');
+            tip.hidden = true;
+            tip.innerHTML = '<span class="gloss-name" aria-hidden="true"></span><span class="gloss-def"></span>';
+            tip.querySelector('.gloss-name').textContent = btn.textContent;
+            tip.querySelector('.gloss-def').textContent = term.dataset.tip;
+            btn.setAttribute('aria-describedby', tip.id);
+            // A tap on the hint itself puts it away (on a small phone it can cover the next line's words)
+            tip.addEventListener('click', () => hide());
+            term.append(btn, tip);
+        });
+        const place = (term) => {
+            const tip = term.querySelector('.gloss-tip');
+            tip.classList.remove('below');
+            tip.style.setProperty('--shift', '0px');
+            const t = tip.getBoundingClientRect();
+            const inner = term.closest('.panel-inner').getBoundingClientRect();
+            const edge = 12;
+            let shift = 0;
+            if (t.left < inner.left + edge) shift = inner.left + edge - t.left;
+            else if (t.right > inner.right - edge) shift = inner.right - edge - t.right;
+            tip.style.setProperty('--shift', `${Math.round(shift)}px`);
+            if (t.top < term.closest('.panel').getBoundingClientRect().top + edge) tip.classList.add('below');
+        };
+        // Where the text shows from: under the diagram held at the top of the write-up, or the write-up's top edge
+        const clearOf = (panel) => {
+            const art = panel.querySelector('.panel-art');
+            return art ? art.getBoundingClientRect().bottom : panel.getBoundingClientRect().top;
+        };
+        const hide = () => {
+            clearTimeout(leaveTimer);
+            if (!open) return;
+            open.querySelector('.gloss-tip').hidden = true;
+            open.classList.remove('open');
+            open = null;
+            held = false;
+        };
+        const show = (term, hold) => {
+            clearTimeout(leaveTimer);
+            if (open !== term) {
+                hide();
+                open = term;
+                term.classList.add('open');
+                term.querySelector('.gloss-tip').hidden = false;
+                place(term);
+            }
+            if (hold) held = true;
+        };
+        terms.forEach((term) => {
+            const btn = term.querySelector('.gloss-btn');
+            btn.addEventListener('click', () => {
+                if (open === term && held) hide();
+                else show(term, true);
+            });
+            btn.addEventListener('focus', () => { if (btn.matches(':focus-visible')) show(term, true); });
+            btn.addEventListener('blur', () => { if (open === term && !term.matches(':hover')) hide(); });
+            // A mouse shows it while over the term or the hint itself, with a moment's grace to cross between them
+            term.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') show(term, false); });
+            term.addEventListener('pointerleave', (e) => {
+                if (e.pointerType !== 'mouse' || open !== term || held) return;
+                leaveTimer = setTimeout(hide, 180);
+            });
+        });
+        document.addEventListener('pointerdown', (e) => { if (open && !open.contains(e.target)) hide(); }, true);
+        // Esc puts the hint away first, and only closes the write-up when no hint is showing (a menu opened on top
+        // still closes on the first Esc)
+        window.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape' || !open) return;
+            if (open.closest('.panel').contains(e.target)) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+            }
+            hide();
+        }, true);
+        projectPanels.forEach((panel) => {
+            panel.addEventListener('close', hide);
+            // A term scrolled up under the diagram takes its hint with it
+            panel.addEventListener('scroll', () => {
+                if (open && panel.contains(open) && open.querySelector('.gloss-btn').getBoundingClientRect().top < clearOf(panel)) hide();
+            }, { passive: true });
+        });
+        window.addEventListener('resize', () => { if (open) place(open); });
+    })();
+
     document.querySelectorAll('[data-panel]').forEach((btn) => {
         const panel = document.getElementById(btn.dataset.panel);
         panelCard.set(panel, btn.closest('.card'));
@@ -1914,12 +2045,13 @@
         } else {
             lastW = w;
             lastH = h;
+            fitIntro();
             layoutGallery();
         }
         request();
     });
     // Late fonts change line lengths, so measure again once they're in (if any are still on the way)
-    if (document.fonts && document.fonts.status !== 'loaded') document.fonts.ready.then(() => { layoutGallery(); measureLayout(); request(); });
+    if (document.fonts && document.fonts.status !== 'loaded') document.fonts.ready.then(() => { fitIntro(); layoutGallery(); measureLayout(); request(); });
 
     /* ---------- Looping animations rest while off screen ---------- */
     // The intro's glow and ring, the project diagrams, and the toolkit marquees pause whenever they're out of view
@@ -2918,6 +3050,14 @@
             copy.classList.toggle('telling', open);
             taleBtn.setAttribute('aria-expanded', String(open));
             (open ? tale : taleBtn).focus({ preventScroll: true });
+            // Where the intro scrolls rather than staying pinned (a phone turned sideways), the story can open partly
+            // under the top bar or off the screen, so the page brings all of it into view, just under the bar
+            if (open && root.classList.contains('intro-tall')) {
+                const r = tale.getBoundingClientRect();
+                const top = nav.getBoundingClientRect().bottom + 12;
+                const by = r.top < top ? r.top - top : Math.min(Math.max(0, r.bottom - (window.innerHeight - 12)), r.top - top);
+                if (Math.abs(by) > 1) window.scrollBy({ top: by, behavior: motion ? 'smooth' : 'instant' });
+            }
         };
         taleBtn.hidden = false;
         taleBtn.addEventListener('click', () => tell(!telling()));

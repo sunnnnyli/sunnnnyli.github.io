@@ -52,6 +52,13 @@
 
 .r-btn:hover { color: var(--text); border-color: rgba(var(--ink-rgb), 0.3); }
 
+/* Copy text turns gold with a tick for a moment once the résumé is on the clipboard */
+.r-copy { justify-content: center; }
+.r-copy .i-check,
+.r-copy.copied .i-copy { display: none; }
+.r-copy.copied .i-check { display: block; }
+.r-copy.copied { color: var(--accent); border-color: rgba(var(--accent-rgb), 0.45); }
+
 /* Projects with a write-up on the portfolio link to it, under their points (on screen only) */
 .r-more {
     display: inline-flex;
@@ -66,6 +73,14 @@
 
 .r-more svg { transition: transform 0.3s var(--ease); }
 .r-more:hover svg { transform: translateX(3px); }
+
+/* Touch screens: Back, the contact links, and the write-up links take taps a little beyond what they show, so a
+   fingertip finds them. The contact links stack close on a phone, so theirs stops halfway to the next one. */
+@media (pointer: coarse) {
+    .r-back, .r-more, .r-contact a { position: relative; }
+    .r-back::before, .r-more::before { content: ''; position: absolute; inset: -10px -6px; }
+    .r-contact a::before { content: ''; position: absolute; inset: -3px -6px; }
+}
 
 .r-back svg,
 .r-more svg,
@@ -214,11 +229,23 @@
     .r-btn { padding: 0 0.7rem; }
 }
 
-/* Narrow phones: the PDF and Print buttons fold down to their icons, and Back loses "to the site",
+/* Narrower screens: Back loses "to the site", then the PDF, Print, and Copy text buttons fold down to their icons,
    so the bar keeps to one row with all three toggles */
-@media (max-width: 460px) {
-    .r-label,
+.r-back, .r-btn { white-space: nowrap; }
+
+@media (max-width: 600px) {
     .r-long {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 500px) {
+    .r-label {
         position: absolute;
         width: 1px;
         height: 1px;
@@ -229,6 +256,10 @@
 
     .r-btn { justify-content: center; width: 32px; height: 32px; padding: 0; }
     .r-actions { gap: 0.35rem; }
+}
+
+@media (max-width: 340px) {
+    .r-actions { gap: 0.2rem; }
 }
 
 /* ================= Motion ================= */

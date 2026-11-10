@@ -203,6 +203,76 @@
         document.body.append(frame);
     });
 
+    // Copy text: the résumé as plain text, for application forms that ask you to paste it in. It's read from the page
+    // itself, so it always matches: each role's place and dates on its own lines, a dash before each point, and the
+    // portfolio's address with the contact details.
+    const copyBtn = document.querySelector('.r-copy');
+    const copyLabel = copyBtn.querySelector('.r-label');
+    const copyStatus = document.querySelector('.r-copy-status');
+    const clean = (el) => {
+        if (!el) return '';
+        const copy = el.cloneNode(true);
+        copy.querySelectorAll('.visually-hidden, svg').forEach((n) => n.remove());
+        // Straight quotes, which every form takes
+        return copy.textContent.replace(/\s+/g, ' ').replace(/[‘’]/g, "'").replace(/[“”]/g, '"').trim();
+    };
+    const joined = (...parts) => parts.map(clean).filter(Boolean).join(' | ');
+    const asText = () => {
+        const out = [clean(document.querySelector('.r-head h1'))];
+        out.push([...document.querySelectorAll('.r-contact li')].map(clean).concat('sunnnnyli.github.io').join(' | '));
+        document.querySelectorAll('.r-section').forEach((section) => {
+            out.push('', clean(section.querySelector('h2')).toUpperCase());
+            section.querySelectorAll('.r-item').forEach((item) => {
+                const head = item.querySelector('.r-row:not(.r-sub)');
+                const sub = item.querySelector('.r-sub');
+                out.push('', joined(head.querySelector('h3'), head.querySelector('.r-where, .r-when')));
+                if (sub) out.push(sub.classList.contains('r-row') ? joined(sub.querySelector('.r-role'), sub.querySelector('.r-when')) : clean(sub));
+                item.querySelectorAll('.r-points li').forEach((li) => out.push(`- ${clean(li)}`));
+            });
+            const skills = [...section.querySelectorAll('.r-skills > div')];
+            if (skills.length) out.push('', ...skills.map((row) => `${clean(row.querySelector('dt'))}: ${clean(row.querySelector('dd'))}`));
+        });
+        return `${out.join('\n')}\n`;
+    };
+    const copyText = async (text) => {
+        // The clipboard API can hang waiting on a permission prompt, so give it a moment, then fall back
+        let ok = false;
+        if (navigator.clipboard) {
+            ok = await Promise.race([
+                navigator.clipboard.writeText(text).then(() => true, () => false),
+                new Promise((r) => setTimeout(() => r(false), 800)),
+            ]);
+        }
+        if (!ok) {
+            // Older browsers and non-secure pages: copy from a hidden text box
+            const t = document.createElement('textarea');
+            t.value = text;
+            t.setAttribute('readonly', '');
+            t.style.cssText = 'position:fixed;opacity:0';
+            document.body.append(t);
+            t.select();
+            try { ok = document.execCommand('copy'); } catch (err) {}
+            t.remove();
+        }
+        return ok;
+    };
+    let copyTimer;
+    copyBtn.addEventListener('click', async () => {
+        const ok = await copyText(asText());
+        copyBtn.style.minWidth = `${copyBtn.offsetWidth}px`; // "Copied" is shorter, and the bar shouldn't shift
+        copyBtn.classList.toggle('copied', ok);
+        copyLabel.textContent = ok ? 'Copied' : 'Copy failed';
+        copyStatus.textContent = ok ? 'Résumé copied as plain text' : 'Could not copy the résumé';
+        clearTimeout(copyTimer);
+        copyTimer = setTimeout(() => {
+            copyBtn.classList.remove('copied');
+            copyBtn.style.minWidth = '';
+            copyLabel.textContent = 'Copy text';
+            copyStatus.textContent = '';
+        }, 2000);
+    });
+    copyBtn.hidden = false;
+
     if ('serviceWorker' in navigator && window.isSecureContext) {
         window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
     }

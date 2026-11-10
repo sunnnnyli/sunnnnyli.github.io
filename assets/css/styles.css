@@ -689,6 +689,24 @@ html:not(.motion) .marquee [aria-hidden="true"] { display: none; }
     padding-bottom: calc(4.5rem + var(--toolbar-room));
 }
 
+/* An intro too tall to pin (the smallest phones, and phones turned sideways; main.js sets .intro-tall): it scrolls
+   like the rest of the page, starting just under the top bar, and the about paragraph comes up after it like any other
+   section rather than over it. Nothing in it fades or shrinks as it scrolls away. */
+.motion.intro-tall .hero { height: auto; }
+
+.motion.intro-tall .hero-sticky {
+    position: relative;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100svh;
+    align-items: flex-start;
+    padding-bottom: calc(var(--overlap) + 2.5rem);
+}
+
+.motion.intro-tall :is(.hero-copy, .hero-photo-wrap, .aurora) { --p: 0; }
+.motion.intro-tall .hero + .rise { margin-top: calc(-1 * var(--overlap)); border-top: var(--overlap) solid transparent; }
+.intro-tall .scroll-cue { display: none; }
+
 .aurora {
     position: absolute;
     inset: 0;
@@ -974,6 +992,10 @@ html:not(.motion) .dot-grid canvas { display: none; }
     .hero-quote .more-btn { margin-top: 0.15rem; font-size: 0.8rem; }
 }
 
+/* Where the intro scrolls instead of being pinned (.intro-tall), the page brings the story into view as it opens (see
+   main.js), so it can take a screen's height under the top bar, as far as the intro's own height allows */
+.intro-tall .tale { max-height: min(calc(100svh - var(--nav-h) - var(--safe-top) - 2rem), 100%); }
+
 .motion .hero-photo-wrap {
     transform: translate3d(0, calc(var(--p, 0) * -40px), 0) scale(calc(1 + var(--p, 0) * 0.35));
     opacity: calc(1 - var(--p, 0) * 1.6);
@@ -1213,6 +1235,12 @@ html:not(.motion) .dot-grid canvas { display: none; }
 }
 
 .story-text p + p { margin-top: 0.8em; }
+
+/* Phones turned sideways: the paragraph spreads across the wider screen and steps down a size, so it fits the
+   shorter one */
+@media (orientation: landscape) and (max-height: 500px) {
+    .story-text { max-width: 34em; font-size: clamp(1.05rem, 5.6vh, 1.4rem); }
+}
 
 .story .hl { font-style: italic; color: var(--story-hl); }
 
@@ -2336,6 +2364,14 @@ html:not(.motion) .card.card-loop,
 
 .card-more:hover .chev { transform: translateX(3px); }
 
+/* Touch screens: the small text links and buttons take taps a little beyond what they show, so a fingertip finds
+   them. The extra stops short of their neighbors, so one never takes another's tap. */
+@media (pointer: coarse) {
+    :is(.link, .more-btn, .card-more, .earlier a) { position: relative; }
+    :is(.link, .more-btn, .card-more)::before { content: ''; position: absolute; inset: -7px -6px; }
+    .earlier a::before { content: ''; position: absolute; inset: -6px -4px; }
+}
+
 .panel {
     position: fixed;
     inset: 0 0 0 auto;
@@ -2368,7 +2404,98 @@ html:not(.motion) .card.card-loop,
 
 html:has(.panel[open]) { overflow: hidden; }
 
-.panel-inner { padding: clamp(1.4rem, 4vw, 2.5rem); padding-bottom: calc(clamp(1.4rem, 4vw, 2.5rem) + var(--safe-bottom)); }
+.panel-inner {
+    padding: clamp(1.4rem, 4vw, 2.5rem);
+    padding-right: max(clamp(1.4rem, 4vw, 2.5rem), env(safe-area-inset-right, 0px)); /* clear of an iPhone's notch on its side */
+    padding-bottom: calc(clamp(1.4rem, 4vw, 2.5rem) + var(--safe-bottom));
+}
+
+/* Plain-language hints on technical terms in the write-ups (see main.js): the term keeps the sentence's look with a
+   dotted underline, and its hint sits above it (below it near the top of the write-up) in a small card whose arrow
+   points at the term, however far the card is nudged to stay inside the write-up. */
+.gloss { position: relative; }
+
+.gloss-btn {
+    display: inline;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-align: inherit;
+    text-decoration: underline dotted rgba(var(--accent-rgb), 0.75);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 0.22em;
+    cursor: help;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.2s, text-decoration-color 0.2s;
+}
+
+.gloss.open .gloss-btn { color: var(--text); text-decoration-style: solid; text-decoration-color: var(--accent); }
+.gloss-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+@media (hover: hover) {
+    .gloss-btn:hover { color: var(--text); text-decoration-color: var(--accent); }
+}
+
+.gloss-tip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 10px);
+    z-index: 3;
+    display: block;
+    width: max-content;
+    max-width: min(17.5rem, calc(100vw - 3rem));
+    padding: 0.6rem 0.8rem 0.65rem;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgb(var(--bg-rgb));
+    box-shadow: 0 14px 34px -14px rgba(0, 0, 0, 0.45);
+    color: var(--text-2);
+    font: 400 0.84rem/1.45 var(--font);
+    letter-spacing: 0;
+    text-align: left;
+    text-indent: 0;
+    white-space: normal;
+    translate: calc(-50% + var(--shift, 0px)) 0;
+}
+
+.gloss-tip.below { top: calc(100% + 10px); bottom: auto; }
+
+.gloss-tip::after {
+    content: '';
+    position: absolute;
+    left: calc(50% - var(--shift, 0px));
+    top: 100%;
+    width: 9px;
+    height: 9px;
+    border: solid var(--line);
+    border-width: 0 1px 1px 0;
+    background: rgb(var(--bg-rgb));
+    translate: -50% -50%;
+    rotate: 45deg;
+}
+
+.gloss-tip.below::after { top: 0; rotate: -135deg; }
+
+.gloss-name {
+    display: block;
+    margin-bottom: 0.2rem;
+    color: var(--accent);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.gloss-def { display: block; }
+
+.motion .gloss-tip:not([hidden]) { animation: tipIn 0.22s var(--ease) both; }
+.motion .gloss-tip.below:not([hidden]) { animation-name: tipInBelow; }
+
+@keyframes tipIn { from { opacity: 0; transform: translateY(4px); } }
+@keyframes tipInBelow { from { opacity: 0; transform: translateY(-4px); } }
 
 .panel-top {
     display: flex;
@@ -2520,6 +2647,11 @@ html:has(.panel[open]) { overflow: hidden; }
     margin: 1.4rem 0 0.4rem;
     border-radius: 16px;
     box-shadow: 0 0 0 0.75rem var(--surface);
+}
+
+/* On a short screen (a phone turned sideways) it would cover half the write-up, so it scrolls away with the text */
+@media (max-height: 500px) {
+    .panel-art { position: relative; top: auto; }
 }
 
 /* A diagram that has played (a write-up's, or a card's under the mouse) fades its parts together from then on, not
@@ -3902,6 +4034,14 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
 
     .menu-open body { overflow: hidden; }
 
+    /* Where the links don't all fit (a phone turned sideways), the menu scrolls, starting from the first one */
+    .nav-links {
+        align-items: center;
+        align-items: safe center;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
     .nav-links ul { flex-direction: column; gap: 0.25rem; }
 
     .nav-links li {
@@ -3937,6 +4077,13 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
     .nav-steps { width: 100%; }
 }
 
+/* Phones turned sideways: the menu's links step down a size so all six fit the short screen */
+@media (max-width: 1060px) and (max-height: 500px) {
+    .nav-links { padding-block: 0.75rem; }
+    .nav-links ul { gap: 0.1rem; }
+    .nav-links a { padding: 0.2rem 0; font-size: 1.5rem; }
+}
+
 @media (max-width: 760px) {
     .hero-sticky { align-items: flex-start; padding-top: calc(var(--nav-h) + var(--safe-top) + 1rem); }
     .hero-layout { grid-template-columns: 1fr; gap: 1.6rem; }
@@ -3951,7 +4098,7 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
     .py-line { display: block; }
     .hero-quote { --py-room: 1.15rem; }
     .quote-en { margin-top: 0.3rem; font-size: 0.82rem; line-height: 1.35; }
-    .quote-lead { margin-bottom: 0.1rem; font-size: min(0.8rem, 2.95vw); line-height: 1.3; }
+    .quote-lead { margin-bottom: 0.1rem; font-size: clamp(0.69rem, 2.95vw, 0.8rem); line-height: 1.3; }
     .hero-sub { margin-top: 0.9rem; }
     .hero-lede { margin-top: 0.75rem; font-size: 1rem; line-height: 1.5; }
     .hero-actions { gap: 0.9rem 1.25rem; }
@@ -3982,7 +4129,7 @@ body, .hero, .story, .dark, .light, .footer, .hero-sticky, .story-sticky, .galle
     .footer-side { display: contents; }
     .footer-actions > :not(.footer-link) { display: none; }
     .footer-link { order: 1; }
-    .footer-meta { order: 2; flex-basis: 100%; font-size: 0.68rem; line-height: 1.3; }
+    .footer-meta { order: 2; flex-basis: 100%; font-size: 0.75rem; line-height: 1.3; }
     .footer { padding-bottom: calc(13px + var(--safe-bottom)); } /* the two lines centered on the button */
 
     .to-top {
@@ -4110,6 +4257,7 @@ picture { display: contents; }
 .motion.contrast .card { opacity: 1; }
 .motion.contrast .marquee { -webkit-mask-image: none; mask-image: none; }
 .contrast .gallery-dot::before { background: var(--text-2); }
+.contrast .gloss-btn { text-decoration-color: currentColor; }
 .contrast :is(.nav-links a, .theme-btn, .motion-btn, .contrast-btn, .panel-close, .panel-link, .sample-btn, .jr-role, .gallery-arrow, .r-btn) { border-color: var(--line); }
 
 /* Windows high contrast: the drawn lines and indicators use the system's colors */
